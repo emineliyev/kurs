@@ -1,0 +1,246 @@
+name: CI — Kursum SaaS
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main]
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+  POSTGRES_DB: kursum_test
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+
+jobs:
+  # ── 1. Django backend tests ─────────────────────────────────────────────────
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-test.txt
+
+      - name: Run unit tests
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/kursum_test
+          DEBUG: "False"
+          ALLOWED_HOSTS: "*"
+        run: |
+          pytest tests/unit/ -m unit -v --tb=short --no-header
+
+      - name: Run integration tests
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/kursum_test
+          DEBUG: "False"
+          ALLOWED_HOSTS: "*"
+        run: |
+          pytest tests/integration/ -m integration -v --tb=short
+
+      - name: Run security tests
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/kursum_test
+          DEBUG: "False"
+          ALLOWED_HOSTS: "*"
+        run: |
+          pytest tests/security/ -m security -v --tb=short
+
+      - name: Full test suite with coverage
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/kursum_test
+          DEBUG: "False"
+          ALLOWED_HOSTS: "*"
+        run: |
+          pytest \
+            --cov=apps \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing \
+            --cov-fail-under=80 \
+            -v
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+          fail_ci_if_error: false
+
+  # ── 2. Static analysis ──────────────────────────────────────────────────────
+  lint-backend:
+    name: Backend Lint + Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install linting tools
+        run: pip install flake8 bandit safety
+
+      - name: Flake8 (style)
+        run: flake8 apps/ core/ --max-line-length=120 --exclude=migrations
+
+      - name: Bandit (security scan)
+        run: bandit -r apps/ -ll --skip B101,B601
+
+      - name: Safety (dependency vulnerability check)
+        run: safety check -r requirements.txt --ignore 70612
+        continue-on-error: true  # advisory only
+
+  # ── 3. Frontend tests ───────────────────────────────────────────────────────
+  frontend:
+    name: Frontend (Vitest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run component tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Run tests with coverage
+        working-directory: frontend
+        run: npm run test:coverage
+
+  # ── 4. Frontend build check ─────────────────────────────────────────────────
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    needs: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://api.kursum.az
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 3
+
+  # ── 5. E2E tests (optional, runs on staging) ───────────────────────────────
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend-build]
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          npm init -y
+          npm install @playwright/test
+          npx playwright install --with-deps chromium
+
+      - name: Run E2E tests against staging
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: ${{ secrets.STAGING_URL }}
+          E2E_TEACHER_EMAIL: ${{ secrets.E2E_TEACHER_EMAIL }}
+          E2E_TEACHER_PASSWORD: ${{ secrets.E2E_TEACHER_PASSWORD }}
+          E2E_STUDENT_EMAIL: ${{ secrets.E2E_STUDENT_EMAIL }}
+          E2E_STUDENT_PASSWORD: ${{ secrets.E2E_STUDENT_PASSWORD }}
+        run: npx playwright test --config=playwright.config.js
+        continue-on-error: true  # E2E failures don't block merge
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
+
+  # ── 6. Final gate ────────────────────────────────────────────────────────────
+  ci-success:
+    name: All checks passed
+    runs-on: ubuntu-latest
+    needs: [backend, lint-backend, frontend, frontend-build]
+    if: always()
+
+    steps:
+      - name: Check all jobs
+        run: |
+          if [[ "${{ needs.backend.result }}" != "success" ]]; then
+            echo "Backend tests failed!"
+            exit 1
+          fi
+          if [[ "${{ needs.frontend.result }}" != "success" ]]; then
+            echo "Frontend tests failed!"
+            exit 1
+          fi
+          if [[ "${{ needs.frontend-build.result }}" != "success" ]]; then
+            echo "Frontend build failed!"
+            exit 1
+          fi
+          echo "All checks passed!"

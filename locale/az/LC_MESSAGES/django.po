@@ -1,0 +1,126 @@
+# Azerbaijani translations for Kurs project
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: az\n"
+
+# accounts/serializers.py
+msgid "Password must contain at least one uppercase letter."
+msgstr "Şifrə ən azı bir böyük hərf içərməlidir."
+
+msgid "Password must contain at least one lowercase letter."
+msgstr "Şifrə ən azı bir kiçik hərf içərməlidir."
+
+msgid "Password must contain at least one digit."
+msgstr "Şifrə ən azı bir rəqəm içərməlidir."
+
+msgid "Password must contain at least one special character."
+msgstr "Şifrə ən azı bir xüsusi simvol içərməlidir."
+
+msgid "Passwords do not match."
+msgstr "Şifrələr uyğun gəlmir."
+
+msgid "Email or username is required."
+msgstr "E-poçt və ya istifadəçi adı tələb olunur."
+
+msgid "Invalid credentials."
+msgstr "E-poçt və ya şifrə yanlışdır."
+
+msgid "Account is disabled."
+msgstr "Hesab deaktiv edilmişdir."
+
+msgid "Incorrect password."
+msgstr "Şifrə yanlışdır."
+
+msgid "Password changed successfully."
+msgstr "Şifrə uğurla dəyişdirildi."
+
+msgid "Logged out successfully."
+msgstr "Uğurla çıxış edildi."
+
+# permissions
+msgid "Only teachers can perform this action."
+msgstr "Bu əməliyyatı yalnız müəllimlər icra edə bilər."
+
+msgid "Only students can perform this action."
+msgstr "Bu əməliyyatı yalnız şagirdlər icra edə bilər."
+
+# classes
+msgid "Student not found."
+msgstr "Şagird tapılmadı."
+
+msgid "Student enrolled successfully."
+msgstr "Şagird sinfə əlavə edildi."
+
+msgid "Student unenrolled."
+msgstr "Şagird sinfindən çıxarıldı."
+
+msgid "Enrollment not found."
+msgstr "Qeydiyyat tapılmadı."
+
+msgid "Permission denied."
+msgstr "İcazə yoxdur."
+
+# exams
+msgid "Exam is not currently active."
+msgstr "İmtahan hazırda aktiv deyil."
+
+msgid "You are not enrolled in this class."
+msgstr "Siz bu sinfə qeydiyyatlı deyilsiniz."
+
+msgid "You have already completed this exam."
+msgstr "Siz bu imtahanı artıq tamamlamısınız."
+
+msgid "No active exam session found."
+msgstr "Aktiv imtahan sessiyası tapılmadı."
+
+msgid "No active session."
+msgstr "Aktiv sessiya yoxdur."
+
+msgid "End time must be after start time."
+msgstr "Bitmə vaxtı başlanğıc vaxtından sonra olmalıdır."
+
+# subscriptions
+msgid "Plan not found."
+msgstr "Plan tapılmadı."
+
+msgid "No subscription found."
+msgstr "Abunəlik tapılmadı."
+
+# general
+msgid "This field is required."
+msgstr "Bu sahə tələb olunur."
+
+msgid "This field may not be blank."
+msgstr "Bu sahə boş ola bilməz."
+
+msgid "A user with that email already exists."
+msgstr "Bu e-poçtla istifadəçi artıq mövcuddur."
+
+msgid "A user with that username already exists."
+msgstr "Bu istifadəçi adı artıq mövcuddur."
+
+msgid "Enter a valid email address."
+msgstr "Düzgün e-poçt ünvanı daxil edin."
+
+msgid "Ensure this field has no more than %(max_length)s characters."
+msgstr "Bu sahə %(max_length)s simvoldan çox ola bilməz."
+
+msgid "Ensure this value is greater than or equal to %(limit_value)s."
+msgstr "Bu dəyər %(limit_value)s-dən böyük və ya bərabər olmalıdır."
+
+msgid "Ensure this value is less than or equal to %(limit_value)s."
+msgstr "Bu dəyər %(limit_value)s-dən kiçik və ya bərabər olmalıdır."
+
+msgid "Not found."
+msgstr "Tapılmadı."
+
+msgid "Authentication credentials were not provided."
+msgstr "Autentifikasiya məlumatları verilmədi."
+
+msgid "Given token not valid for any token type"
+msgstr "Token etibarsızdır."
+
+msgid "Token is invalid or expired"
+msgstr "Token etibarsız və ya müddəti bitmiş."

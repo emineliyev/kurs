@@ -1,0 +1,39 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.sqlite3
+media/
+staticfiles/
+.idea
+.idea/
+
+# Claude Code
+.claude/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+tests/
+e2e/
+pytest.ini
+requirements-test.txt
+frontend/src/__tests__/
+frontend/vitest.config.js
+
+# Test outputs
+test-results/
+frontend/test-results/
+.coverage
+htmlcov/
+playwright-report/
+frontend/playwright-report/

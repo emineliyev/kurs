@@ -1,0 +1,126 @@
+# Russian translations for Kurs project
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ru\n"
+
+# accounts/serializers.py
+msgid "Password must contain at least one uppercase letter."
+msgstr "Пароль должен содержать хотя бы одну заглавную букву."
+
+msgid "Password must contain at least one lowercase letter."
+msgstr "Пароль должен содержать хотя бы одну строчную букву."
+
+msgid "Password must contain at least one digit."
+msgstr "Пароль должен содержать хотя бы одну цифру."
+
+msgid "Password must contain at least one special character."
+msgstr "Пароль должен содержать хотя бы один специальный символ."
+
+msgid "Passwords do not match."
+msgstr "Пароли не совпадают."
+
+msgid "Email or username is required."
+msgstr "Требуется email или имя пользователя."
+
+msgid "Invalid credentials."
+msgstr "Неверный email или пароль."
+
+msgid "Account is disabled."
+msgstr "Аккаунт отключён."
+
+msgid "Incorrect password."
+msgstr "Неверный пароль."
+
+msgid "Password changed successfully."
+msgstr "Пароль успешно изменён."
+
+msgid "Logged out successfully."
+msgstr "Вы успешно вышли из системы."
+
+# permissions
+msgid "Only teachers can perform this action."
+msgstr "Это действие доступно только учителям."
+
+msgid "Only students can perform this action."
+msgstr "Это действие доступно только ученикам."
+
+# classes
+msgid "Student not found."
+msgstr "Ученик не найден."
+
+msgid "Student enrolled successfully."
+msgstr "Ученик успешно записан в класс."
+
+msgid "Student unenrolled."
+msgstr "Ученик исключён из класса."
+
+msgid "Enrollment not found."
+msgstr "Запись не найдена."
+
+msgid "Permission denied."
+msgstr "Нет доступа."
+
+# exams
+msgid "Exam is not currently active."
+msgstr "Экзамен сейчас не активен."
+
+msgid "You are not enrolled in this class."
+msgstr "Вы не записаны в этот класс."
+
+msgid "You have already completed this exam."
+msgstr "Вы уже прошли этот экзамен."
+
+msgid "No active exam session found."
+msgstr "Активная сессия экзамена не найдена."
+
+msgid "No active session."
+msgstr "Нет активной сессии."
+
+msgid "End time must be after start time."
+msgstr "Время окончания должно быть позже времени начала."
+
+# subscriptions
+msgid "Plan not found."
+msgstr "Тариф не найден."
+
+msgid "No subscription found."
+msgstr "Подписка не найдена."
+
+# general
+msgid "This field is required."
+msgstr "Это поле обязательно."
+
+msgid "This field may not be blank."
+msgstr "Это поле не может быть пустым."
+
+msgid "A user with that email already exists."
+msgstr "Пользователь с таким email уже существует."
+
+msgid "A user with that username already exists."
+msgstr "Пользователь с таким именем уже существует."
+
+msgid "Enter a valid email address."
+msgstr "Введите корректный email адрес."
+
+msgid "Ensure this field has no more than %(max_length)s characters."
+msgstr "Это поле не должно содержать более %(max_length)s символов."
+
+msgid "Ensure this value is greater than or equal to %(limit_value)s."
+msgstr "Это значение должно быть не менее %(limit_value)s."
+
+msgid "Ensure this value is less than or equal to %(limit_value)s."
+msgstr "Это значение должно быть не более %(limit_value)s."
+
+msgid "Not found."
+msgstr "Не найдено."
+
+msgid "Authentication credentials were not provided."
+msgstr "Учётные данные не были предоставлены."
+
+msgid "Given token not valid for any token type"
+msgstr "Токен недействителен."
+
+msgid "Token is invalid or expired"
+msgstr "Токен недействителен или истёк."
