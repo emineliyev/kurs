@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from apps.accounts.permissions import IsTeacher
 from .models import PaymentRequisite, PaymentRequest
 from .serializers import PaymentRequisiteSerializer, PaymentRequestSerializer, SubmitPaymentRequestSerializer
-from .services import notify_admin_new_request
+from .tasks import send_admin_notification_task
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class SubmitPaymentRequestView(APIView):
         serializer = SubmitPaymentRequestSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             payment = serializer.save(teacher=request.user)
-            notify_admin_new_request(payment)
+            send_admin_notification_task.delay(payment.pk)
             return Response(
                 {'detail': 'Ödəniş sorğunuz qəbul edildi. Admin yoxlayandan sonra abunəliyiniz aktivləşdiriləcək.'},
                 status=status.HTTP_201_CREATED,

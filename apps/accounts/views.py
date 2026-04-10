@@ -4,6 +4,7 @@ from django.core import signing
 from django.core.mail import send_mail
 from django.utils.translation import gettext_lazy as _
 from apps.email_utils import email_shell, cta_button, greeting, paragraph, note
+from apps.accounts.tasks import send_verification_email_task, send_password_reset_email_task
 from rest_framework import status, generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
@@ -118,7 +119,7 @@ class TeacherRegisterView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             self._create_free_subscription(user)
-            _send_verification_email(user)
+            send_verification_email_task.delay(user.pk)
             refresh = RefreshToken.for_user(user)
             return Response({
                 'user': UserSerializer(user).data,
@@ -410,7 +411,7 @@ class ResendVerificationView(APIView):
         user = request.user
         if user.is_email_verified:
             return Response({'detail': 'Email artıq təsdiqlənib.'})
-        _send_verification_email(user)
+        send_verification_email_task.delay(user.pk)
         return Response({'detail': 'Doğrulama emaili yenidən göndərildi.'})
 
 
@@ -433,7 +434,7 @@ class PasswordResetRequestView(APIView):
         # Always return success to prevent email enumeration
         try:
             user = User.objects.get(email=email, is_active=True)
-            _send_password_reset_email(user)
+            send_password_reset_email_task.delay(user.pk)
         except User.DoesNotExist:
             pass
         return Response({'detail': 'Əgər bu email mövcuddursa, şifrə sıfırlama linki göndəriləcək.'})

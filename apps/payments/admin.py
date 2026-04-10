@@ -6,7 +6,7 @@ from django.utils.html import format_html
 
 from apps.subscriptions.models import Subscription
 from .models import PaymentRequisite, PaymentRequest
-from .services import notify_user_approved, notify_user_rejected
+from .tasks import send_approval_email_task, send_rejection_email_task
 
 
 # ── PaymentRequisite ──────────────────────────────────────────────────────────
@@ -81,10 +81,10 @@ class PaymentRequestAdmin(admin.ModelAdmin):
                 super().save_model(request, obj, form, change)
                 if obj.status == PaymentRequest.STATUS_APPROVED:
                     self._activate_subscription(obj)
-                    notify_user_approved(obj)
+                    send_approval_email_task.delay(obj.pk)
                     messages.success(request, f'{obj.teacher.email} üçün abunəlik aktivləşdirildi.')
                 elif obj.status == PaymentRequest.STATUS_REJECTED:
-                    notify_user_rejected(obj)
+                    send_rejection_email_task.delay(obj.pk)
                 return
         super().save_model(request, obj, form, change)
 
@@ -100,7 +100,7 @@ class PaymentRequestAdmin(admin.ModelAdmin):
             pr.reviewed_at = timezone.now()
             pr.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
             self._activate_subscription(pr)
-            notify_user_approved(pr)
+            send_approval_email_task.delay(pr.pk)
             count += 1
         self.message_user(request, f'{count} ödəniş təsdiqləndi, abunəliklər aktivləşdirildi.', messages.SUCCESS)
 
@@ -115,7 +115,7 @@ class PaymentRequestAdmin(admin.ModelAdmin):
             if not pr.rejection_reason:
                 pr.rejection_reason = 'Ödəniş təsdiqlənmədi.'
             pr.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'rejection_reason'])
-            notify_user_rejected(pr)
+            send_rejection_email_task.delay(pr.pk)
             count += 1
         self.message_user(request, f'{count} sorğu rədd edildi.', messages.WARNING)
 
