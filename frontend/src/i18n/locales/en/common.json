@@ -146,6 +146,8 @@
   "landing_per_month": "AZN/mo",
   "landing_unlimited_tests": "Unlimited tests",
   "landing_n_tests": "{{count}} tests/month",
+  "landing_unlimited_exams": "Unlimited exams",
+  "landing_n_exams": "{{count}} exams/month",
   "landing_unlimited_classes": "Unlimited classes",
   "landing_n_classes": "{{count}} classes",
   "landing_unlimited_students": "Unlimited students",

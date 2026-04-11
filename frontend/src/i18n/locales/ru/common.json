@@ -146,6 +146,8 @@
   "landing_per_month": "AZN/мес",
   "landing_unlimited_tests": "Неограниченные тесты",
   "landing_n_tests": "{{count}} тестов в месяц",
+  "landing_unlimited_exams": "Неограниченные экзамены",
+  "landing_n_exams": "{{count}} экзаменов в месяц",
   "landing_unlimited_classes": "Неограниченные классы",
   "landing_n_classes": "{{count}} классов",
   "landing_unlimited_students": "Неограниченные ученики",

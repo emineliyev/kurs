@@ -315,22 +315,16 @@ export default function LandingPage() {
                       </li>
                       <li className="flex items-start gap-2 text-slate-600">
                         <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
+                        {plan.max_exams_per_month === -1 ? t('landing_unlimited_exams') : t('landing_n_exams', { count: plan.max_exams_per_month })}
+                      </li>
+                      <li className="flex items-start gap-2 text-slate-600">
+                        <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
                         {plan.max_classes === -1 ? t('landing_unlimited_classes') : t('landing_n_classes', { count: plan.max_classes })}
                       </li>
                       <li className="flex items-start gap-2 text-slate-600">
                         <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
                         {plan.max_students === -1 ? t('landing_unlimited_students') : t('landing_n_students', { count: plan.max_students })}
                       </li>
-                      <li className="flex items-start gap-2 text-slate-600">
-                        <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
-                        {t('landing_analytics_stats')}
-                      </li>
-                      {(isPro || isStandard) && (
-                        <li className="flex items-start gap-2 text-slate-600">
-                          <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
-                          {t('landing_pdf_report')}
-                        </li>
-                      )}
                       {plan.price === 0 && (
                         <li className="flex items-start gap-2 text-slate-600">
                           <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>

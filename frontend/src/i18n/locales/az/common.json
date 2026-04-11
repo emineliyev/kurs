@@ -146,6 +146,8 @@
   "landing_per_month": "AZN/ay",
   "landing_unlimited_tests": "Limitsiz test",
   "landing_n_tests": "Ayda {{count}} test",
+  "landing_unlimited_exams": "Limitsiz imtahan",
+  "landing_n_exams": "Ayda {{count}} imtahan",
   "landing_unlimited_classes": "Limitsiz sinif",
   "landing_n_classes": "{{count}} sinif",
   "landing_unlimited_students": "Limitsiz şagird",
