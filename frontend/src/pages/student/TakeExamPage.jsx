@@ -183,6 +183,18 @@ export default function TakeExamPage() {
       <div className="card p-4 flex items-center justify-between sticky top-14 z-10">
         <div>
           <p className="font-semibold text-slate-900">{exam?.title}</p>
+          <div className="flex items-center gap-3 flex-wrap">
+            {exam?.teacher_name && (
+              <span className="text-xs text-slate-400 flex items-center gap-1">
+                <i className="bi bi-person"></i> {exam.teacher_name}
+              </span>
+            )}
+            {exam?.subject_name && (
+              <span className="text-xs text-slate-400 flex items-center gap-1">
+                <i className="bi bi-book"></i> {exam.subject_name}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-slate-500">
             {isPassage
               ? <span className="text-teal-600 flex items-center gap-1"><i className="bi bi-book"></i> {t('passage_reading_label', { ns: 'student' })}</span>

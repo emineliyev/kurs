@@ -204,10 +204,12 @@ export default function ExamsPage() {
                           className="w-7 h-7 rounded-lg flex items-center justify-center bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors">
                           <i className="bi bi-list-ol text-xs"></i>
                         </Link>
-                        <button onClick={() => openEdit(exam)} title={t('edit_time', { ns: 'teacher' })}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
-                          <i className="bi bi-pencil text-xs"></i>
-                        </button>
+                        {exam.is_upcoming && (
+                          <button onClick={() => openEdit(exam)} title={t('edit_time', { ns: 'teacher' })}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
+                            <i className="bi bi-pencil text-xs"></i>
+                          </button>
+                        )}
                         <button onClick={() => onDelete(exam)} title={t('delete')}
                           className="w-7 h-7 rounded-lg flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
                           <i className="bi bi-trash text-xs"></i>
@@ -255,10 +257,12 @@ export default function ExamsPage() {
                     className="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors">
                     <i className="bi bi-list-ol text-sm"></i>
                   </Link>
-                  <button onClick={() => openEdit(exam)} title={t('edit')}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
-                    <i className="bi bi-pencil text-sm"></i>
-                  </button>
+                  {exam.is_upcoming && (
+                    <button onClick={() => openEdit(exam)} title={t('edit')}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
+                      <i className="bi bi-pencil text-sm"></i>
+                    </button>
+                  )}
                   <button onClick={() => onDelete(exam)} title={t('delete')}
                     className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
                     <i className="bi bi-trash text-sm"></i>

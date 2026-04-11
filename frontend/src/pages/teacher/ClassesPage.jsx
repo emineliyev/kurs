@@ -179,7 +179,7 @@ export default function ClassesPage() {
               <label className="block text-sm font-medium mb-1">{t('group', { ns: 'teacher' })}</label>
               <select {...regEdit('group')} className="input-field">
                 <option value="">{t('select_option')}</option>
-                {['I','II','III','A','B','C'].map((g) => <option key={g} value={g}>{g}</option>)}
+                {['I','II','III','IV','V'].map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div className="md:col-span-2 flex gap-3">
@@ -220,7 +220,7 @@ export default function ClassesPage() {
               <label className="block text-sm font-medium mb-1">{t('group', { ns: 'teacher' })}</label>
               <select {...register('group')} className="input-field">
                 <option value="">{t('select_option')}</option>
-                {['I','II','III','A','B','C'].map((g) => <option key={g} value={g}>{g}</option>)}
+                {['I','II','III','IV','V'].map((g) => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div className="md:col-span-2 flex gap-3">

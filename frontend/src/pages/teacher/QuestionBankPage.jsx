@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
@@ -6,6 +6,7 @@ import { bankApi } from '@/api/questionBank'
 import FormulaLibrary from '@/components/teacher/FormulaLibrary'
 import MediaPickerModal from '@/components/common/MediaPickerModal'
 import { renderMath } from '@/utils/math'
+import QuestionTextEditor, { LatexPreview } from '@/components/teacher/QuestionTextEditor'
 
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -74,6 +75,7 @@ export default function QuestionBankPage() {
   const [showMedia, setShowMedia]   = useState(false)
   const [search, setSearch]         = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
+  const editorRef = useRef(null)
 
   useEffect(() => { loadQuestions() }, [])
 
@@ -248,7 +250,7 @@ export default function QuestionBankPage() {
   }
 
   const insertFormula = (latex) => {
-    upForm({ text: form.text + ` $${latex}$ ` })
+    editorRef.current?.insertText(` $${latex}$ `)
     setShowFormula(false)
   }
 
@@ -393,21 +395,9 @@ export default function QuestionBankPage() {
             {/* Question text */}
             {qType !== 'image_mcq' && (
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    {t('q_text_label', { ns: 'teacher' })}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => setShowMedia(true)}
-                      className="flex items-center gap-1 text-xs px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded border border-blue-200 font-medium">
-                      <i className="bi bi-image"></i> {t('q_image_btn', { ns: 'teacher' })}
-                    </button>
-                    <button type="button" onClick={() => setShowFormula(true)}
-                      className="flex items-center gap-1 text-xs px-2 py-1 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded border border-purple-200 font-medium">
-                      <i className="bi bi-calculator"></i> {t('q_formula_btn', { ns: 'teacher' })}
-                    </button>
-                  </div>
-                </div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">
+                  {t('q_text_label', { ns: 'teacher' })}
+                </label>
                 {form._imagePreview && (
                   <div className="relative inline-block group mb-3">
                     <img src={form._imagePreview} alt=""
@@ -419,21 +409,14 @@ export default function QuestionBankPage() {
                     </button>
                   </div>
                 )}
-                <textarea
+                <QuestionTextEditor
+                  ref={editorRef}
                   value={form.text}
-                  onChange={e => upForm({ text: e.target.value })}
-                  placeholder={t('q_text_placeholder', { ns: 'teacher' })}
-                  rows={3}
-                  className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary-500 resize-none placeholder-slate-400"
+                  onChange={v => upForm({ text: v })}
+                  onFormulaClick={() => setShowFormula(true)}
+                  onImageClick={() => setShowMedia(true)}
                 />
-                {form.text?.includes('$') && (
-                  <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm">
-                    <span className="text-xs text-blue-400 font-medium mr-2">
-                      {t('preview_label', { ns: 'teacher' })}
-                    </span>
-                    <span dangerouslySetInnerHTML={{ __html: renderMath(form.text) }} />
-                  </div>
-                )}
+                <LatexPreview text={form.text} />
               </div>
             )}
 

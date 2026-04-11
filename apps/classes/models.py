@@ -12,7 +12,7 @@ class Subject(models.Model):
 
 class Class(models.Model):
     GRADE_CHOICES = [(i, str(i)) for i in range(1, 12)]
-    GROUP_CHOICES = [('I', 'I'), ('II', 'II'), ('III', 'III'), ('A', 'A'), ('B', 'B'), ('C', 'C')]
+    GROUP_CHOICES = [('I', 'I'), ('II', 'II'), ('III', 'III'), ('IV', 'IV'), ('V', 'V')]
 
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='classes')
     subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)

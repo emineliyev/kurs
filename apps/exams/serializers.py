@@ -12,6 +12,7 @@ class ExamSerializer(serializers.ModelSerializer):
     class_grade = serializers.IntegerField(source='class_room.grade', read_only=True)
     class_group = serializers.CharField(source='class_room.group', read_only=True)
     teacher_name = serializers.SerializerMethodField()
+    subject_name = serializers.SerializerMethodField()
     is_ongoing = serializers.BooleanField(read_only=True)
     is_upcoming = serializers.BooleanField(read_only=True)
     is_finished = serializers.BooleanField(read_only=True)
@@ -26,7 +27,7 @@ class ExamSerializer(serializers.ModelSerializer):
         model = Exam
         fields = [
             'id', 'test', 'test_title', 'test_topic', 'class_room', 'class_name',
-            'class_grade', 'class_group', 'teacher_name',
+            'class_grade', 'class_group', 'teacher_name', 'subject_name',
             'title', 'start_time', 'end_time', 'duration_minutes',
             'randomize_questions', 'randomize_answers', 'is_active',
             'is_ongoing', 'is_upcoming', 'is_finished', 'my_status',
@@ -38,6 +39,12 @@ class ExamSerializer(serializers.ModelSerializer):
     def get_teacher_name(self, obj):
         try:
             return obj.class_room.teacher.get_full_name() or obj.class_room.teacher.username
+        except Exception:
+            return ''
+
+    def get_subject_name(self, obj):
+        try:
+            return obj.class_room.subject.name if obj.class_room.subject else ''
         except Exception:
             return ''
 

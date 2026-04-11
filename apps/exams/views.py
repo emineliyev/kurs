@@ -53,9 +53,10 @@ class ExamViewSet(viewsets.ModelViewSet):
             return serializer.save()
 
     def update(self, request, *args, **kwargs):
-        if self.get_object().results.filter(status=ExamResult.STATUS_SUBMITTED).exists():
+        exam = self.get_object()
+        if not exam.is_upcoming:
             return Response(
-                {'detail': 'Şagirdlər bu imtahanı tamamladığı üçün redaktə edilə bilməz.'},
+                {'detail': 'Yalnız başlamamış imtahanlar redaktə edilə bilər.'},
                 status=status.HTTP_403_FORBIDDEN
             )
         return super().update(request, *args, **kwargs)
