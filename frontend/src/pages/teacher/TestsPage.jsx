@@ -140,10 +140,12 @@ export default function TestsPage() {
                     <td className="px-5 py-3 text-slate-400 text-xs">{test.created_at ? format(new Date(test.created_at), 'dd.MM.yyyy') : '—'}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1.5 justify-end">
-                        <Link to={`/teacher/tests/${test.id}`} title={t('edit')}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
-                          <i className="bi bi-pencil text-xs"></i>
-                        </Link>
+                        {!test.is_published && (
+                          <Link to={`/teacher/tests/${test.id}/edit`} title={t('edit')}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
+                            <i className="bi bi-pencil text-xs"></i>
+                          </Link>
+                        )}
                         <button onClick={() => onDuplicate(test.id)} title={t('copy')} disabled={duplicatingId === test.id}
                           className="w-7 h-7 rounded-lg flex items-center justify-center bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors disabled:opacity-50">
                           <i className={`bi ${duplicatingId === test.id ? 'bi-arrow-repeat animate-spin' : 'bi-copy'} text-xs`}></i>
@@ -180,10 +182,12 @@ export default function TestsPage() {
                 <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                   <span className="text-xs text-slate-400">{test.created_at ? format(new Date(test.created_at), 'dd.MM.yyyy') : '—'}</span>
                   <div className="flex items-center gap-1.5">
-                    <Link to={`/teacher/tests/${test.id}`} title={t('edit')}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
-                      <i className="bi bi-pencil text-sm"></i>
-                    </Link>
+                    {!test.is_published && (
+                      <Link to={`/teacher/tests/${test.id}/edit`} title={t('edit')}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
+                        <i className="bi bi-pencil text-sm"></i>
+                      </Link>
+                    )}
                     <button onClick={() => onDuplicate(test.id)} title={t('copy')} disabled={duplicatingId === test.id}
                       className="w-8 h-8 rounded-lg flex items-center justify-center bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors disabled:opacity-50">
                       <i className={`bi ${duplicatingId === test.id ? 'bi-arrow-repeat animate-spin' : 'bi-copy'} text-sm`}></i>

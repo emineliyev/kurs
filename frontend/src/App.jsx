@@ -79,6 +79,7 @@ export default function App() {
         <Route index element={<TeacherDashboard />} />
         <Route path="tests" element={<TestsPage />} />
         <Route path="tests/create" element={<TestCreatePage />} />
+        <Route path="tests/:id/edit" element={<TestCreatePage />} />
         <Route path="tests/:id" element={<TestDetailPage />} />
         <Route path="classes" element={<ClassesPage />} />
         <Route path="classes/:id" element={<ClassDetailPage />} />

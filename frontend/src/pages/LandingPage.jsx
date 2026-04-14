@@ -176,8 +176,9 @@ export default function LandingPage() {
               {t('landing_start_free')}
             </Link>
             <a
-              href="#features"
-              onClick={(e) => smoothScroll(e, 'features')}
+              href="https://www.youtube.com/@kursumaz"
+              target="_blank"
+              rel="noopener noreferrer"
               className="border-2 border-white/50 text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 transition-colors text-lg"
             >
               <i className="bi bi-play-circle mr-2"></i>
@@ -399,6 +400,17 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* WhatsApp fixed button */}
+      <a
+        href="https://wa.me/994XXXXXXXXX"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors"
+        title="WhatsApp"
+      >
+        <i className="bi bi-whatsapp text-2xl"></i>
+      </a>
     </div>
   )
 }

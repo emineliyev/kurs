@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
@@ -539,6 +539,8 @@ function SortableQuestionCard({ dndId, ...props }) {
 export default function TestCreatePage() {
   const { t } = useTranslation(['common', 'teacher'])
   const navigate = useNavigate()
+  const { id: editId } = useParams()
+  const isEditMode = !!editId
   const [classes, setClasses]         = useState([])
   const [selectedClasses, setSelectedClasses] = useState([])
   const [step, setStep]               = useState(1)
@@ -549,7 +551,7 @@ export default function TestCreatePage() {
   const [bankQuestions, setBankQuestions] = useState([])
   const [bankLoading, setBankLoading]     = useState(false)
   const [addingBankId, setAddingBankId]   = useState(null)
-  const { register, handleSubmit }    = useForm({
+  const { register, handleSubmit, reset } = useForm({
     defaultValues: { passing_score: 50, randomize_questions: false, randomize_answers: false }
   })
 
@@ -562,6 +564,57 @@ export default function TestCreatePage() {
   useEffect(() => {
     classesApi.list().then(r => setClasses(r.data.results || r.data))
   }, [])
+
+  useEffect(() => {
+    if (!editId) return
+    Promise.all([
+      testsApi.get(editId),
+      testsApi.questions(editId),
+    ]).then(([testRes, qRes]) => {
+      const test = testRes.data
+      if (test.is_published) {
+        toast.error(t('test_already_published', { ns: 'teacher' }))
+        navigate('/teacher/tests')
+        return
+      }
+      reset({
+        title: test.title,
+        description: test.description || '',
+        topic: test.topic || '',
+        passing_score: test.passing_score,
+        randomize_questions: test.randomize_questions,
+        randomize_answers: test.randomize_answers,
+      })
+      setSelectedClasses(test.class_rooms || [])
+      setCreatedTest(test)
+      const loadedQs = (qRes.data || []).map(q => ({
+        question_type: q.question_type,
+        text: q.text || '',
+        points: q.points || 1,
+        math_formula: q.math_formula || '',
+        model_answer: q.model_answer || '',
+        correct_answer: q.correct_answer || '',
+        tolerance: q.tolerance ?? '',
+        answers: q.answers || [],
+        image: q.image || null,
+        _imagePreview: q.image || null,
+        _imageFile: null,
+        _saved: true,
+        _id: q.id,
+        _choiceCount: q.question_type === 'image_mcq' ? (q.answers?.length || 4) : undefined,
+        _correctIndex: q.question_type === 'image_mcq'
+          ? (q.answers?.findIndex(a => a.is_correct) ?? -1)
+          : q.answers?.findIndex(a => a.is_correct) ?? undefined,
+        _hideChoices: q.hide_choices || false,
+        _dndId: newDndId(),
+      }))
+      setQuestions(loadedQs.length ? loadedQs : [defaultQuestion('multiple_choice')])
+      setStep(2)
+    }).catch(() => {
+      toast.error(t('error_occurred'))
+      navigate('/teacher/tests')
+    })
+  }, [editId])
 
   const handleDragEnd = async (event) => {
     const { active, over } = event
@@ -582,10 +635,17 @@ export default function TestCreatePage() {
       return
     }
     try {
-      const res = await testsApi.create({ ...data, class_rooms: selectedClasses })
-      setCreatedTest(res.data)
-      setStep(2)
-      toast.success(t('test_created', { ns: 'teacher' }))
+      if (isEditMode) {
+        const res = await testsApi.update(editId, { ...data, class_rooms: selectedClasses })
+        setCreatedTest(res.data)
+        setStep(2)
+        toast.success(t('test_updated', { ns: 'teacher' }))
+      } else {
+        const res = await testsApi.create({ ...data, class_rooms: selectedClasses })
+        setCreatedTest(res.data)
+        setStep(2)
+        toast.success(t('test_created', { ns: 'teacher' }))
+      }
     } catch (err) {
       const errs = err.response?.data
       if (errs?.detail) toast.error(String(errs.detail))
@@ -688,7 +748,9 @@ export default function TestCreatePage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-slate-900">
-            {step === 1 ? t('new_test_create', { ns: 'teacher' }) : createdTest?.title}
+            {step === 1
+              ? (isEditMode ? t('edit_test', { ns: 'teacher' }) : t('new_test_create', { ns: 'teacher' }))
+              : createdTest?.title}
           </h1>
           {step === 2 && (
             <p className="text-sm text-slate-500">
