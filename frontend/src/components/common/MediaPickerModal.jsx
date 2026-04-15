@@ -36,7 +36,7 @@ function drawArrowHead(ctx, x1, y1, x2, y2) {
 }
 
 function drawShape(ctx, shape) {
-  const { type, color, lw } = shape
+  const { type, color, lw, filled, fillColor } = shape
   if (type === 'eraser') {
     ctx.save()
     ctx.fillStyle = '#ffffff'
@@ -47,9 +47,10 @@ function drawShape(ctx, shape) {
     ctx.restore()
     return
   }
-  ctx.strokeStyle = color; ctx.fillStyle = color
+  ctx.strokeStyle = color; ctx.fillStyle = fillColor || color
   ctx.lineWidth = lw; ctx.setLineDash([])
   if (type === 'rect') {
+    if (filled) { ctx.fillRect(shape.x1, shape.y1, shape.x2 - shape.x1, shape.y2 - shape.y1) }
     ctx.strokeRect(shape.x1, shape.y1, shape.x2 - shape.x1, shape.y2 - shape.y1)
   } else if (type === 'circle') {
     ctx.beginPath()
@@ -57,7 +58,9 @@ function drawShape(ctx, shape) {
       (shape.x1 + shape.x2) / 2, (shape.y1 + shape.y2) / 2,
       Math.abs(shape.x2 - shape.x1) / 2, Math.abs(shape.y2 - shape.y1) / 2,
       0, 0, Math.PI * 2
-    ); ctx.stroke()
+    )
+    if (filled) ctx.fill()
+    ctx.stroke()
   } else if (type === 'line') {
     ctx.beginPath(); ctx.moveTo(shape.x1, shape.y1); ctx.lineTo(shape.x2, shape.y2); ctx.stroke()
   } else if (type === 'arrow') {
@@ -255,6 +258,208 @@ function AnnotateCanvas({ dataUrl, onConfirm, onSkip, onBack }) {
             <i className="bi bi-check-lg"></i> {t('done')}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Draw Stage (blank canvas with shapes) ─────────────────────────────────────
+function DrawCanvas({ onConfirm, onBack }) {
+  const { t } = useTranslation('common')
+  const canvasRef  = useRef(null)
+  const shapesRef  = useRef([])
+  const activeRef  = useRef(null)
+  const downRef    = useRef(false)
+  const rafRef     = useRef(null)
+  const [tool, setTool]   = useState('pencil')
+  const [color, setColor] = useState('#111827')
+  const [lw, setLw]       = useState(2.5)
+  const [filled, setFilled] = useState(false)
+  const [count, setCount] = useState(0)
+
+  const FILL_SHAPES = ['rect', 'circle']
+
+  const CANVAS_W = 800
+  const CANVAS_H = 560
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    shapesRef.current.forEach(s => drawShape(ctx, s))
+    if (activeRef.current) drawShape(ctx, activeRef.current)
+  }, [])
+
+  const sched = useCallback(() => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    rafRef.current = requestAnimationFrame(draw)
+  }, [draw])
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    canvas.width  = CANVAS_W
+    canvas.height = CANVAS_H
+    draw()
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+  }, [draw])
+
+  const getCoords = (e) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+    const r  = canvas.getBoundingClientRect()
+    const sx = canvas.width  / r.width
+    const sy = canvas.height / r.height
+    const px = e.touches ? e.touches[0].clientX : e.clientX
+    const py = e.touches ? e.touches[0].clientY : e.clientY
+    return { x: (px - r.left) * sx, y: (py - r.top) * sy }
+  }
+
+  const onDown = (e) => {
+    e.preventDefault()
+    downRef.current = true
+    const { x, y } = getCoords(e)
+    const isFillable = FILL_SHAPES.includes(tool)
+    if (tool === 'pencil') {
+      activeRef.current = { type: 'pencil', color, lw, pts: [{ x, y }] }
+    } else {
+      activeRef.current = { type: tool, color, lw, x1: x, y1: y, x2: x, y2: y, filled: isFillable && filled, fillColor: color }
+    }
+    sched()
+  }
+
+  const onMove = (e) => {
+    if (!downRef.current || !activeRef.current) return
+    e.preventDefault()
+    const { x, y } = getCoords(e)
+    if (activeRef.current.type === 'pencil') {
+      activeRef.current = { ...activeRef.current, pts: [...activeRef.current.pts, { x, y }] }
+    } else if (activeRef.current.type === 'eraser') {
+      activeRef.current = { ...activeRef.current, x2: x, y2: y }
+    } else {
+      activeRef.current = { ...activeRef.current, x2: x, y2: y }
+    }
+    sched()
+  }
+
+  const onUp = () => {
+    if (!downRef.current || !activeRef.current) return
+    downRef.current = false
+    if (activeRef.current.type !== 'eraser' || (Math.abs(activeRef.current.x2 - activeRef.current.x1) > 2)) {
+      shapesRef.current = [...shapesRef.current, activeRef.current]
+      setCount(c => c + 1)
+    }
+    activeRef.current = null
+    sched()
+  }
+
+  const undo = () => {
+    shapesRef.current = shapesRef.current.slice(0, -1)
+    setCount(c => c - 1)
+    sched()
+  }
+
+  const clear = () => {
+    shapesRef.current = []
+    setCount(0)
+    sched()
+  }
+
+  const confirm = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+    canvas.toBlob(blob => {
+      onConfirm(new File([blob], 'drawing.jpg', { type: 'image/jpeg' }), URL.createObjectURL(blob), dataUrl)
+    }, 'image/jpeg', 0.92)
+  }
+
+  const TOOLS = [
+    { id: 'pencil', icon: 'bi-pencil',         labelKey: 'tool_pencil' },
+    { id: 'arrow',  icon: 'bi-arrow-up-right', labelKey: 'tool_arrow'  },
+    { id: 'rect',   icon: 'bi-square',         labelKey: 'tool_rect'   },
+    { id: 'circle', icon: 'bi-circle',         labelKey: 'tool_circle' },
+    { id: 'line',   icon: 'bi-slash-lg',       labelKey: 'tool_line'   },
+    { id: 'eraser', icon: 'bi-eraser',         labelKey: 'tool_eraser' },
+  ]
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Toolbar */}
+      <div className="flex items-center gap-1.5 px-4 py-2 border-b bg-slate-50 shrink-0 flex-wrap">
+        {TOOLS.map(tl => (
+          <button key={tl.id} onClick={() => setTool(tl.id)}
+            title={t(tl.labelKey)}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${tool === tl.id ? 'bg-primary-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+            <i className={`bi ${tl.icon} text-sm`}></i>
+          </button>
+        ))}
+        {tool !== 'eraser' && (<>
+          <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
+          <div className="flex gap-1 items-center">
+            {ANNO_COLORS.map(c => (
+              <button key={c} onClick={() => setColor(c)} title={c}
+                className={`w-5 h-5 rounded-full border-2 transition-transform shrink-0 ${color === c ? 'border-slate-600 scale-125 shadow' : 'border-white hover:scale-110'}`}
+                style={{ background: c }} />
+            ))}
+          </div>
+          <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
+          <div className="flex gap-1">
+            {[1.5, 2.5, 4.5].map(s => (
+              <button key={s} onClick={() => setLw(s)} title={`${s}px`}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${lw === s ? 'bg-primary-600' : 'bg-white border border-slate-200 hover:bg-slate-100'}`}>
+                <span style={{ width: 14, height: Math.round(s * 0.9 + 1), background: lw === s ? '#fff' : '#475569', display: 'block', borderRadius: 2 }}></span>
+              </button>
+            ))}
+          </div>
+          {FILL_SHAPES.includes(tool) && (<>
+            <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
+            <button
+              onClick={() => setFilled(v => !v)}
+              title={filled ? t('draw_filled_tip') : t('draw_outline_tip')}
+              className={`flex items-center gap-1 px-2 h-8 rounded-lg text-xs font-medium transition-colors border ${
+                filled
+                  ? 'bg-primary-600 text-white border-primary-600'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              <i className={`bi ${filled ? 'bi-square-fill' : 'bi-square'} text-sm`}></i>
+              <span className="hidden sm:inline">{filled ? t('draw_filled') : t('draw_outline')}</span>
+            </button>
+          </>)}
+        </>)}
+        <div className="flex-1"></div>
+        <button onClick={undo} disabled={count === 0}
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40">
+          <i className="bi bi-arrow-counterclockwise"></i> {t('undo')}
+        </button>
+        <button onClick={clear} disabled={count === 0}
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-white border border-slate-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 disabled:opacity-40">
+          <i className="bi bi-trash3"></i> {t('clear_all')}
+        </button>
+      </div>
+
+      {/* Canvas */}
+      <div className="flex-1 min-h-0 overflow-auto flex items-center justify-center bg-slate-700 p-4">
+        <canvas ref={canvasRef}
+          className="shadow-xl rounded select-none touch-none bg-white"
+          style={{ display: 'block', maxWidth: '100%', cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}
+          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
+          onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+        />
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50 shrink-0">
+        <button onClick={onBack} className="btn-secondary text-sm py-2">
+          <i className="bi bi-arrow-left"></i> {t('back')}
+        </button>
+        <button onClick={confirm} disabled={count === 0}
+          className="btn-primary text-sm py-2 disabled:opacity-40 disabled:cursor-not-allowed">
+          <i className="bi bi-check-lg"></i> {t('draw_confirm')}
+        </button>
       </div>
     </div>
   )
@@ -538,6 +743,9 @@ function CropCanvas({ dataUrl, onCropConfirm, onBack }) {
   )
 }
 
+const PDF_INITIAL_BATCH = 8
+const PDF_MORE_BATCH    = 8
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function MediaPickerModal({ onPick, onClose }) {
   const { t } = useTranslation('common')
@@ -548,7 +756,24 @@ export default function MediaPickerModal({ onPick, onClose }) {
   const [croppedDataUrl, setCroppedDataUrl] = useState(null)
   const [pdfPages, setPdfPages]         = useState([])
   const [pdfLoading, setPdfLoading]     = useState(false)
+  const [pdfLoadingMore, setPdfLoadingMore] = useState(false)
+  const [pdfTotalPages, setPdfTotalPages]   = useState(0)
+  const pdfDocRef = useRef(null)
   const fileRef = useRef()
+
+  const renderPdfPages = async (pdfDoc, from, count) => {
+    const pages = []
+    const to = Math.min(from + count, pdfDoc.numPages)
+    for (let i = from + 1; i <= to; i++) {
+      const page = await pdfDoc.getPage(i)
+      const viewport = page.getViewport({ scale: 1.5 })
+      const canvas = document.createElement('canvas')
+      canvas.width = viewport.width; canvas.height = viewport.height
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
+      pages.push(canvas.toDataURL())
+    }
+    return pages
+  }
 
   const handleFile = async (file) => {
     if (!file) return
@@ -561,19 +786,23 @@ export default function MediaPickerModal({ onPick, onClose }) {
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER
         const buf = await file.arrayBuffer()
         const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise
-        const pages = []
-        for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
-          const page = await pdf.getPage(i)
-          const viewport = page.getViewport({ scale: 1.5 })
-          const canvas = document.createElement('canvas')
-          canvas.width = viewport.width; canvas.height = viewport.height
-          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
-          pages.push(canvas.toDataURL())
-        }
+        pdfDocRef.current = pdf
+        setPdfTotalPages(pdf.numPages)
+        const pages = await renderPdfPages(pdf, 0, PDF_INITIAL_BATCH)
         setPdfPages(pages); setStage('pdf')
       } catch (err) { console.error(err) }
       finally { setPdfLoading(false) }
     }
+  }
+
+  const handleLoadMore = async () => {
+    if (!pdfDocRef.current || pdfLoadingMore) return
+    setPdfLoadingMore(true)
+    try {
+      const more = await renderPdfPages(pdfDocRef.current, pdfPages.length, PDF_MORE_BATCH)
+      setPdfPages(prev => [...prev, ...more])
+    } catch (err) { console.error(err) }
+    finally { setPdfLoadingMore(false) }
   }
 
   const handleDrop = (e) => { e.preventDefault(); handleFile(e.dataTransfer.files[0]) }
@@ -622,6 +851,15 @@ export default function MediaPickerModal({ onPick, onClose }) {
     </Shell>
   )
 
+  if (stage === 'draw') return (
+    <Shell title={t('draw_canvas_title')} icon="bi-pen" maxW="max-w-5xl">
+      <DrawCanvas
+        onConfirm={(file, url) => onPick(file, url)}
+        onBack={() => setStage('pick')}
+      />
+    </Shell>
+  )
+
   if (stage === 'pdf') return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl overflow-hidden w-full max-w-5xl shadow-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
@@ -629,7 +867,7 @@ export default function MediaPickerModal({ onPick, onClose }) {
           <div className="flex items-center gap-2">
             <i className="bi bi-file-pdf text-red-500"></i>
             <span className="font-semibold text-slate-900">{t('pdf_select_page')}</span>
-            <span className="text-xs text-slate-400">{t('pdf_page_count', { count: pdfPages.length })}</span>
+            <span className="text-xs text-slate-400">{t('pdf_page_count', { count: pdfTotalPages })}</span>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">
             <i className="bi bi-x-lg"></i>
@@ -650,9 +888,23 @@ export default function MediaPickerModal({ onPick, onClose }) {
               </button>
             ))}
           </div>
+          {pdfPages.length < pdfTotalPages && (
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={handleLoadMore}
+                disabled={pdfLoadingMore}
+                className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-medium transition-colors disabled:opacity-60"
+              >
+                {pdfLoadingMore
+                  ? <><i className="bi bi-arrow-repeat animate-spin"></i> {t('pdf_loading_more')}</>
+                  : <><i className="bi bi-chevron-down"></i> {t('pdf_load_more', { remaining: pdfTotalPages - pdfPages.length })}</>
+                }
+              </button>
+            </div>
+          )}
         </div>
         <div className="px-5 py-3 border-t bg-slate-50 shrink-0">
-          <button onClick={() => setStage('pick')} className="btn-secondary text-sm py-2">
+          <button onClick={() => { pdfDocRef.current = null; setPdfPages([]); setPdfTotalPages(0); setStage('pick') }} className="btn-secondary text-sm py-2">
             <i className="bi bi-arrow-left"></i> {t('back')}
           </button>
         </div>
@@ -694,7 +946,7 @@ export default function MediaPickerModal({ onPick, onClose }) {
                 onChange={e => handleFile(e.target.files[0])} />
             </div>
           )}
-          <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="flex items-start gap-2 p-3 bg-slate-50 rounded-xl">
               <i className="bi bi-scissors text-blue-500 text-lg mt-0.5 shrink-0"></i>
               <div>
@@ -716,6 +968,16 @@ export default function MediaPickerModal({ onPick, onClose }) {
                 <p className="text-xs text-slate-400">{t('feature_pdf_desc')}</p>
               </div>
             </div>
+            <button
+              onClick={() => setStage('draw')}
+              className="flex items-start gap-2 p-3 bg-green-50 hover:bg-green-100 rounded-xl text-left transition-colors border border-green-100 hover:border-green-300"
+            >
+              <i className="bi bi-pen text-green-600 text-lg mt-0.5 shrink-0"></i>
+              <div>
+                <p className="font-medium text-green-800 text-xs">{t('feature_draw')}</p>
+                <p className="text-xs text-green-600">{t('feature_draw_desc')}</p>
+              </div>
+            </button>
           </div>
         </div>
       </div>

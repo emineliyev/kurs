@@ -251,7 +251,6 @@ export default function QuestionBankPage() {
 
   const insertFormula = (latex) => {
     editorRef.current?.insertText(` $${latex}$ `)
-    setShowFormula(false)
   }
 
   const updateAnswer = (i, field, value) => {

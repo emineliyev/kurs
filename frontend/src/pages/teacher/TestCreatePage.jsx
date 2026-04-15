@@ -125,7 +125,6 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId }) {
       ans[formulaTarget] = { ...ans[formulaTarget], text: (ans[formulaTarget]?.text || '') + f }
       upQ({ answers: ans })
     }
-    setShowFormula(false)
   }
 
   const updateAnswer = (i, field, value) => {
