@@ -43,6 +43,88 @@ function TablePicker({ onSelect }) {
   )
 }
 
+// ── Answer Mini Editor ────────────────────────────────────────────────────────
+export const AnswerMiniEditor = forwardRef(function AnswerMiniEditor(
+  { value, onChange, placeholder, className },
+  ref
+) {
+  const { t } = useTranslation('teacher')
+  const divRef = useRef(null)
+  const [focused, setFocused] = useState(false)
+
+  useImperativeHandle(ref, () => ({
+    focus: () => divRef.current?.focus()
+  }))
+
+  useEffect(() => {
+    const el = divRef.current
+    if (!el) return
+    if (document.activeElement === el) return
+    el.innerHTML = value || ''
+  }, [value])
+
+  const exec = (cmd, val = null) => {
+    divRef.current?.focus()
+    document.execCommand(cmd, false, val)
+    onChange(divRef.current?.innerHTML || '')
+  }
+
+  const insertChar = (char) => {
+    divRef.current?.focus()
+    document.execCommand('insertText', false, char)
+    onChange(divRef.current?.innerHTML || '')
+  }
+
+  const onInput = () => onChange(divRef.current?.innerHTML || '')
+
+  const onPaste = (e) => {
+    e.preventDefault()
+    const text = e.clipboardData?.getData('text/plain') || ''
+    document.execCommand('insertText', false, text)
+    onChange(divRef.current?.innerHTML || '')
+  }
+
+  const mBtn = (handler, title, content) => (
+    <button
+      type="button"
+      onMouseDown={e => { e.preventDefault(); handler() }}
+      title={title}
+      className="w-6 h-6 rounded flex items-center justify-center text-xs transition-colors text-slate-600 hover:bg-slate-100 shrink-0"
+    >{content}</button>
+  )
+
+  return (
+    <div className="relative flex-1 min-w-0">
+      {focused && (
+        <div className="absolute bottom-full left-0 mb-1 flex items-center gap-0.5 bg-white border border-slate-200 rounded-lg shadow-lg px-1.5 py-1 z-50 whitespace-nowrap">
+          {mBtn(() => exec('bold'),        t('q_ans_bold'),  <strong className="text-xs">B</strong>)}
+          {mBtn(() => exec('italic'),      t('q_ans_italic'), <em className="text-xs font-serif">I</em>)}
+          {mBtn(() => exec('superscript'), t('q_ans_sup'),   <span className="text-[10px] leading-none">x<sup>2</sup></span>)}
+          {mBtn(() => exec('subscript'),   t('q_ans_sub'),   <span className="text-[10px] leading-none">x<sub>2</sub></span>)}
+          <div className="w-px h-4 bg-slate-200 mx-0.5"></div>
+          {mBtn(() => insertChar('√'), t('q_ans_sqrt'),  <span className="text-xs font-mono font-bold">√</span>)}
+          {mBtn(() => insertChar('×'), t('q_ans_times'), <span className="text-xs font-mono">×</span>)}
+          {mBtn(() => insertChar('÷'), t('q_ans_div'),   <span className="text-xs font-mono">÷</span>)}
+          {mBtn(() => insertChar('π'), t('q_ans_pi'),    <span className="text-xs font-mono">π</span>)}
+          <div className="w-px h-4 bg-slate-200 mx-0.5"></div>
+          {mBtn(() => exec('removeFormat'), t('q_ans_clear'), <i className="bi bi-eraser text-xs"></i>)}
+        </div>
+      )}
+      <div
+        ref={divRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={onInput}
+        onPaste={onPaste}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        data-placeholder={placeholder}
+        className={`bg-transparent text-sm focus:outline-none min-w-0 empty:before:content-[attr(data-placeholder)] empty:before:text-slate-300 empty:before:pointer-events-none ${className || ''}`}
+      />
+    </div>
+  )
+})
+
 // ── Main editor ───────────────────────────────────────────────────────────────
 const QuestionTextEditor = forwardRef(function QuestionTextEditor(
   { value, onChange, onFormulaClick, onImageClick },
@@ -70,7 +152,6 @@ const QuestionTextEditor = forwardRef(function QuestionTextEditor(
     el.innerHTML = value || ''
   }, [value])
 
-  // Close table picker on outside click
   useEffect(() => {
     if (!showTablePicker) return
     const handler = (e) => {
@@ -108,7 +189,6 @@ const QuestionTextEditor = forwardRef(function QuestionTextEditor(
   }
 
   const onKeyDown = (e) => {
-    // Tab key inside table: move to next cell
     if (e.key === 'Tab') {
       const sel = window.getSelection()
       const node = sel?.anchorNode
@@ -160,11 +240,15 @@ const QuestionTextEditor = forwardRef(function QuestionTextEditor(
           />
         ))}
         <div className="w-px h-4 bg-slate-200 mx-0.5"></div>
+        {btn(() => exec('justifyLeft'),   t('q_align_left'),   <i className="bi bi-text-left"></i>)}
+        {btn(() => exec('justifyCenter'), t('q_align_center'), <i className="bi bi-text-center"></i>)}
+        {btn(() => exec('justifyRight'),  t('q_align_right'),  <i className="bi bi-text-right"></i>)}
+        <div className="w-px h-4 bg-slate-200 mx-0.5"></div>
         {btn(() => exec('insertOrderedList'),   t('q_ordered_list'),   <i className="bi bi-list-ol"></i>)}
         {btn(() => exec('insertUnorderedList'), t('q_unordered_list'), <i className="bi bi-list-ul"></i>)}
         <div className="w-px h-4 bg-slate-200 mx-0.5"></div>
 
-        {/* Table button with grid picker */}
+        {/* Table picker */}
         <div className="relative" ref={tablePickerRef}>
           <button
             type="button"
@@ -178,9 +262,7 @@ const QuestionTextEditor = forwardRef(function QuestionTextEditor(
           >
             <i className="bi bi-table"></i>
           </button>
-          {showTablePicker && (
-            <TablePicker onSelect={insertTable} />
-          )}
+          {showTablePicker && <TablePicker onSelect={insertTable} />}
         </div>
 
         <div className="w-px h-4 bg-slate-200 mx-0.5"></div>

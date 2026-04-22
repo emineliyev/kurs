@@ -6,7 +6,7 @@ import { bankApi } from '@/api/questionBank'
 import FormulaLibrary from '@/components/teacher/FormulaLibrary'
 import MediaPickerModal from '@/components/common/MediaPickerModal'
 import { renderMath } from '@/utils/math'
-import QuestionTextEditor, { LatexPreview } from '@/components/teacher/QuestionTextEditor'
+import QuestionTextEditor, { LatexPreview, AnswerMiniEditor } from '@/components/teacher/QuestionTextEditor'
 
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -430,14 +430,16 @@ export default function QuestionBankPage() {
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {form.answers.map((ans, i) => (
-                    <div key={i} className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${ans.is_correct ? 'border-green-400 bg-green-50' : 'border-slate-200 bg-slate-50'}`}>
+                    <div key={i} className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all overflow-visible ${ans.is_correct ? 'border-green-400 bg-green-50' : 'border-slate-200 bg-slate-50'}`}>
                       <button type="button" onClick={() => setCorrect(i)}
                         className={`w-7 h-7 rounded-lg shrink-0 border-2 flex items-center justify-center font-bold text-sm ${ans.is_correct ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 text-slate-400 hover:border-green-400'}`}>
                         {ans.is_correct ? <i className="bi bi-check text-base"></i> : LABELS[i]}
                       </button>
-                      <input value={ans.text || ''} onChange={e => updateAnswer(i, 'text', e.target.value)}
+                      <AnswerMiniEditor
+                        value={ans.text || ''}
+                        onChange={v => updateAnswer(i, 'text', v)}
                         placeholder={t('q_option_placeholder', { ns: 'teacher', label: LABELS[i] })}
-                        className="flex-1 bg-transparent text-sm focus:outline-none placeholder-slate-300" />
+                      />
                       {form.answers.length > 2 && (
                         <button type="button" onClick={() => {
                           const a = form.answers.filter((_, idx) => idx !== i)

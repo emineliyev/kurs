@@ -12,7 +12,7 @@ import { classesApi } from '@/api/classes'
 import FormulaLibrary from '@/components/teacher/FormulaLibrary'
 import MediaPickerModal from '@/components/common/MediaPickerModal'
 import { renderMath, MathText } from '@/utils/math'
-import QuestionTextEditor, { LatexPreview } from '@/components/teacher/QuestionTextEditor'
+import QuestionTextEditor, { LatexPreview, AnswerMiniEditor } from '@/components/teacher/QuestionTextEditor'
 
 let _dndIdCounter = 0
 const newDndId = () => ++_dndIdCounter
@@ -257,15 +257,17 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId }) {
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {(question.answers || []).map((ans, i) => (
-            <div key={i} className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${ans.is_correct ? 'border-green-400 bg-green-50' : 'border-slate-200 bg-slate-50'}`}>
+            <div key={i} className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all overflow-visible ${ans.is_correct ? 'border-green-400 bg-green-50' : 'border-slate-200 bg-slate-50'}`}>
               <button type="button" onClick={() => setCorrect(i)}
                 className={`w-7 h-7 rounded-lg shrink-0 border-2 flex items-center justify-center font-bold text-sm transition-all ${ans.is_correct ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 text-slate-400 hover:border-green-400'}`}>
                 {ans.is_correct ? <i className="bi bi-check text-base"></i> : LABELS[i]}
               </button>
-              <div className="flex-1 flex items-center gap-1.5">
-                <input value={ans.text || ''} onChange={e => updateAnswer(i, 'text', e.target.value)}
+              <div className="flex-1 flex items-center gap-1.5 overflow-visible">
+                <AnswerMiniEditor
+                  value={ans.text || ''}
+                  onChange={v => updateAnswer(i, 'text', v)}
                   placeholder={t('q_option_placeholder', { ns: 'teacher', label: LABELS[i] })}
-                  className="flex-1 bg-transparent text-sm focus:outline-none placeholder-slate-300" />
+                />
                 <button type="button" onClick={() => { setFormulaTarget(i); setShowFormula(true) }}
                   className="text-slate-300 hover:text-purple-500 shrink-0">
                   <i className="bi bi-calculator text-sm"></i>
