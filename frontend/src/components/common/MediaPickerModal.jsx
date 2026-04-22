@@ -263,6 +263,61 @@ function AnnotateCanvas({ dataUrl, onConfirm, onSkip, onBack }) {
   )
 }
 
+// ── Draw Stage helpers ────────────────────────────────────────────────────────
+function hitTest(shape, x, y, tol = 8) {
+  if (shape.type === 'rect' || shape.type === 'eraser') {
+    const lx = Math.min(shape.x1, shape.x2) - tol, rx = Math.max(shape.x1, shape.x2) + tol
+    const ty = Math.min(shape.y1, shape.y2) - tol, by = Math.max(shape.y1, shape.y2) + tol
+    return x >= lx && x <= rx && y >= ty && y <= by
+  }
+  if (shape.type === 'circle') {
+    const cx = (shape.x1 + shape.x2) / 2, cy = (shape.y1 + shape.y2) / 2
+    const rx = Math.abs(shape.x2 - shape.x1) / 2 + tol
+    const ry = Math.abs(shape.y2 - shape.y1) / 2 + tol
+    if (rx < 1 || ry < 1) return false
+    return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1
+  }
+  if (shape.type === 'line' || shape.type === 'arrow') {
+    const dx = shape.x2 - shape.x1, dy = shape.y2 - shape.y1
+    const len2 = dx * dx + dy * dy
+    if (len2 === 0) return Math.hypot(x - shape.x1, y - shape.y1) <= tol
+    const t = Math.max(0, Math.min(1, ((x - shape.x1) * dx + (y - shape.y1) * dy) / len2))
+    return Math.hypot(x - (shape.x1 + t * dx), y - (shape.y1 + t * dy)) <= tol
+  }
+  if (shape.type === 'pencil' && shape.pts?.length) {
+    for (let i = 1; i < shape.pts.length; i++) {
+      const ax = shape.pts[i-1].x, ay = shape.pts[i-1].y
+      const bx = shape.pts[i].x,   by2 = shape.pts[i].y
+      const dx = bx - ax, dy = by2 - ay
+      const len2 = dx * dx + dy * dy
+      if (len2 === 0) { if (Math.hypot(x - ax, y - ay) <= tol) return true; continue }
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2))
+      if (Math.hypot(x - (ax + t * dx), y - (ay + t * dy)) <= tol) return true
+    }
+  }
+  return false
+}
+
+function shapeBounds(shape) {
+  if (shape.type === 'pencil' && shape.pts?.length) {
+    const xs = shape.pts.map(p => p.x), ys = shape.pts.map(p => p.y)
+    const x = Math.min(...xs), y = Math.min(...ys)
+    return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }
+  }
+  if (shape.x1 !== undefined) {
+    const x = Math.min(shape.x1, shape.x2), y = Math.min(shape.y1, shape.y2)
+    return { x, y, w: Math.abs(shape.x2 - shape.x1), h: Math.abs(shape.y2 - shape.y1) }
+  }
+  return null
+}
+
+function moveShape(shape, dx, dy) {
+  if (shape.type === 'pencil') {
+    return { ...shape, pts: shape.pts.map(p => ({ x: p.x + dx, y: p.y + dy })) }
+  }
+  return { ...shape, x1: shape.x1 + dx, y1: shape.y1 + dy, x2: shape.x2 + dx, y2: shape.y2 + dy }
+}
+
 // ── Draw Stage (blank canvas with shapes) ─────────────────────────────────────
 function DrawCanvas({ onConfirm, onBack }) {
   const { t } = useTranslation('common')
@@ -271,6 +326,8 @@ function DrawCanvas({ onConfirm, onBack }) {
   const activeRef  = useRef(null)
   const downRef    = useRef(false)
   const rafRef     = useRef(null)
+  const dragRef    = useRef(null)
+  const selIdxRef  = useRef(-1)
   const [tool, setTool]   = useState('pencil')
   const [color, setColor] = useState('#111827')
   const [lw, setLw]       = useState(2.5)
@@ -290,6 +347,24 @@ function DrawCanvas({ onConfirm, onBack }) {
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     shapesRef.current.forEach(s => drawShape(ctx, s))
     if (activeRef.current) drawShape(ctx, activeRef.current)
+    const si = selIdxRef.current
+    if (si >= 0 && si < shapesRef.current.length) {
+      const b = shapeBounds(shapesRef.current[si])
+      if (b) {
+        ctx.save()
+        ctx.setLineDash([5, 4])
+        ctx.strokeStyle = '#3b82f6'
+        ctx.lineWidth = 1.5
+        ctx.strokeRect(b.x - 6, b.y - 6, b.w + 12, b.h + 12)
+        ctx.setLineDash([])
+        ctx.fillStyle = '#ffffff'
+        ;[[b.x-6, b.y-6],[b.x+b.w+6, b.y-6],[b.x-6, b.y+b.h+6],[b.x+b.w+6, b.y+b.h+6]].forEach(([hx, hy]) => {
+          ctx.beginPath(); ctx.arc(hx, hy, 4, 0, Math.PI * 2)
+          ctx.fill(); ctx.stroke()
+        })
+        ctx.restore()
+      }
+    }
   }, [])
 
   const sched = useCallback(() => {
@@ -306,6 +381,12 @@ function DrawCanvas({ onConfirm, onBack }) {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [draw])
 
+  useEffect(() => {
+    selIdxRef.current = -1
+    dragRef.current = null
+    sched()
+  }, [tool, sched])
+
   const getCoords = (e) => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
@@ -319,8 +400,18 @@ function DrawCanvas({ onConfirm, onBack }) {
 
   const onDown = (e) => {
     e.preventDefault()
-    downRef.current = true
     const { x, y } = getCoords(e)
+    if (tool === 'select') {
+      let hit = -1
+      for (let i = shapesRef.current.length - 1; i >= 0; i--) {
+        if (hitTest(shapesRef.current[i], x, y)) { hit = i; break }
+      }
+      selIdxRef.current = hit
+      dragRef.current = hit >= 0 ? { idx: hit, lastX: x, lastY: y } : null
+      sched()
+      return
+    }
+    downRef.current = true
     const isFillable = FILL_SHAPES.includes(tool)
     if (tool === 'pencil') {
       activeRef.current = { type: 'pencil', color, lw, pts: [{ x, y }] }
@@ -331,13 +422,25 @@ function DrawCanvas({ onConfirm, onBack }) {
   }
 
   const onMove = (e) => {
+    if (tool === 'select') {
+      if (!dragRef.current) return
+      e.preventDefault()
+      const { x, y } = getCoords(e)
+      const dx = x - dragRef.current.lastX
+      const dy = y - dragRef.current.lastY
+      const idx = dragRef.current.idx
+      const updated = [...shapesRef.current]
+      updated[idx] = moveShape(updated[idx], dx, dy)
+      shapesRef.current = updated
+      dragRef.current = { ...dragRef.current, lastX: x, lastY: y }
+      sched()
+      return
+    }
     if (!downRef.current || !activeRef.current) return
     e.preventDefault()
     const { x, y } = getCoords(e)
     if (activeRef.current.type === 'pencil') {
       activeRef.current = { ...activeRef.current, pts: [...activeRef.current.pts, { x, y }] }
-    } else if (activeRef.current.type === 'eraser') {
-      activeRef.current = { ...activeRef.current, x2: x, y2: y }
     } else {
       activeRef.current = { ...activeRef.current, x2: x, y2: y }
     }
@@ -345,6 +448,10 @@ function DrawCanvas({ onConfirm, onBack }) {
   }
 
   const onUp = () => {
+    if (tool === 'select') {
+      dragRef.current = null
+      return
+    }
     if (!downRef.current || !activeRef.current) return
     downRef.current = false
     if (activeRef.current.type !== 'eraser' || (Math.abs(activeRef.current.x2 - activeRef.current.x1) > 2)) {
@@ -377,12 +484,13 @@ function DrawCanvas({ onConfirm, onBack }) {
   }
 
   const TOOLS = [
-    { id: 'pencil', icon: 'bi-pencil',         labelKey: 'tool_pencil' },
-    { id: 'arrow',  icon: 'bi-arrow-up-right', labelKey: 'tool_arrow'  },
-    { id: 'rect',   icon: 'bi-square',         labelKey: 'tool_rect'   },
-    { id: 'circle', icon: 'bi-circle',         labelKey: 'tool_circle' },
-    { id: 'line',   icon: 'bi-slash-lg',       labelKey: 'tool_line'   },
-    { id: 'eraser', icon: 'bi-eraser',         labelKey: 'tool_eraser' },
+    { id: 'select', icon: 'bi-cursor',          labelKey: 'tool_select' },
+    { id: 'pencil', icon: 'bi-pencil',          labelKey: 'tool_pencil' },
+    { id: 'arrow',  icon: 'bi-arrow-up-right',  labelKey: 'tool_arrow'  },
+    { id: 'rect',   icon: 'bi-square',          labelKey: 'tool_rect'   },
+    { id: 'circle', icon: 'bi-circle',          labelKey: 'tool_circle' },
+    { id: 'line',   icon: 'bi-slash-lg',        labelKey: 'tool_line'   },
+    { id: 'eraser', icon: 'bi-eraser',          labelKey: 'tool_eraser' },
   ]
 
   return (
@@ -396,7 +504,7 @@ function DrawCanvas({ onConfirm, onBack }) {
             <i className={`bi ${tl.icon} text-sm`}></i>
           </button>
         ))}
-        {tool !== 'eraser' && (<>
+        {tool !== 'eraser' && tool !== 'select' && (<>
           <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
           <div className="flex gap-1 items-center">
             {ANNO_COLORS.map(c => (
@@ -445,7 +553,7 @@ function DrawCanvas({ onConfirm, onBack }) {
       <div className="flex-1 min-h-0 overflow-auto flex items-center justify-center bg-slate-700 p-4">
         <canvas ref={canvasRef}
           className="shadow-xl rounded select-none touch-none bg-white"
-          style={{ display: 'block', maxWidth: '100%', cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}
+          style={{ display: 'block', maxWidth: '100%', cursor: tool === 'eraser' ? 'cell' : tool === 'select' ? (dragRef.current ? 'grabbing' : 'default') : 'crosshair' }}
           onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
           onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
         />

@@ -77,6 +77,7 @@
   "print_student_name": "Full Name",
   "print_date": "Date",
   "print_score": "Score",
+  "tool_select": "Select & move",
   "tool_pencil": "Pencil",
   "tool_arrow": "Arrow",
   "tool_rect": "Rectangle",

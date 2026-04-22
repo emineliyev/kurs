@@ -77,6 +77,7 @@
   "print_student_name": "Имя Фамилия",
   "print_date": "Дата",
   "print_score": "Оценка",
+  "tool_select": "Выбрать и переместить",
   "tool_pencil": "Карандаш",
   "tool_arrow": "Стрелка",
   "tool_rect": "Прямоугольник",
