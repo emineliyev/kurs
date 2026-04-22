@@ -507,5 +507,17 @@
   "tip_piecewise": "Кусочная функция",
   "tip_overset": "Надпись сверху",
   "q_table": "Вставить таблицу",
-  "q_table_insert": "Таблица"
+  "q_table_insert": "Таблица",
+  "q_align_left": "По левому краю",
+  "q_align_center": "По центру",
+  "q_align_right": "По правому краю",
+  "q_ans_bold": "Жирный",
+  "q_ans_italic": "Курсив",
+  "q_ans_sup": "Верхний индекс",
+  "q_ans_sub": "Нижний индекс",
+  "q_ans_sqrt": "Корень (√)",
+  "q_ans_times": "Умножение (×)",
+  "q_ans_div": "Деление (÷)",
+  "q_ans_pi": "Пи (π)",
+  "q_ans_clear": "Убрать форматирование"
 }

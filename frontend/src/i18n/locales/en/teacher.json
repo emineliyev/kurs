@@ -507,5 +507,17 @@
   "tip_piecewise": "Piecewise function",
   "tip_overset": "Overset text",
   "q_table": "Insert table",
-  "q_table_insert": "Table"
+  "q_table_insert": "Table",
+  "q_align_left": "Align left",
+  "q_align_center": "Center",
+  "q_align_right": "Align right",
+  "q_ans_bold": "Bold",
+  "q_ans_italic": "Italic",
+  "q_ans_sup": "Superscript",
+  "q_ans_sub": "Subscript",
+  "q_ans_sqrt": "Root (√)",
+  "q_ans_times": "Multiply (×)",
+  "q_ans_div": "Divide (÷)",
+  "q_ans_pi": "Pi (π)",
+  "q_ans_clear": "Clear format"
 }

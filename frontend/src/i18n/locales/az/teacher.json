@@ -515,5 +515,17 @@
   "tip_piecewise": "Parçalı funksiya",
   "tip_overset": "Üstə yazı",
   "q_table": "Cədvəl əlavə et",
-  "q_table_insert": "Cədvəl"
+  "q_table_insert": "Cədvəl",
+  "q_align_left": "Sola hizala",
+  "q_align_center": "Ortala",
+  "q_align_right": "Sağa hizala",
+  "q_ans_bold": "Qalın",
+  "q_ans_italic": "Kursiv",
+  "q_ans_sup": "Yuxarı indeks",
+  "q_ans_sub": "Aşağı indeks",
+  "q_ans_sqrt": "Kök (√)",
+  "q_ans_times": "Hasilat (×)",
+  "q_ans_div": "Bölmə (÷)",
+  "q_ans_pi": "Pi (π)",
+  "q_ans_clear": "Formatı sil"
 }
