@@ -65,6 +65,47 @@ function drawShape(ctx, shape) {
     ctx.beginPath(); ctx.moveTo(shape.x1, shape.y1); ctx.lineTo(shape.x2, shape.y2); ctx.stroke()
   } else if (type === 'arrow') {
     drawArrowHead(ctx, shape.x1, shape.y1, shape.x2, shape.y2)
+  } else if (type === 'triangle') {
+    const mx = (shape.x1 + shape.x2) / 2
+    ctx.beginPath()
+    ctx.moveTo(mx, shape.y1)
+    ctx.lineTo(shape.x2, shape.y2)
+    ctx.lineTo(shape.x1, shape.y2)
+    ctx.closePath()
+    if (filled) ctx.fill(); ctx.stroke()
+  } else if (type === 'diamond') {
+    const cx = (shape.x1 + shape.x2) / 2, cy = (shape.y1 + shape.y2) / 2
+    ctx.beginPath()
+    ctx.moveTo(cx, shape.y1)
+    ctx.lineTo(shape.x2, cy)
+    ctx.lineTo(cx, shape.y2)
+    ctx.lineTo(shape.x1, cy)
+    ctx.closePath()
+    if (filled) ctx.fill(); ctx.stroke()
+  } else if (type === 'star') {
+    const cx = (shape.x1 + shape.x2) / 2, cy = (shape.y1 + shape.y2) / 2
+    const outerR = Math.min(Math.abs(shape.x2 - shape.x1), Math.abs(shape.y2 - shape.y1)) / 2
+    const innerR = outerR * 0.4
+    ctx.beginPath()
+    for (let i = 0; i < 10; i++) {
+      const angle = (i * Math.PI / 5) - Math.PI / 2
+      const r = i % 2 === 0 ? outerR : innerR
+      const px = cx + r * Math.cos(angle), py = cy + r * Math.sin(angle)
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)
+    }
+    ctx.closePath()
+    if (filled) ctx.fill(); ctx.stroke()
+  } else if (type === 'hexagon') {
+    const cx = (shape.x1 + shape.x2) / 2, cy = (shape.y1 + shape.y2) / 2
+    const rx = Math.abs(shape.x2 - shape.x1) / 2, ry = Math.abs(shape.y2 - shape.y1) / 2
+    ctx.beginPath()
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI / 3) - Math.PI / 6
+      const px = cx + rx * Math.cos(angle), py = cy + ry * Math.sin(angle)
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)
+    }
+    ctx.closePath()
+    if (filled) ctx.fill(); ctx.stroke()
   } else if (type === 'pencil' && shape.pts?.length > 1) {
     ctx.beginPath(); ctx.moveTo(shape.pts[0].x, shape.pts[0].y)
     for (let i = 1; i < shape.pts.length; i++) ctx.lineTo(shape.pts[i].x, shape.pts[i].y)
@@ -265,7 +306,7 @@ function AnnotateCanvas({ dataUrl, onConfirm, onSkip, onBack }) {
 
 // ── Draw Stage helpers ────────────────────────────────────────────────────────
 function hitTest(shape, x, y, tol = 8) {
-  if (shape.type === 'rect' || shape.type === 'eraser') {
+  if (shape.type === 'rect' || shape.type === 'eraser' || shape.type === 'triangle' || shape.type === 'diamond' || shape.type === 'star' || shape.type === 'hexagon') {
     const lx = Math.min(shape.x1, shape.x2) - tol, rx = Math.max(shape.x1, shape.x2) + tol
     const ty = Math.min(shape.y1, shape.y2) - tol, by = Math.max(shape.y1, shape.y2) + tol
     return x >= lx && x <= rx && y >= ty && y <= by
@@ -334,7 +375,7 @@ function DrawCanvas({ onConfirm, onBack }) {
   const [filled, setFilled] = useState(false)
   const [count, setCount] = useState(0)
 
-  const FILL_SHAPES = ['rect', 'circle']
+  const FILL_SHAPES = ['rect', 'circle', 'triangle', 'diamond', 'star', 'hexagon']
 
   const CANVAS_W = 800
   const CANVAS_H = 560
@@ -484,13 +525,17 @@ function DrawCanvas({ onConfirm, onBack }) {
   }
 
   const TOOLS = [
-    { id: 'select', icon: 'bi-cursor',          labelKey: 'tool_select' },
-    { id: 'pencil', icon: 'bi-pencil',          labelKey: 'tool_pencil' },
-    { id: 'arrow',  icon: 'bi-arrow-up-right',  labelKey: 'tool_arrow'  },
-    { id: 'rect',   icon: 'bi-square',          labelKey: 'tool_rect'   },
-    { id: 'circle', icon: 'bi-circle',          labelKey: 'tool_circle' },
-    { id: 'line',   icon: 'bi-slash-lg',        labelKey: 'tool_line'   },
-    { id: 'eraser', icon: 'bi-eraser',          labelKey: 'tool_eraser' },
+    { id: 'select',   icon: 'bi-cursor',          labelKey: 'tool_select'   },
+    { id: 'pencil',   icon: 'bi-pencil',          labelKey: 'tool_pencil'   },
+    { id: 'arrow',    icon: 'bi-arrow-up-right',  labelKey: 'tool_arrow'    },
+    { id: 'line',     icon: 'bi-slash-lg',        labelKey: 'tool_line'     },
+    { id: 'rect',     icon: 'bi-square',          labelKey: 'tool_rect'     },
+    { id: 'circle',   icon: 'bi-circle',          labelKey: 'tool_circle'   },
+    { id: 'triangle', icon: 'bi-triangle',        labelKey: 'tool_triangle' },
+    { id: 'diamond',  icon: 'bi-diamond',         labelKey: 'tool_diamond'  },
+    { id: 'star',     icon: 'bi-star',            labelKey: 'tool_star'     },
+    { id: 'hexagon',  icon: 'bi-hexagon',         labelKey: 'tool_hexagon'  },
+    { id: 'eraser',   icon: 'bi-eraser',          labelKey: 'tool_eraser'   },
   ]
 
   return (
