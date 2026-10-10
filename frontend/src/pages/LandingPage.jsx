@@ -176,7 +176,7 @@ export default function LandingPage() {
               {t('landing_start_free')}
             </Link>
             <a
-              href="https://www.youtube.com/@kursumaz"
+              href="https://www.youtube.com/@kursumapp"
               target="_blank"
               rel="noopener noreferrer"
               className="border-2 border-white/50 text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 transition-colors text-lg"
@@ -403,7 +403,7 @@ export default function LandingPage() {
 
       {/* WhatsApp fixed button */}
       <a
-        href="https://wa.me/994XXXXXXXXX"
+        href="https://wa.me/994703678873"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors"
