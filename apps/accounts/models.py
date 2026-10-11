@@ -51,13 +51,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class TeacherProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher_profile')
-    subject = models.ForeignKey(
-        'classes.Subject',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='teachers'
-    )
+    subject = models.CharField(max_length=100, blank=True)
     avatar = models.ImageField(upload_to='avatars/teachers/', blank=True, null=True)
     bio = models.TextField(blank=True)
     organization = models.CharField(max_length=200, blank=True)

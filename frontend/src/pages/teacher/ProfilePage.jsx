@@ -6,10 +6,10 @@ import { authApi } from '@/api/auth'
 import { classesApi } from '@/api/classes'
 import { useAuthStore } from '@/store/authStore'
 import PageSpinner from '@/components/common/PageSpinner'
-import Select from '@/components/common/Select'
+import SuggestInput from '@/components/common/SuggestInput'
 
 export default function TeacherProfilePage() {
-  const { t } = useTranslation(['common', 'teacher'])
+  const { t, i18n } = useTranslation(['common', 'teacher'])
   const { user, setUser } = useAuthStore()
   const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -88,12 +88,12 @@ export default function TeacherProfilePage() {
               <i className="bi bi-book mr-1 text-primary-700"></i>
               {t('teaching_subject', { ns: 'teacher' })}
             </label>
-            <Select {...register('teacher_profile.subject')} className="input-field">
-              <option value="">{t('select_subject', { ns: 'teacher' })}</option>
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </Select>
+            <SuggestInput
+              {...register('teacher_profile.subject')}
+              maxLength={100}
+              placeholder={t('subject_placeholder', { ns: 'teacher' })}
+              suggestions={subjects.map((s) => s[`name_${i18n.language?.slice(0, 2)}`] || s.name)}
+            />
             <p className="text-xs text-slate-400 mt-1">{t('subject_hint', { ns: 'teacher' })}</p>
           </div>
 

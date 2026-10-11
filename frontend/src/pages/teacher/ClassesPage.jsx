@@ -9,16 +9,13 @@ import { classesApi } from '@/api/classes'
 import { useAuthStore } from '@/store/authStore'
 import PageSpinner from '@/components/common/PageSpinner'
 import Select from '@/components/common/Select'
+import SuggestInput from '@/components/common/SuggestInput'
 
 function subjectName(s) {
   const lang = i18n.language?.slice(0, 2) || 'az'
   return s[`name_${lang}`] || s.name_az || s.name || ''
 }
 
-function classSubjectName(cls) {
-  const lang = i18n.language?.slice(0, 2) || 'az'
-  return cls[`subject_name_${lang}`] || cls.subject_name_az || cls.subject_name || ''
-}
 
 function ClassCard({ cls, onDelete, onEdit }) {
   const { t } = useTranslation(['common', 'teacher'])
@@ -49,9 +46,9 @@ function ClassCard({ cls, onDelete, onEdit }) {
       <p className="text-sm text-slate-500 mt-1">
         {cls.grade && t('grade_nth', { ns: 'teacher', grade: cls.grade })} {cls.group && `· ${t('group_card', { ns: 'teacher', group: cls.group })}`}
       </p>
-      {cls.subject_name && (
+      {cls.subject && (
         <span className="inline-block mt-2 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-          {classSubjectName(cls)}
+          {cls.subject}
         </span>
       )}
       <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-1 text-sm text-slate-500">
@@ -87,6 +84,9 @@ export default function ClassesPage() {
     if (!accessToken) return
     load()
   }, [accessToken])
+
+  // Admin-curated subjects plus whatever this teacher has typed before
+  const subjectSuggestions = [...subjects.map(subjectName), ...classes.map((c) => c.subject)]
 
   const onCreate = async (data) => {
     setCreating(true)
@@ -162,10 +162,12 @@ export default function ClassesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('subject_field', { ns: 'teacher' })}</label>
-              <Select {...regEdit('subject')} className="input-field">
-                <option value="">{t('select_option')}</option>
-                {subjects.map((s) => <option key={s.id} value={s.id}>{subjectName(s)}</option>)}
-              </Select>
+              <SuggestInput
+                {...regEdit('subject')}
+                maxLength={100}
+                placeholder={t('subject_placeholder', { ns: 'teacher' })}
+                suggestions={subjectSuggestions}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('grade_1_11', { ns: 'teacher' })}</label>
@@ -203,10 +205,12 @@ export default function ClassesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('subject_field', { ns: 'teacher' })}</label>
-              <Select {...register('subject')} className="input-field">
-                <option value="">{t('select_option')}</option>
-                {subjects.map((s) => <option key={s.id} value={s.id}>{subjectName(s)}</option>)}
-              </Select>
+              <SuggestInput
+                {...register('subject')}
+                maxLength={100}
+                placeholder={t('subject_placeholder', { ns: 'teacher' })}
+                suggestions={subjectSuggestions}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('grade_1_11', { ns: 'teacher' })}</label>

@@ -44,7 +44,7 @@ class ExamSerializer(serializers.ModelSerializer):
 
     def get_subject_name(self, obj):
         try:
-            return obj.class_room.subject.name if obj.class_room.subject else ''
+            return obj.class_room.subject
         except Exception:
             return ''
 

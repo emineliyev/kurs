@@ -15,7 +15,8 @@ class Class(models.Model):
     GROUP_CHOICES = [('I', 'I'), ('II', 'II'), ('III', 'III'), ('IV', 'IV'), ('V', 'V')]
 
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='classes')
-    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)
+    # Free text typed by the teacher; Subject rows only feed the suggestions.
+    subject = models.CharField(max_length=100, blank=True)
     name = models.CharField(max_length=200)
     grade = models.PositiveSmallIntegerField(choices=GRADE_CHOICES, null=True, blank=True)
     group = models.CharField(max_length=10, choices=GROUP_CHOICES, blank=True)

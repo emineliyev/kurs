@@ -20,11 +20,9 @@ def validate_strong_password(value):
 
 
 class TeacherProfileSerializer(serializers.ModelSerializer):
-    subject_name = serializers.CharField(source='subject.name', read_only=True)
-
     class Meta:
         model = TeacherProfile
-        fields = ['avatar', 'bio', 'organization', 'phone', 'subject', 'subject_name']
+        fields = ['avatar', 'bio', 'organization', 'phone', 'subject']
 
 
 class StudentProfileSerializer(serializers.ModelSerializer):

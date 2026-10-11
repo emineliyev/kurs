@@ -11,17 +11,13 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 class ClassSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source='teacher.get_full_name', read_only=True)
-    subject_name = serializers.CharField(source='subject.name', read_only=True)
-    subject_name_az = serializers.CharField(source='subject.name_az', read_only=True, default=None)
-    subject_name_en = serializers.CharField(source='subject.name_en', read_only=True, default=None)
-    subject_name_ru = serializers.CharField(source='subject.name_ru', read_only=True, default=None)
     student_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Class
         fields = [
             'id', 'name', 'grade', 'group', 'description',
-            'subject', 'subject_name', 'subject_name_az', 'subject_name_en', 'subject_name_ru',
+            'subject',
             'teacher_name', 'student_count', 'is_active', 'created_at',
         ]
         read_only_fields = ['id', 'created_at']

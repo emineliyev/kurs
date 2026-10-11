@@ -24,8 +24,8 @@ class ClassViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_teacher:
-            return Class.objects.filter(teacher=user).select_related('subject')
-        return Class.objects.filter(enrollments__student=user, is_active=True).select_related('subject')
+            return Class.objects.filter(teacher=user)
+        return Class.objects.filter(enrollments__student=user, is_active=True)
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
