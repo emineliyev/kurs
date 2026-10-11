@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { analyticsApi } from '@/api/analytics'
 import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
+import Select from '@/components/common/Select'
 
 function StatCard({ icon, value, label, color }) {
   return (
@@ -85,20 +86,20 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <select value={gradeFilter} onChange={e => { setGradeFilter(e.target.value); setPage(1) }} className="input-field py-1.5 text-xs w-32">
+        <Select value={gradeFilter} onChange={e => { setGradeFilter(e.target.value); setPage(1) }} className="input-field py-1.5 text-xs w-32">
           <option value="">{t('grades_filter', { ns: 'teacher' })}</option>
           {uniqueGrades.map(g => <option key={g} value={String(g)}>{t('grade_nth', { ns: 'teacher', grade: g })}</option>)}
-        </select>
+        </Select>
 
-        <select value={groupFilter} onChange={e => { setGroupFilter(e.target.value); setPage(1) }} className="input-field py-1.5 text-xs w-28">
+        <Select value={groupFilter} onChange={e => { setGroupFilter(e.target.value); setPage(1) }} className="input-field py-1.5 text-xs w-28">
           <option value="">{t('groups_filter', { ns: 'teacher' })}</option>
           {uniqueGroups.map(g => <option key={g} value={g}>{t('group_nth', { ns: 'teacher', group: g })}</option>)}
-        </select>
+        </Select>
 
-        <select value={classFilter} onChange={e => { setClassFilter(e.target.value); setPage(1) }} className="input-field py-1.5 text-xs w-40">
+        <Select value={classFilter} onChange={e => { setClassFilter(e.target.value); setPage(1) }} className="input-field py-1.5 text-xs w-40">
           <option value="">{t('class_names_filter', { ns: 'teacher' })}</option>
           {uniqueClasses.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        </Select>
 
         <div className="relative ml-auto">
           <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>

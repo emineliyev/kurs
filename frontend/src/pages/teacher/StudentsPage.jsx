@@ -10,6 +10,7 @@ import { analyticsApi } from '@/api/analytics'
 import { Link, useNavigate } from 'react-router-dom'
 import client from '@/api/client'
 import PageSpinner from '@/components/common/PageSpinner'
+import Select from '@/components/common/Select'
 
 function StudentHistoryModal({ student, onClose }) {
   const { t } = useTranslation(['common', 'teacher'])
@@ -314,12 +315,12 @@ export default function StudentsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('grade', { ns: 'teacher' })} <span className="text-red-500">*</span></label>
-              <select {...register('class_id', { required: true })} className="input-field">
+              <Select {...register('class_id', { required: true })} className="input-field">
                 <option value="">{t('select_class', { ns: 'teacher' })}</option>
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
-              </select>
+              </Select>
               {errors.class_id && <p className="text-xs text-red-500 mt-1">{t('class_required', { ns: 'teacher' })}</p>}
             </div>
             <div className="flex gap-3">
@@ -345,14 +346,14 @@ export default function StudentsPage() {
             className="input-field pl-9"
           />
         </div>
-        <select
+        <Select
           value={classFilter}
           onChange={(e) => setClassFilter(e.target.value)}
           className="input-field w-48"
         >
           <option value="">{t('all_classes', { ns: 'teacher' })}</option>
           {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        </Select>
       </div>
 
       {loading ? (

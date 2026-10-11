@@ -38,6 +38,8 @@ class ClassViewSet(viewsets.ModelViewSet):
         from rest_framework.exceptions import PermissionDenied
         try:
             sub = Subscription.objects.select_related('plan').get(teacher=user)
+            if not sub.is_active:
+                raise PermissionDenied(Subscription.EXPIRED_MESSAGE)
             if sub.plan.max_classes != -1:
                 current = user.classes.filter(is_active=True).count()
                 if current >= sub.plan.max_classes:
@@ -75,6 +77,8 @@ class ClassViewSet(viewsets.ModelViewSet):
         from apps.subscriptions.models import Subscription
         try:
             sub = Subscription.objects.select_related('plan').get(teacher=request.user)
+            if not sub.is_active:
+                return Response({'detail': Subscription.EXPIRED_MESSAGE}, status=status.HTTP_403_FORBIDDEN)
             if sub.plan.max_students != -1:
                 current = ClassEnrollment.objects.filter(
                     class_room__teacher=request.user, is_active=True

@@ -227,23 +227,24 @@ class StudentCreateView(APIView):
 
     def post(self, request):
         class_id = request.data.get('class_id')
-        # Check enrollment limit BEFORE creating the student account
-        if class_id:
-            from apps.subscriptions.models import Subscription
-            from apps.classes.models import ClassEnrollment
-            try:
-                sub = Subscription.objects.select_related('plan').get(teacher=request.user)
-                if sub.plan.max_students != -1:
-                    current = ClassEnrollment.objects.filter(
-                        class_room__teacher=request.user, is_active=True
-                    ).values('student').distinct().count()
-                    if current >= sub.plan.max_students:
-                        return Response(
-                            {'detail': f'Şagird limitinə çatmısınız ({sub.plan.max_students}). Abunəliyinizi yeniləyin.'},
-                            status=status.HTTP_403_FORBIDDEN
-                        )
-            except Subscription.DoesNotExist:
-                pass
+        # Check subscription and enrollment limit BEFORE creating the student account
+        from apps.subscriptions.models import Subscription
+        from apps.classes.models import ClassEnrollment
+        try:
+            sub = Subscription.objects.select_related('plan').get(teacher=request.user)
+            if not sub.is_active:
+                return Response({'detail': Subscription.EXPIRED_MESSAGE}, status=status.HTTP_403_FORBIDDEN)
+            if class_id and sub.plan.max_students != -1:
+                current = ClassEnrollment.objects.filter(
+                    class_room__teacher=request.user, is_active=True
+                ).values('student').distinct().count()
+                if current >= sub.plan.max_students:
+                    return Response(
+                        {'detail': f'Şagird limitinə çatmısınız ({sub.plan.max_students}). Abunəliyinizi yeniləyin.'},
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+        except Subscription.DoesNotExist:
+            pass
 
         serializer = StudentCreateSerializer(data=request.data)
         if serializer.is_valid():

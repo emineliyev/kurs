@@ -8,6 +8,7 @@ import { paymentsApi } from '@/api/payments'
 import { subscriptionsApi } from '@/api/subscriptions'
 import { useAuthStore } from '@/store/authStore'
 import PageSpinner from '@/components/common/PageSpinner'
+import Select from '@/components/common/Select'
 
 const METHOD_ICONS = {
   card:  'bi-credit-card-2-front',
@@ -373,7 +374,7 @@ export default function PaymentPage() {
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               {t('plan_label', { ns: 'teacher' })} <span className="text-red-500">*</span>
             </label>
-            <select
+            <Select
               {...register('plan_id', { required: true })}
               className="input-field"
             >
@@ -383,7 +384,7 @@ export default function PaymentPage() {
                   {p.display_name} — {p.price} AZN/ay
                 </option>
               ))}
-            </select>
+            </Select>
             {errors.plan_id && (
               <p className="text-red-500 text-xs mt-1">{t('select_plan_required', { ns: 'teacher' })}</p>
             )}

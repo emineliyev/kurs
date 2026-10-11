@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { examsApi } from '@/api/exams'
 import { testsApi } from '@/api/tests'
 import { classesApi } from '@/api/classes'
+import Select from '@/components/common/Select'
 
 export default function ExamCreatePage() {
   const { t } = useTranslation(['common', 'teacher'])
@@ -144,7 +145,7 @@ export default function ExamCreatePage() {
           {/* Test selector */}
           <div>
             <label className="block text-sm font-medium mb-1">{t('tests')} <span className="text-red-500">*</span></label>
-            <select {...register('test')} className="input-field">
+            <Select {...register('test')} className="input-field">
               <option value="">{t('select_test', { ns: 'teacher' })}</option>
               {availableTests.map(test => (
                 <option key={test.id} value={test.id}>
@@ -152,7 +153,7 @@ export default function ExamCreatePage() {
                   {!test.class_rooms?.length ? ` (${t('general', { ns: 'teacher' })})` : ` (${test.class_names?.map(c => c.name).join(', ')})`}
                 </option>
               ))}
-            </select>
+            </Select>
             {selectedTest && (
               <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
                 <i className="bi bi-info-circle"></i>

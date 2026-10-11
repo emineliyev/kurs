@@ -6,6 +6,7 @@ import { authApi } from '@/api/auth'
 import { classesApi } from '@/api/classes'
 import { useAuthStore } from '@/store/authStore'
 import PageSpinner from '@/components/common/PageSpinner'
+import Select from '@/components/common/Select'
 
 export default function TeacherProfilePage() {
   const { t } = useTranslation(['common', 'teacher'])
@@ -87,12 +88,12 @@ export default function TeacherProfilePage() {
               <i className="bi bi-book mr-1 text-primary-700"></i>
               {t('teaching_subject', { ns: 'teacher' })}
             </label>
-            <select {...register('teacher_profile.subject')} className="input-field">
+            <Select {...register('teacher_profile.subject')} className="input-field">
               <option value="">{t('select_subject', { ns: 'teacher' })}</option>
               {subjects.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
-            </select>
+            </Select>
             <p className="text-xs text-slate-400 mt-1">{t('subject_hint', { ns: 'teacher' })}</p>
           </div>
 

@@ -8,6 +8,7 @@ import Swal from 'sweetalert2'
 import { classesApi } from '@/api/classes'
 import { useAuthStore } from '@/store/authStore'
 import PageSpinner from '@/components/common/PageSpinner'
+import Select from '@/components/common/Select'
 
 function subjectName(s) {
   const lang = i18n.language?.slice(0, 2) || 'az'
@@ -161,26 +162,26 @@ export default function ClassesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('subject_field', { ns: 'teacher' })}</label>
-              <select {...regEdit('subject')} className="input-field">
+              <Select {...regEdit('subject')} className="input-field">
                 <option value="">{t('select_option')}</option>
                 {subjects.map((s) => <option key={s.id} value={s.id}>{subjectName(s)}</option>)}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('grade_1_11', { ns: 'teacher' })}</label>
-              <select {...regEdit('grade')} className="input-field">
+              <Select {...regEdit('grade')} className="input-field">
                 <option value="">{t('select_option')}</option>
                 {Array.from({ length: 11 }, (_, i) => i + 1).map((g) => (
                   <option key={g} value={g}>{g}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('group', { ns: 'teacher' })}</label>
-              <select {...regEdit('group')} className="input-field">
+              <Select {...regEdit('group')} className="input-field">
                 <option value="">{t('select_option')}</option>
                 {['I','II','III','IV','V'].map((g) => <option key={g} value={g}>{g}</option>)}
-              </select>
+              </Select>
             </div>
             <div className="md:col-span-2 flex gap-3">
               <button type="submit" disabled={editSaving} className="btn-primary">
@@ -202,26 +203,26 @@ export default function ClassesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('subject_field', { ns: 'teacher' })}</label>
-              <select {...register('subject')} className="input-field">
+              <Select {...register('subject')} className="input-field">
                 <option value="">{t('select_option')}</option>
                 {subjects.map((s) => <option key={s.id} value={s.id}>{subjectName(s)}</option>)}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('grade_1_11', { ns: 'teacher' })}</label>
-              <select {...register('grade')} className="input-field">
+              <Select {...register('grade')} className="input-field">
                 <option value="">{t('select_option')}</option>
                 {Array.from({ length: 11 }, (_, i) => i + 1).map((g) => (
                   <option key={g} value={g}>{g}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('group', { ns: 'teacher' })}</label>
-              <select {...register('group')} className="input-field">
+              <Select {...register('group')} className="input-field">
                 <option value="">{t('select_option')}</option>
                 {['I','II','III','IV','V'].map((g) => <option key={g} value={g}>{g}</option>)}
-              </select>
+              </Select>
             </div>
             <div className="md:col-span-2 flex gap-3">
               <button type="submit" disabled={creating} className="btn-primary">

@@ -36,6 +36,8 @@ class Plan(models.Model):
 
 
 class Subscription(models.Model):
+    EXPIRED_MESSAGE = 'Abunəliyinizin müddəti bitib. Davam etmək üçün abunəliyinizi yeniləyin.'
+
     STATUS_ACTIVE    = 'active'
     STATUS_EXPIRED   = 'expired'
     STATUS_CANCELLED = 'cancelled'

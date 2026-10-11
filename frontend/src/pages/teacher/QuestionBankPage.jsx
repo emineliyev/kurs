@@ -7,6 +7,7 @@ import FormulaLibrary from '@/components/teacher/FormulaLibrary'
 import MediaPickerModal from '@/components/common/MediaPickerModal'
 import { renderMath } from '@/utils/math'
 import QuestionTextEditor, { LatexPreview, AnswerMiniEditor } from '@/components/teacher/QuestionTextEditor'
+import Select from '@/components/common/Select'
 
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -540,13 +541,13 @@ export default function QuestionBankPage() {
               placeholder={t('bank_search_placeholder', { ns: 'teacher' })}
               className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 bg-white" />
           </div>
-          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          <Select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
             className="input-field sm:w-48">
             <option value="all">{t('filter_all', { ns: 'teacher' })}</option>
             {Object.entries(TYPE_LABEL_KEYS).map(([type, key]) => (
               <option key={type} value={type}>{t(key, { ns: 'teacher' })}</option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 

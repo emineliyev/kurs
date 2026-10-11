@@ -6,6 +6,7 @@ import { analyticsApi } from '@/api/analytics'
 import { classesApi } from '@/api/classes'
 import { examsApi } from '@/api/exams'
 import PageSpinner from '@/components/common/PageSpinner'
+import Select from '@/components/common/Select'
 
 const GREEN_FILL  = { patternType: 'solid', fgColor: { rgb: 'C6EFCE' } }
 const RED_FILL    = { patternType: 'solid', fgColor: { rgb: 'FFC7CE' } }
@@ -111,23 +112,23 @@ export default function AnalyticsPage() {
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Class filter */}
-          <select
+          <Select
             value={selectedClass || ''}
             onChange={(e) => setSelectedClass(e.target.value)}
             className="input-field w-48"
           >
             {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          </Select>
 
           {/* Exam filter */}
-          <select
+          <Select
             value={selectedExam}
             onChange={(e) => setSelectedExam(e.target.value)}
             className="input-field w-48"
           >
             <option value="">{t('all_exams', { ns: 'teacher' })}</option>
             {exams.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
-          </select>
+          </Select>
 
           {/* Date filter toggle pill */}
           <button
@@ -144,14 +145,14 @@ export default function AnalyticsPage() {
 
           {filterByDate && (
             <>
-              <select
+              <Select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
                 className="input-field w-36"
               >
                 {months.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-              </select>
-              <select
+              </Select>
+              <Select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
                 className="input-field w-24"
@@ -159,7 +160,7 @@ export default function AnalyticsPage() {
                 {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => (
                   <option key={y} value={y}>{y}</option>
                 ))}
-              </select>
+              </Select>
             </>
           )}
 
