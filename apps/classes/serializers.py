@@ -22,6 +22,13 @@ class ClassSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at']
 
+    def to_internal_value(self, data):
+        # Forms send "" when no grade is chosen; treat it as "not set".
+        if hasattr(data, 'get') and data.get('grade') == '':
+            data = data.copy() if hasattr(data, 'copy') else dict(data)
+            data['grade'] = None
+        return super().to_internal_value(data)
+
 
 class ClassEnrollmentSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.get_full_name', read_only=True)
