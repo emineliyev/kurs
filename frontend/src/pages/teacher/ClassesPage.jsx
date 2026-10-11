@@ -61,7 +61,8 @@ function ClassCard({ cls, onDelete, onEdit }) {
 
 export default function ClassesPage() {
   const { t } = useTranslation(['common', 'teacher'])
-  const { accessToken } = useAuthStore()
+  const { accessToken, user } = useAuthStore()
+  const profileSubject = user?.teacher_profile?.subject || ''
   const [classes, setClasses] = useState([])
   const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -85,8 +86,8 @@ export default function ClassesPage() {
     load()
   }, [accessToken])
 
-  // Admin-curated subjects plus whatever this teacher has typed before
-  const subjectSuggestions = [...subjects.map(subjectName), ...classes.map((c) => c.subject)]
+  // The teacher's profile subject first, then admin-curated subjects and earlier entries
+  const subjectSuggestions = [profileSubject, ...subjects.map(subjectName), ...classes.map((c) => c.subject)]
 
   const onCreate = async (data) => {
     setCreating(true)
@@ -144,7 +145,11 @@ export default function ClassesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">{t('classes')}</h1>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+        <button onClick={() => {
+          // New classes start with the subject from the teacher's profile
+          if (!showForm) reset({ subject: profileSubject })
+          setShowForm(!showForm)
+        }} className="btn-primary">
           <i className="bi bi-plus-lg"></i> {t('create_class', { ns: 'teacher' })}
         </button>
       </div>
