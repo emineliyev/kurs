@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 're
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
+import Swal from 'sweetalert2'
 import { useTranslation } from 'react-i18next'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable'
@@ -659,8 +660,28 @@ export default function TestCreatePage() {
     setQuestions(prev => prev.map((q, i) => i === index ? updated : q))
   }
 
-  const removeQuestion = (index) => {
-    setQuestions(prev => prev.filter((_, i) => i !== index))
+  const removeQuestion = async (index) => {
+    const q = questions[index]
+    const r = await Swal.fire({
+      title: t('confirm_delete'),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#EF4444',
+      confirmButtonText: t('yes_delete'),
+      cancelButtonText: t('no_cancel'),
+    })
+    if (!r.isConfirmed) return
+    // A question saved earlier also exists on the server — delete it there too.
+    if (q?._id) {
+      try {
+        await testsApi.deleteQuestion(q._id)
+      } catch (err) {
+        toast.error(err.response?.data?.detail || t('error_occurred'))
+        return
+      }
+    }
+    setQuestions(prev => prev.filter(item => item !== q))
+    toast.success(t('question_deleted', { ns: 'teacher' }))
   }
 
   const addQuestion = (type) => {
@@ -726,12 +747,8 @@ export default function TestCreatePage() {
     } catch (err) {
       const errs = err.response?.data
       const msg = errs?.detail ? String(errs.detail) : t('test_not_published', { ns: 'teacher' })
+      // The draft is kept so the teacher's work is never lost (e.g. limit reached or email not verified)
       toast.error(msg)
-      // If subscription limit exceeded — delete the draft and go back
-      if (err.response?.status === 403) {
-        await testsApi.delete(createdTest.id).catch(() => {})
-        navigate('/teacher/tests')
-      }
     } finally { setPublishing(false) }
   }
 

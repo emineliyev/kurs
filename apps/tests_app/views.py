@@ -17,7 +17,8 @@ class TestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
-        if self.action in ['retrieve']:
+        # Questions (with correct answers) are for the owning teacher only.
+        if self.action == 'retrieve' and self.request.user.is_teacher:
             return TestDetailSerializer
         return TestSerializer
 
@@ -32,7 +33,7 @@ class TestViewSet(viewsets.ModelViewSet):
         ).distinct().prefetch_related('class_rooms')
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy', 'duplicate']:
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'duplicate', 'versions']:
             return [IsTeacher()]
         return [IsAuthenticated()]
 
@@ -147,6 +148,18 @@ class TestViewSet(viewsets.ModelViewSet):
         user = request.user
         questions = test.questions.prefetch_related('answers')
         if user.is_student:
+            # Students get the questions only while taking an exam built on this test.
+            from django.utils import timezone
+            from apps.exams.models import ExamResult
+            now = timezone.now()
+            in_exam = ExamResult.objects.filter(
+                student=user, exam__test=test, exam__is_active=True,
+                exam__start_time__lte=now, exam__end_time__gte=now,
+                status=ExamResult.STATUS_IN_PROGRESS,
+            ).exists()
+            if not in_exam:
+                return Response({'detail': 'Suallar yalnız imtahan zamanı əlçatandır.'},
+                                status=status.HTTP_403_FORBIDDEN)
             serializer = QuestionPublicSerializer(questions, many=True, context={'request': request})
         else:
             serializer = QuestionSerializer(questions, many=True, context={'request': request})
@@ -163,14 +176,29 @@ class QuestionViewSet(viewsets.ModelViewSet):
             test__teacher=self.request.user
         ).prefetch_related('answers')
 
+    @staticmethod
+    def _ensure_editable(test):
+        if test.is_locked:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(Test.LOCKED_MESSAGE)
+
     def perform_create(self, serializer):
         test_id = self.request.data.get('test')
         try:
             test = Test.objects.get(id=test_id, teacher=self.request.user)
-        except Test.DoesNotExist:
+        except (Test.DoesNotExist, ValueError, TypeError):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Test not found or permission denied.')
+        self._ensure_editable(test)
         serializer.save(test=test)
+
+    def perform_update(self, serializer):
+        self._ensure_editable(serializer.instance.test)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._ensure_editable(instance.test)
+        instance.delete()
 
     @action(detail=False, methods=['post'])
     def reorder(self, request):
@@ -209,6 +237,8 @@ class BankQuestionViewSet(viewsets.ModelViewSet):
             test = Test.objects.get(id=test_id, teacher=request.user)
         except Test.DoesNotExist:
             return Response({'detail': 'Test tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+        if test.is_locked:
+            return Response({'detail': Test.LOCKED_MESSAGE}, status=status.HTTP_403_FORBIDDEN)
 
         new_order = test.questions.count()
         new_q = Question.objects.create(

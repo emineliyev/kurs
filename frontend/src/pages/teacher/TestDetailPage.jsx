@@ -71,9 +71,13 @@ export default function TestDetailPage() {
       cancelButtonText: t('no_cancel'),
     })
     if (r.isConfirmed) {
-      await testsApi.deleteQuestion(qId)
-      toast.success(t('question_deleted', { ns: 'teacher' }))
-      load()
+      try {
+        await testsApi.deleteQuestion(qId)
+        toast.success(t('question_deleted', { ns: 'teacher' }))
+        load()
+      } catch (err) {
+        toast.error(err.response?.data?.detail || t('error_occurred'))
+      }
     }
   }
 

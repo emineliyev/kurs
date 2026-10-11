@@ -30,6 +30,14 @@ class Test(models.Model):
     def total_points(self):
         return sum(q.points for q in self.questions.all())
 
+    LOCKED_MESSAGE = 'Şagirdlər bu testə aid imtahana başladığı üçün suallar dəyişdirilə bilməz.'
+
+    @property
+    def is_locked(self):
+        """Questions are frozen once any student has started an exam built on this test."""
+        from apps.exams.models import ExamResult
+        return ExamResult.objects.filter(exam__test=self).exists()
+
 
 class Question(models.Model):
     TYPE_MCQ = 'mcq'
