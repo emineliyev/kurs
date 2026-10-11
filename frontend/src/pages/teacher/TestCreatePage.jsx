@@ -20,6 +20,15 @@ const newDndId = () => ++_dndIdCounter
 
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
+// Rich-text editors leave markup like "<br>" or "<div><br></div>" after clearing.
+function isBlankHtml(html) {
+  if (!html) return true
+  if (/<img/i.test(html)) return false
+  const div = document.createElement('div')
+  div.innerHTML = html
+  return !(div.textContent || '').replace(/ /g, ' ').trim()
+}
+
 const TYPE_CONFIG = {
   multiple_choice: { icon: 'bi-list-check',        color: 'blue'   },
   image_mcq:       { icon: 'bi-image',             color: 'orange' },
@@ -140,14 +149,14 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId }) {
   }
 
   const handleMediaPick = (file, previewUrl) => { upQ({ _imageFile: file, _imagePreview: previewUrl }); setShowMedia(false) }
-  const removeImage = () => upQ({ _imageFile: null, _imagePreview: null, image: null })
+  const removeImage = () => upQ({ _imageFile: null, _imagePreview: null, image: null, _imageRemoved: !!question._id })
   const preview = question._imagePreview || question.image || null
   const qType   = question.question_type || 'multiple_choice'
 
   // ── Validation ──────────────────────────────────────────────────────────────
   const validate = () => {
     if (qType === 'passage') {
-      if (!question.text?.trim()) { toast.error(t('q_text_required', { ns: 'teacher' })); return false }
+      if (isBlankHtml(question.text)) { toast.error(t('q_text_required', { ns: 'teacher' })); return false }
       return true
     }
     if (qType === 'image_mcq') {
@@ -155,9 +164,9 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId }) {
       if ((question._correctIndex ?? -1) < 0) { toast.error(t('q_correct_select', { ns: 'teacher' })); return false }
       return true
     }
-    if (!question.text?.trim()) { toast.error(t('q_text_required', { ns: 'teacher' })); return false }
+    if (isBlankHtml(question.text)) { toast.error(t('q_text_required', { ns: 'teacher' })); return false }
     if (qType === 'multiple_choice') {
-      const filled = (question.answers || []).filter(a => a.text?.trim())
+      const filled = (question.answers || []).filter(a => !isBlankHtml(a.text))
       if (filled.length < 2) { toast.error(t('q_min_2_choices', { ns: 'teacher' })); return false }
       if (!filled.some(a => a.is_correct)) { toast.error(t('q_mark_correct', { ns: 'teacher' })); return false }
     }
@@ -183,7 +192,7 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId }) {
       let answersPayload = []
       if (qType === 'multiple_choice') {
         answersPayload = (question.answers || [])
-          .filter(a => a.text?.trim())
+          .filter(a => !isBlankHtml(a.text))
           .map((a, i) => ({ text: a.text, is_correct: a.is_correct || false, order: i }))
       } else if (qType === 'image_mcq') {
         const count = question._choiceCount || 4
@@ -206,6 +215,7 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId }) {
         hide_choices: question._hideChoices || false,
         answers: answersPayload,
       }
+      if (question._imageRemoved && !question._imageFile) payload.image = null
 
       let qId = question._id
       if (qId) {
@@ -213,15 +223,19 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId }) {
       } else {
         const res = await testsApi.createQuestion(payload)
         qId = res.data.id
+        // Remember the id now, so a failed image upload is retried as an update, not a duplicate
+        onUpdate(index, { ...question, _id: qId, _saved: false })
       }
 
+      let image = question._imageRemoved ? null : question.image
       if (question._imageFile) {
         const fd = new FormData()
         fd.append('image', question._imageFile)
-        await testsApi.updateQuestion(qId, fd)
+        const res = await testsApi.updateQuestion(qId, fd)
+        image = res.data.image
       }
 
-      onUpdate(index, { ...question, _saved: true, _id: qId })
+      onUpdate(index, { ...question, _saved: true, _id: qId, image, _imageFile: null, _imageRemoved: false })
       setSaved(true)
       toast.success(t('q_saved_msg', { ns: 'teacher', num: index + 1 }))
     } catch (err) {
@@ -739,6 +753,19 @@ export default function TestCreatePage() {
   const onPublish = async () => {
     const savedCount = questions.filter(q => q._saved).length
     if (savedCount === 0) { toast.error(t('min_one_question', { ns: 'teacher' })); return }
+    const unsavedCount = questions.length - savedCount
+    if (unsavedCount > 0) {
+      const r = await Swal.fire({
+        title: t('unsaved_questions_title', { ns: 'teacher' }),
+        text: t('unsaved_questions_text', { ns: 'teacher', count: unsavedCount }),
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#143587',
+        confirmButtonText: t('publish_anyway', { ns: 'teacher' }),
+        cancelButtonText: t('cancel'),
+      })
+      if (!r.isConfirmed) return
+    }
     setPublishing(true)
     try {
       await testsApi.update(createdTest.id, { is_published: true })
