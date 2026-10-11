@@ -30,58 +30,37 @@ class SubscriptionView(APIView):
             return Response({'detail': 'No subscription found.'}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request):
-        """Initial subscription or re-subscribe after expiry."""
+        """
+        Activate the free trial for a teacher who has never had a subscription.
+        Paid plans are activated only by an admin approving a PaymentRequest.
+        """
         plan_id = request.data.get('plan_id')
-        payment_reference = request.data.get('payment_reference', '')
         try:
             plan = Plan.objects.get(id=plan_id, is_active=True)
-        except Plan.DoesNotExist:
+        except (Plan.DoesNotExist, ValueError, TypeError):
             return Response({'detail': 'Plan tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if plan.price > 0:
+            return Response(
+                {'detail': 'Ödənişli plan yalnız ödəniş təsdiqləndikdən sonra aktivləşir.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if Subscription.objects.filter(teacher=request.user).exists():
+            return Response(
+                {'detail': 'Pulsuz sınaq müddətindən artıq istifadə etmisiniz.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         now = timezone.now()
-        sub, created = Subscription.objects.update_or_create(
+        sub = Subscription.objects.create(
             teacher=request.user,
-            defaults={
-                'plan': plan,
-                'status': Subscription.STATUS_ACTIVE,
-                'start_date': now,
-                'end_date': now + timedelta(days=plan.duration_days),
-                'payment_reference': payment_reference,
-                'tests_used_this_month': 0,
-                'pending_plan': None,
-                'pending_change_date': None,
-                'cancelled_at': None,
-            }
+            plan=plan,
+            status=Subscription.STATUS_TRIAL,
+            start_date=now,
+            end_date=now + timedelta(days=plan.duration_days),
         )
-        return Response(
-            SubscriptionSerializer(sub).data,
-            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
-        )
-
-
-class UpgradeSubscriptionView(APIView):
-    """Immediate upgrade to a higher plan with proration."""
-    permission_classes = [IsTeacher]
-
-    def post(self, request):
-        plan_id = request.data.get('plan_id')
-        try:
-            sub  = Subscription.objects.select_related('plan').get(teacher=request.user)
-            plan = Plan.objects.get(id=plan_id, is_active=True)
-        except Subscription.DoesNotExist:
-            return Response({'detail': 'Abunəlik tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
-        except Plan.DoesNotExist:
-            return Response({'detail': 'Plan tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if plan.tier <= sub.plan.tier:
-            return Response({'detail': 'Bu bir upgrade deyil.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        proration = sub.calculate_upgrade_proration(plan)
-        sub.apply_upgrade(plan)
-        return Response({
-            **SubscriptionSerializer(sub).data,
-            'charged_amount': proration,
-        })
+        return Response(SubscriptionSerializer(sub).data, status=status.HTTP_201_CREATED)
 
 
 class DowngradeSubscriptionView(APIView):
