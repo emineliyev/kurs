@@ -325,7 +325,7 @@ export default function StudentsPage() {
             </div>
             <div className="flex gap-3">
               <button type="submit" disabled={adding} className="btn-primary">
-                {adding ? <i className="bi bi-arrow-repeat animate-spin"></i> : <i className="bi bi-check-lg"></i>} {t('create')}
+                {adding ? <i className="bi bi-arrow-repeat animate-spin"></i> : <i className="bi bi-check-lg"></i>} {t('add')}
               </button>
               <button type="button" onClick={() => { setShowForm(false); reset() }} className="btn-secondary">
                 {t('cancel')}

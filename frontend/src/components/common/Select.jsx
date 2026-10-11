@@ -149,8 +149,9 @@ const Select = forwardRef(function Select(
         type="hidden"
         ref={attachNative}
         name={name}
-        value={controlled ? current : undefined}
-        onChange={() => {}}
+        // Pass `value` only when controlled: even `value={undefined}` makes React
+        // reset a hidden input to its initial value on every re-render.
+        {...(controlled ? { value: current, onChange: () => {} } : {})}
         disabled={disabled}
         {...rest}
       />
