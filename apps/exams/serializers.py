@@ -81,6 +81,14 @@ class ExamSerializer(serializers.ModelSerializer):
         end = attrs.get('end_time')
         if start and end and start >= end:
             raise serializers.ValidationError({'end_time': 'End time must be after start time.'})
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            test = attrs.get('test')
+            if test is not None and test.teacher_id != request.user.id:
+                raise serializers.ValidationError({'test': 'Test tapılmadı.'})
+            class_room = attrs.get('class_room')
+            if class_room is not None and class_room.teacher_id != request.user.id:
+                raise serializers.ValidationError({'class_room': 'Sinif tapılmadı.'})
         return attrs
 
 

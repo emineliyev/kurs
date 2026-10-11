@@ -78,6 +78,12 @@ class TestSerializer(serializers.ModelSerializer):
     def get_class_names(self, obj):
         return [{'id': c.id, 'name': c.name} for c in obj.class_rooms.all()]
 
+    def validate_class_rooms(self, value):
+        request = self.context.get('request')
+        if request and any(c.teacher_id != request.user.id for c in value):
+            raise serializers.ValidationError('Sinif tapılmadı.')
+        return value
+
     class Meta:
         model = Test
         fields = [

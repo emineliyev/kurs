@@ -13,6 +13,8 @@ class Test(models.Model):
     randomize_answers = models.BooleanField(default=False)
     topic = models.CharField(max_length=300, blank=True)
     passing_score = models.PositiveIntegerField(default=50)
+    # Set on the first publish; republishing does not use the monthly quota again.
+    published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -31,6 +33,28 @@ class Test(models.Model):
         return sum(q.points for q in self.questions.all())
 
     LOCKED_MESSAGE = 'Şagirdlər bu testə aid imtahana başladığı üçün suallar dəyişdirilə bilməz.'
+
+    def publish_errors(self):
+        """Reasons the test can't be published yet (empty list = ready)."""
+        questions = list(self.questions.prefetch_related('answers'))
+        if not any(q.question_type not in Question.NO_GRADE_TYPES for q in questions):
+            return ['Testdə ən azı bir sual olmalıdır.']
+        errors = []
+        for n, q in enumerate(questions, start=1):
+            if q.question_type in Question.MCQ_TYPES:
+                answers = list(q.answers.all())
+                if len(answers) < 2:
+                    errors.append(f'Sual {n}: ən azı 2 cavab variantı olmalıdır.')
+                elif not any(a.is_correct for a in answers):
+                    errors.append(f'Sual {n}: düzgün cavab işarələnməyib.')
+            elif q.question_type == Question.TYPE_SHORT_ANSWER and not q.correct_answer.strip():
+                errors.append(f'Sual {n}: düzgün cavab yazılmayıb.')
+            elif q.question_type == Question.TYPE_NUMERIC:
+                try:
+                    float(q.correct_answer)  # same parsing as grading
+                except ValueError:
+                    errors.append(f'Sual {n}: düzgün cavab rəqəm olmalıdır.')
+        return errors
 
     @property
     def is_locked(self):

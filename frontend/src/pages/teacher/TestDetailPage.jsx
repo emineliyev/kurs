@@ -56,8 +56,8 @@ export default function TestDetailPage() {
       await testsApi.update(id, { is_published: !test.is_published })
       toast.success(test.is_published ? t('move_to_draft', { ns: 'teacher' }) : t('publish', { ns: 'teacher' }))
       load()
-    } catch {
-      toast.error(t('error_occurred'))
+    } catch (err) {
+      toast.error(err.response?.data?.detail || t('error_occurred'))
     } finally { setToggling(false) }
   }
 

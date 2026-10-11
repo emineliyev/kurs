@@ -13,6 +13,17 @@ from .serializers import (
 )
 
 
+def copy_image(source, question):
+    """Copy an image file into question.image (each question owns its own file)."""
+    import os
+    from django.core.files.base import ContentFile
+    source.open('rb')
+    try:
+        question.image.save(os.path.basename(source.name), ContentFile(source.read()), save=True)
+    finally:
+        source.close()
+
+
 class TestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -38,7 +49,8 @@ class TestViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
-        serializer.save(teacher=self.request.user)
+        # Publishing goes through update(), where email, quota and content are checked.
+        serializer.save(teacher=self.request.user, is_published=False)
 
     def update(self, request, *args, **kwargs):
         test = self.get_object()
@@ -48,12 +60,17 @@ class TestViewSet(viewsets.ModelViewSet):
                 {'detail': 'Şagirdlər bu testə aid imtahanı tamamladığı üçün test redaktə edilə bilməz.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        # Check subscription limit only on first publish
-        is_publishing = not test.is_published and request.data.get('is_published')
+        is_publishing = not test.is_published and request.data.get('is_published') in (True, 'true', 'True', '1', 1)
+        # Only the first publish uses the monthly quota; republishing a draft is free.
+        first_publish = is_publishing and test.published_at is None
         if is_publishing and not request.user.is_email_verified:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Testi yayımlamaq üçün əvvəlcə email ünvanınızı təsdiqləyin.')
         if is_publishing:
+            errors = test.publish_errors()
+            if errors:
+                return Response({'detail': ' '.join(errors)}, status=status.HTTP_400_BAD_REQUEST)
+        if first_publish:
             from apps.subscriptions.models import Subscription
             from rest_framework.exceptions import PermissionDenied
             try:
@@ -66,9 +83,10 @@ class TestViewSet(viewsets.ModelViewSet):
             except Subscription.DoesNotExist:
                 pass
         response = super().update(request, *args, **kwargs)
-        # Increment counter after successful publish
-        if is_publishing and response.status_code < 300:
+        if first_publish and response.status_code < 300:
+            from django.utils import timezone
             from apps.subscriptions.models import Subscription
+            Test.objects.filter(pk=test.pk).update(published_at=timezone.now())
             try:
                 subscription = Subscription.objects.get(teacher=request.user)
                 subscription.tests_used_this_month += 1
@@ -109,13 +127,14 @@ class TestViewSet(viewsets.ModelViewSet):
             teacher=request.user,
             title=f'{original.title} (Copy)',
             description=original.description,
+            topic=original.topic,
             randomize_questions=original.randomize_questions,
             randomize_answers=original.randomize_answers,
             passing_score=original.passing_score,
             is_published=False,
         )
 
-        for question in original.questions.all():
+        for question in original.questions.prefetch_related('answers'):
             new_question = Question.objects.create(
                 test=new_test,
                 question_type=question.question_type,
@@ -123,7 +142,13 @@ class TestViewSet(viewsets.ModelViewSet):
                 points=question.points,
                 order=question.order,
                 math_formula=question.math_formula,
+                model_answer=question.model_answer,
+                correct_answer=question.correct_answer,
+                tolerance=question.tolerance,
+                hide_choices=question.hide_choices,
             )
+            if question.image:
+                copy_image(question.image, new_question)
             for answer in question.answers.all():
                 Answer.objects.create(
                     question=new_question,
@@ -253,15 +278,7 @@ class BankQuestionViewSet(viewsets.ModelViewSet):
             order=new_order,
         )
         if bank_q.image:
-            import os as _os
-            from django.core.files.base import ContentFile
-            bank_q.image.open('rb')
-            new_q.image.save(
-                _os.path.basename(bank_q.image.name),
-                ContentFile(bank_q.image.read()),
-                save=True,
-            )
-            bank_q.image.close()
+            copy_image(bank_q.image, new_q)
         for ans in bank_q.answers.all():
             Answer.objects.create(
                 question=new_q,
