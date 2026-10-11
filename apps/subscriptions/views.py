@@ -80,6 +80,14 @@ class DowngradeSubscriptionView(APIView):
         if plan.tier >= sub.plan.tier:
             return Response({'detail': 'Bu bir downgrade deyil.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # The free trial is given once at signup; switching to it would grant
+        # another free period. To stop paying, the teacher cancels instead.
+        if plan.price == 0:
+            return Response(
+                {'detail': 'Pulsuz plana keçmək mümkün deyil. Ödənişi dayandırmaq üçün abunəliyi ləğv edin.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Check if user exceeds new plan limits
         classes_used  = sub.teacher.classes.filter(is_active=True).count()
         from apps.classes.models import ClassEnrollment

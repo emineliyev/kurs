@@ -9,7 +9,8 @@ import PageSpinner from '@/components/common/PageSpinner'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtDate = (d) => d ? format(new Date(d), 'dd.MM.yyyy') : '—'
-const fmtAZN  = (n, freeLabel) => n === 0 ? freeLabel : `${Number(n).toFixed(2)} AZN`
+// API returns prices as strings ("0.00"), so compare numerically.
+const fmtAZN  = (n, freeLabel) => Number(n) === 0 ? freeLabel : `${Number(n).toFixed(2)} AZN`
 
 function limitLabel(val, unlimitedLabel) {
   return val === -1
@@ -109,6 +110,9 @@ function PlanCard({ plan, sub, onAction, loadingPlan }) {
   const busy           = loadingPlan === plan.id
 
   const getAction = () => {
+    // Free trial is signup-only: it can't be re-selected or downgraded to.
+    if (sub && Number(plan.price) === 0 && !(isCurrent && sub.is_active))
+      return { label: t('trial_used', { ns: 'teacher' }), type: null, color: 'ghost' }
     if (!sub || !sub.is_active) return { label: t('select_plan', { ns: 'teacher' }), type: 'subscribe', color: 'primary' }
     if (isCurrent) {
       if (sub.is_cancellation_scheduled) return { label: t('current_plan_cancelling', { ns: 'teacher' }), type: null, color: 'ghost' }
@@ -188,6 +192,117 @@ function PlanCard({ plan, sub, onAction, loadingPlan }) {
   )
 }
 
+// ── Comparison table ──────────────────────────────────────────────────────────
+const COMMON_FEATURES = [
+  { icon: 'bi-file-earmark-text', key: 'compare_feat_tests' },
+  { icon: 'bi-collection',        key: 'compare_feat_bank' },
+  { icon: 'bi-stopwatch',         key: 'compare_feat_exams' },
+  { icon: 'bi-shield-check',      key: 'compare_feat_anticheat' },
+  { icon: 'bi-bar-chart',         key: 'compare_feat_analytics' },
+]
+
+function CompareTable({ plans, sub }) {
+  const { t } = useTranslation(['common', 'teacher'])
+  if (!plans.length) return null
+  const unlimitedLabel = t('unlimited', { ns: 'teacher' })
+
+  const limitRows = [
+    { icon: 'bi-person',            label: t('students'),                                  field: 'max_students' },
+    { icon: 'bi-people',            label: t('classes'),                                   field: 'max_classes' },
+    { icon: 'bi-file-earmark-text', label: t('tests_per_month_label', { ns: 'teacher' }),  field: 'max_tests_per_month' },
+    { icon: 'bi-journal-check',     label: t('exams_per_month_label', { ns: 'teacher' }),  field: 'max_exams_per_month' },
+  ]
+
+  const colClass = (plan) => plan.name === 'pro' ? 'bg-primary-50/60' : ''
+  const RowLabel = ({ icon, children }) => (
+    <th scope="row" className="text-left font-medium text-slate-600 px-3 sm:px-5 py-3 sm:py-3.5 sm:whitespace-nowrap">
+      <span className="flex items-start gap-2"><i className={`bi ${icon} text-primary-700`}></i><span>{children}</span></span>
+    </th>
+  )
+  const SectionRow = ({ children }) => (
+    <tr className="bg-slate-50 border-y border-slate-200">
+      <th colSpan={plans.length + 1} className="text-left px-3 sm:px-5 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+        {children}
+      </th>
+    </tr>
+  )
+
+  return (
+    <div>
+      <h2 className="text-lg font-bold text-slate-900 mb-4">{t('compare_heading', { ns: 'teacher' })}</h2>
+      <div className="card overflow-hidden">
+        <table className="w-full text-xs sm:text-sm">
+          <thead>
+            <tr className="border-b border-slate-200">
+              <th className="w-[38%] text-left px-3 sm:px-5 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                {t('compare_feature', { ns: 'teacher' })}
+              </th>
+              {plans.map((plan) => (
+                <th key={plan.id} className={`px-1.5 sm:px-5 py-4 text-center ${colClass(plan)}`}>
+                  <div className="font-bold text-slate-900">{plan.display_name}</div>
+                  {plan.name === 'pro' && (
+                    <span className="inline-block mt-1 px-2 py-0.5 bg-primary-700 text-white text-[10px] font-bold rounded-full">
+                      {t('popular', { ns: 'teacher' })}
+                    </span>
+                  )}
+                  {sub?.plan === plan.id && (
+                    <span className="inline-block mt-1 sm:ml-1 px-2 py-0.5 bg-green-500 text-white text-[10px] font-bold rounded-full">
+                      {t('current_plan', { ns: 'teacher' })}
+                    </span>
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            <tr>
+              <RowLabel icon="bi-tag">{t('compare_price', { ns: 'teacher' })}</RowLabel>
+              {plans.map((plan) => (
+                <td key={plan.id} className={`px-1.5 sm:px-5 py-3 sm:py-3.5 text-center ${colClass(plan)}`}>
+                  <span className="text-sm sm:text-base font-extrabold text-primary-700 whitespace-nowrap">{fmtAZN(plan.price, t('free', { ns: 'teacher' }))}</span>
+                  {Number(plan.price) > 0 && <span className="block sm:inline text-xs text-slate-400">{t('per_month', { ns: 'teacher' })}</span>}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <RowLabel icon="bi-calendar3">{t('compare_duration', { ns: 'teacher' })}</RowLabel>
+              {plans.map((plan) => (
+                <td key={plan.id} className={`px-1.5 sm:px-5 py-3 sm:py-3.5 text-center font-medium text-slate-700 ${colClass(plan)}`}>
+                  {t('compare_duration_days', { ns: 'teacher', count: plan.duration_days })}
+                </td>
+              ))}
+            </tr>
+
+            <SectionRow>{t('compare_limits', { ns: 'teacher' })}</SectionRow>
+            {limitRows.map(({ icon, label, field }) => (
+              <tr key={field}>
+                <RowLabel icon={icon}>{label}</RowLabel>
+                {plans.map((plan) => (
+                  <td key={plan.id} className={`px-1.5 sm:px-5 py-3 sm:py-3.5 text-center font-medium text-slate-700 ${colClass(plan)}`}>
+                    {limitLabel(plan[field], unlimitedLabel)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+
+            <SectionRow>{t('compare_included', { ns: 'teacher' })}</SectionRow>
+            {COMMON_FEATURES.map(({ icon, key }) => (
+              <tr key={key}>
+                <RowLabel icon={icon}>{t(key, { ns: 'teacher' })}</RowLabel>
+                {plans.map((plan) => (
+                  <td key={plan.id} className={`px-1.5 sm:px-5 py-3 sm:py-3.5 text-center ${colClass(plan)}`}>
+                    <i className="bi bi-check-circle-fill text-green-500 text-base"></i>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function SubscriptionPage() {
   const { t } = useTranslation(['common', 'teacher'])
@@ -221,7 +336,7 @@ export default function SubscriptionPage() {
   }
 
   const doSubscribe = async (plan) => {
-    if (plan.price === 0) {
+    if (Number(plan.price) === 0) {
       const r = await Swal.fire({
         title: `${plan.display_name}`,
         html: `<p class="text-slate-600 text-sm">${t('free_plan_activate_html', { ns: 'teacher' })}</p>`,
@@ -414,6 +529,8 @@ export default function SubscriptionPage() {
           ))}
         </div>
       </div>
+
+      <CompareTable plans={plans} sub={sub} />
 
       {/* Legend */}
       <div className="text-xs text-slate-400 space-y-1 pt-2">
