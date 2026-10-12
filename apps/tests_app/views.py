@@ -101,7 +101,7 @@ class TestViewSet(viewsets.ModelViewSet):
         is_publishing = not test.is_published and request.data.get('is_published') in (True, 'true', 'True', '1', 1)
         if is_publishing and not request.user.is_email_verified:
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied('Testi yayımlamaq üçün əvvəlcə email ünvanınızı təsdiqləyin.')
+            raise PermissionDenied('Testi tamamlamaq üçün əvvəlcə email ünvanınızı təsdiqləyin.')
         if is_publishing:
             errors = test.publish_errors()
             if errors:

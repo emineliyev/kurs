@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import Swal from 'sweetalert2'
@@ -7,6 +7,7 @@ import { testsApi } from '@/api/tests'
 import { useAuthStore } from '@/store/authStore'
 import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
+import ScheduleExamModal from '@/components/teacher/ScheduleExamModal'
 
 export default function TestsPage() {
   const { t } = useTranslation(['common', 'teacher'])
@@ -15,6 +16,8 @@ export default function TestsPage() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [duplicatingId, setDuplicatingId] = useState(null)
+  const [scheduling, setScheduling] = useState(null)
+  const navigate = useNavigate()
 
   const load = () => {
     setLoading(true)
@@ -110,7 +113,6 @@ export default function TestsPage() {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('test_title', { ns: 'teacher' })}</th>
-                  <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('grade', { ns: 'teacher' })}</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('questions', { ns: 'teacher' })}</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('status')}</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('created_at')}</th>
@@ -123,14 +125,6 @@ export default function TestsPage() {
                     <td className="px-5 py-3">
                       <Link to={`/teacher/tests/${test.id}`} className="font-medium hover:text-primary-700">{test.title}</Link>
                     </td>
-                    <td className="px-5 py-3 text-slate-500">
-                      {test.class_names?.length
-                        ? test.class_names.map(c => (
-                            <span key={c.id} className="inline-block mr-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">{c.name}</span>
-                          ))
-                        : <span className="text-slate-400">{t('general', { ns: 'teacher' })}</span>
-                      }
-                    </td>
                     <td className="px-5 py-3">{test.question_count}</td>
                     <td className="px-5 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${test.is_published ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
@@ -140,6 +134,12 @@ export default function TestsPage() {
                     <td className="px-5 py-3 text-slate-400 text-xs">{test.created_at ? format(new Date(test.created_at), 'dd.MM.yyyy') : '—'}</td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1.5 justify-end">
+                        {test.is_published && (
+                          <button onClick={() => setScheduling(test)}
+                            className="h-7 px-2.5 rounded-lg flex items-center gap-1 bg-primary-50 text-primary-700 hover:bg-primary-100 text-xs font-medium transition-colors">
+                            <i className="bi bi-calendar-plus"></i> {t('schedule_exam', { ns: 'teacher' })}
+                          </button>
+                        )}
                         {!test.is_published && (
                           <Link to={`/teacher/tests/${test.id}/edit`} title={t('edit')}
                             className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
@@ -172,7 +172,7 @@ export default function TestsPage() {
                       {test.title}
                     </Link>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      {test.class_names?.length ? test.class_names.map(c => c.name).join(', ') : t('general', { ns: 'teacher' })} · {t('question_count', { ns: 'teacher', count: test.question_count })}
+                      {t('question_count', { ns: 'teacher', count: test.question_count })}
                     </p>
                   </div>
                   <span className={`shrink-0 px-2 py-1 rounded-full text-xs font-medium ${test.is_published ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
@@ -182,6 +182,12 @@ export default function TestsPage() {
                 <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                   <span className="text-xs text-slate-400">{test.created_at ? format(new Date(test.created_at), 'dd.MM.yyyy') : '—'}</span>
                   <div className="flex items-center gap-1.5">
+                    {test.is_published && (
+                      <button onClick={() => setScheduling(test)} title={t('schedule_exam', { ns: 'teacher' })}
+                        className="h-8 px-2.5 rounded-lg flex items-center gap-1 bg-primary-50 text-primary-700 hover:bg-primary-100 text-xs font-medium transition-colors">
+                        <i className="bi bi-calendar-plus"></i> {t('schedule_exam', { ns: 'teacher' })}
+                      </button>
+                    )}
                     {!test.is_published && (
                       <Link to={`/teacher/tests/${test.id}/edit`} title={t('edit')}
                         className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
@@ -202,6 +208,14 @@ export default function TestsPage() {
             ))}
           </div>
         </>
+      )}
+
+      {scheduling && (
+        <ScheduleExamModal
+          test={scheduling}
+          onClose={() => setScheduling(null)}
+          onDone={() => { setScheduling(null); navigate('/teacher/exams') }}
+        />
       )}
     </div>
   )

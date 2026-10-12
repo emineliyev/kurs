@@ -7,6 +7,7 @@ import { testsApi } from '@/api/tests'
 import { LABELS } from '@/utils/examConstants'
 import { renderMath } from '@/utils/math'
 import PageSpinner from '@/components/common/PageSpinner'
+import ScheduleExamModal from '@/components/teacher/ScheduleExamModal'
 
 const TYPE_COLORS = {
   multiple_choice: 'bg-blue-50 text-blue-700',
@@ -36,6 +37,7 @@ export default function TestDetailPage() {
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(false)
+  const [scheduling, setScheduling] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -95,11 +97,23 @@ export default function TestDetailPage() {
             {test?.question_count} {t('q_word_questions', { ns: 'teacher' })} · {test?.total_points} {t('q_word_points', { ns: 'teacher' })}
           </p>
         </div>
+        {test?.is_published && (
+          <button onClick={() => setScheduling(true)} className="btn-primary">
+            <i className="bi bi-calendar-plus"></i> {t('schedule_exam', { ns: 'teacher' })}
+          </button>
+        )}
         <button onClick={togglePublish} disabled={toggling} className={test?.is_published ? 'btn-secondary' : 'btn-primary'}>
-          <i className={`bi ${toggling ? 'bi-arrow-repeat animate-spin' : test?.is_published ? 'bi-eye-slash' : 'bi-send'}`}></i>
+          <i className={`bi ${toggling ? 'bi-arrow-repeat animate-spin' : test?.is_published ? 'bi-pencil-square' : 'bi-check2-circle'}`}></i>
           {test?.is_published ? t('move_to_draft', { ns: 'teacher' }) : t('publish', { ns: 'teacher' })}
         </button>
       </div>
+      {scheduling && (
+        <ScheduleExamModal
+          test={test}
+          onClose={() => setScheduling(false)}
+          onDone={() => navigate('/teacher/exams')}
+        />
+      )}
 
       <div className="space-y-3">
         {questions.length === 0 ? (

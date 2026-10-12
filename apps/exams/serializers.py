@@ -86,6 +86,8 @@ class ExamSerializer(serializers.ModelSerializer):
             test = attrs.get('test')
             if test is not None and test.teacher_id != request.user.id:
                 raise serializers.ValidationError({'test': 'Test tapılmadı.'})
+            if test is not None and not test.is_published:
+                raise serializers.ValidationError({'test': 'Test hazır deyil. Əvvəlcə testi tamamlayın.'})
             class_room = attrs.get('class_room')
             if class_room is not None and class_room.teacher_id != request.user.id:
                 raise serializers.ValidationError({'class_room': 'Sinif tapılmadı.'})

@@ -9,11 +9,12 @@ import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } 
 import { CSS } from '@dnd-kit/utilities'
 import { testsApi } from '@/api/tests'
 import { bankApi } from '@/api/questionBank'
-import { classesApi } from '@/api/classes'
+import ExamScheduleForm from '@/components/teacher/ExamScheduleForm'
 import FormulaLibrary from '@/components/teacher/FormulaLibrary'
 import MediaPickerModal from '@/components/common/MediaPickerModal'
 import { renderMath, MathText } from '@/utils/math'
 import QuestionTextEditor, { LatexPreview, AnswerMiniEditor } from '@/components/teacher/QuestionTextEditor'
+import { toastApiError } from '@/api/errors'
 
 let _dndIdCounter = 0
 const newDndId = () => ++_dndIdCounter
@@ -239,9 +240,7 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId }) {
       setSaved(true)
       toast.success(t('q_saved_msg', { ns: 'teacher', num: index + 1 }))
     } catch (err) {
-      const errs = err.response?.data
-      if (errs) Object.values(errs).flat().forEach(m => toast.error(String(m)))
-      else toast.error(t('error_occurred'))
+      toastApiError(err)
     } finally { setSaving(false) }
   }
 
@@ -557,8 +556,6 @@ export default function TestCreatePage() {
   const navigate = useNavigate()
   const { id: editId } = useParams()
   const isEditMode = !!editId
-  const [classes, setClasses]         = useState([])
-  const [selectedClasses, setSelectedClasses] = useState([])
   const [step, setStep]               = useState(1)
   const [createdTest, setCreatedTest] = useState(null)
   const [questions, setQuestions]     = useState([defaultQuestion('multiple_choice')])
@@ -568,18 +565,10 @@ export default function TestCreatePage() {
   const [bankLoading, setBankLoading]     = useState(false)
   const [addingBankId, setAddingBankId]   = useState(null)
   const { register, handleSubmit, reset } = useForm({
-    defaultValues: { passing_score: 50, randomize_questions: false, randomize_answers: false }
+    defaultValues: { passing_score: 50 }
   })
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
-
-  const toggleClass = (id) => setSelectedClasses(prev =>
-    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-  )
-
-  useEffect(() => {
-    classesApi.list().then(r => setClasses(r.data.results || r.data))
-  }, [])
 
   useEffect(() => {
     if (!editId) return
@@ -598,10 +587,7 @@ export default function TestCreatePage() {
         description: test.description || '',
         topic: test.topic || '',
         passing_score: test.passing_score,
-        randomize_questions: test.randomize_questions,
-        randomize_answers: test.randomize_answers,
       })
-      setSelectedClasses(test.class_rooms || [])
       setCreatedTest(test)
       const loadedQs = (qRes.data || []).map(q => ({
         question_type: q.question_type,
@@ -646,27 +632,20 @@ export default function TestCreatePage() {
   }
 
   const onCreateTest = async (data) => {
-    if (selectedClasses.length === 0) {
-      toast.error(t('no_class_error', { ns: 'teacher' }))
-      return
-    }
     try {
       if (isEditMode) {
-        const res = await testsApi.update(editId, { ...data, class_rooms: selectedClasses })
+        const res = await testsApi.update(editId, data)
         setCreatedTest(res.data)
         setStep(2)
         toast.success(t('test_updated', { ns: 'teacher' }))
       } else {
-        const res = await testsApi.create({ ...data, class_rooms: selectedClasses })
+        const res = await testsApi.create(data)
         setCreatedTest(res.data)
         setStep(2)
         toast.success(t('test_created', { ns: 'teacher' }))
       }
     } catch (err) {
-      const errs = err.response?.data
-      if (errs?.detail) toast.error(String(errs.detail))
-      else if (errs) Object.values(errs).flat().forEach(m => toast.error(typeof m === 'object' ? JSON.stringify(m) : String(m)))
-      else toast.error(t('error_occurred'))
+      toastApiError(err)
     }
   }
 
@@ -769,8 +748,11 @@ export default function TestCreatePage() {
     setPublishing(true)
     try {
       await testsApi.update(createdTest.id, { is_published: true })
+      const fresh = await testsApi.get(createdTest.id)
+      setCreatedTest(fresh.data)
       toast.success(t('test_published_msg', { ns: 'teacher', count: savedCount }))
-      navigate('/teacher/tests')
+      setStep(3)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
       const errs = err.response?.data
       const msg = errs?.detail ? String(errs.detail) : t('test_not_published', { ns: 'teacher' })
@@ -806,7 +788,7 @@ export default function TestCreatePage() {
         {step === 2 && (
           <button onClick={onPublish} disabled={publishing || savedCount === 0}
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary-700 to-blue-600 text-white rounded-xl font-semibold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50">
-            {publishing ? <i className="bi bi-arrow-repeat animate-spin"></i> : <i className="bi bi-send-fill"></i>}
+            {publishing ? <i className="bi bi-arrow-repeat animate-spin"></i> : <i className="bi bi-check2-circle"></i>}
             {t('publish', { ns: 'teacher' })}
           </button>
         )}
@@ -817,13 +799,14 @@ export default function TestCreatePage() {
         {[
           { n: 1, label: t('step_test_info', { ns: 'teacher' }) },
           { n: 2, label: t('questions', { ns: 'teacher' }) },
+          { n: 3, label: t('step_schedule', { ns: 'teacher' }) },
         ].map(({ n, label }) => (
           <div key={n} className="flex items-center gap-2">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold transition-all ${step >= n ? 'bg-primary-700 text-white' : 'bg-slate-200 text-slate-400'}`}>
               {step > n ? <i className="bi bi-check text-base"></i> : n}
             </div>
             <span className={`text-sm font-medium ${step >= n ? 'text-slate-900' : 'text-slate-400'}`}>{label}</span>
-            {n < 2 && <div className={`flex-1 h-px w-8 ${step > n ? 'bg-primary-700' : 'bg-slate-200'}`}></div>}
+            {n < 3 && <div className={`flex-1 h-px w-8 ${step > n ? 'bg-primary-700' : 'bg-slate-200'}`}></div>}
           </div>
         ))}
       </div>
@@ -857,63 +840,13 @@ export default function TestCreatePage() {
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-primary-500 text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                {t('classes_label', { ns: 'teacher' })}
-                <span className="ml-2 text-xs text-slate-400 font-normal">
-                  {selectedClasses.length === 0
-                    ? t('all_classes_hint', { ns: 'teacher' })
-                    : t('selected_count_classes', { ns: 'teacher', count: selectedClasses.length })}
-                </span>
-              </label>
-              {classes.length === 0 ? (
-                <p className="text-xs text-slate-400">{t('no_classes_yet', { ns: 'teacher' })}</p>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {classes.map(c => {
-                    const checked = selectedClasses.includes(c.id)
-                    return (
-                      <label key={c.id} className={`flex items-center gap-2 p-2.5 rounded-xl border-2 cursor-pointer transition-all text-sm ${checked ? 'border-primary-500 bg-primary-50 text-primary-700 font-medium' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
-                        <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleClass(c.id)} />
-                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${checked ? 'bg-primary-700 border-primary-700' : 'border-slate-300'}`}>
-                          {checked && <i className="bi bi-check text-white text-xs leading-none"></i>}
-                        </div>
-                        {c.name}
-                      </label>
-                    )
-                  })}
-                </div>
-              )}
-              {selectedClasses.length === 0 && (
-                <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
-                  <i className="bi bi-info-circle"></i>
-                  {t('no_class_selected_hint', { ns: 'teacher' })}
-                </p>
-              )}
-            </div>
-            <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">{t('passing_score', { ns: 'teacher' })}</label>
               <input {...register('passing_score')} type="number" min={0}
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-primary-500 text-sm" />
             </div>
-            <div className="p-4 bg-slate-50 rounded-xl space-y-3">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('settings_section', { ns: 'teacher' })}</p>
-              {[
-                { name: 'randomize_questions', labelKey: 'randomize_questions', descKey: 'randomize_q_desc' },
-                { name: 'randomize_answers',   labelKey: 'randomize_answers',   descKey: 'randomize_a_desc' },
-              ].map(({ name, labelKey, descKey }) => (
-                <label key={name} className="flex items-center justify-between cursor-pointer">
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">{t(labelKey, { ns: 'teacher' })}</p>
-                    <p className="text-xs text-slate-400">{t(descKey, { ns: 'teacher' })}</p>
-                  </div>
-                  <div className="relative">
-                    <input {...register(name)} type="checkbox" className="sr-only peer" />
-                    <div className="w-10 h-6 bg-slate-300 peer-checked:bg-primary-700 rounded-full transition-colors"></div>
-                    <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all peer-checked:translate-x-4"></div>
-                  </div>
-                </label>
-              ))}
-            </div>
+            <p className="text-xs text-slate-400 flex items-center gap-1.5">
+              <i className="bi bi-lightbulb"></i>{t('test_library_hint', { ns: 'teacher' })}
+            </p>
             <button type="submit"
               className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-primary-700 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all">
               <i className="bi bi-arrow-right-circle-fill"></i> {t('go_to_questions', { ns: 'teacher' })}
@@ -1065,10 +998,32 @@ export default function TestCreatePage() {
               </div>
               <button onClick={onPublish} disabled={publishing}
                 className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium text-sm">
-                <i className="bi bi-send-fill"></i> {t('publish_test', { ns: 'teacher' })}
+                {t('publish_test', { ns: 'teacher' })} <i className="bi bi-arrow-right"></i>
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Step 3: schedule as an exam ── */}
+      {step === 3 && createdTest && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 bg-gradient-to-r from-primary-700 to-blue-600">
+            <h2 className="text-white font-semibold">{t('schedule_heading', { ns: 'teacher' })}</h2>
+            <p className="text-blue-100 text-sm mt-0.5">{t('schedule_subtitle', { ns: 'teacher' })}</p>
+          </div>
+          <div className="p-6 space-y-5">
+            <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
+              <i className="bi bi-check-circle-fill text-green-600 mt-0.5"></i>
+              {t('test_ready_banner', { ns: 'teacher' })}
+            </div>
+            <ExamScheduleForm
+              fixedTest={createdTest}
+              onDone={() => navigate('/teacher/exams')}
+              onCancel={() => navigate('/teacher/tests')}
+              cancelLabel={t('schedule_later', { ns: 'teacher' })}
+            />
+          </div>
         </div>
       )}
     </div>
