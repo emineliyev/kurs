@@ -9,6 +9,7 @@ import { subscriptionsApi } from '@/api/subscriptions'
 import { useAuthStore } from '@/store/authStore'
 import PageSpinner from '@/components/common/PageSpinner'
 import Select from '@/components/common/Select'
+import { toastApiError } from '@/api/errors'
 
 const METHOD_ICONS = {
   card:  'bi-credit-card-2-front',
@@ -255,14 +256,7 @@ export default function PaymentPage() {
       await paymentsApi.submitRequest(formData)
       setSubmitted(true)
     } catch (err) {
-      const errs = err.response?.data
-      if (errs?.detail) {
-        toast.error(String(errs.detail))
-      } else if (errs) {
-        Object.values(errs).flat().forEach(m => toast.error(String(m)))
-      } else {
-        toast.error(t('request_failed', { ns: 'teacher' }))
-      }
+      toastApiError(err, t('request_failed', { ns: 'teacher' }))
     } finally {
       setSubmitting(false)
     }

@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/authStore'
 import PageSpinner from '@/components/common/PageSpinner'
 import Select from '@/components/common/Select'
 import SuggestInput from '@/components/common/SuggestInput'
+import { toastApiError } from '@/api/errors'
 
 function subjectName(s) {
   const lang = i18n.language?.slice(0, 2) || 'az'
@@ -96,10 +97,7 @@ export default function ClassesPage() {
       toast.success(t('class_created', { ns: 'teacher' }))
       reset(); setShowForm(false); load()
     } catch (err) {
-      const errs = err.response?.data
-      if (errs?.detail) toast.error(String(errs.detail))
-      else if (errs) Object.values(errs).flat().forEach(m => toast.error(typeof m === 'object' ? JSON.stringify(m) : String(m)))
-      else toast.error(t('error_occurred'))
+      toastApiError(err)
     } finally { setCreating(false) }
   }
 

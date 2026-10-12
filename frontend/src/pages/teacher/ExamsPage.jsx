@@ -7,6 +7,7 @@ import Swal from 'sweetalert2'
 import { examsApi } from '@/api/exams'
 import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
+import { toastApiError } from '@/api/errors'
 
 function toLocalDatetimeValue(iso) {
   if (!iso) return ''
@@ -68,8 +69,7 @@ export default function ExamsPage() {
       setEditingExam(null)
       load()
     } catch (err) {
-      const errors = err.response?.data
-      if (errors) Object.values(errors).flat().forEach((m) => toast.error(String(m)))
+      toastApiError(err)
     } finally { setSaving(false) }
   }
 

@@ -7,6 +7,7 @@ import { classesApi } from '@/api/classes'
 import { useAuthStore } from '@/store/authStore'
 import PageSpinner from '@/components/common/PageSpinner'
 import SuggestInput from '@/components/common/SuggestInput'
+import { toastApiError } from '@/api/errors'
 
 export default function TeacherProfilePage() {
   const { t, i18n } = useTranslation(['common', 'teacher'])
@@ -44,8 +45,7 @@ export default function TeacherProfilePage() {
       setUser(res.data)
       toast.success(t('profile_updated', { ns: 'teacher' }))
     } catch (err) {
-      const errors = err.response?.data
-      if (errors) Object.values(errors).flat().forEach((m) => toast.error(String(m)))
+      toastApiError(err)
     } finally {
       setSaving(false)
     }

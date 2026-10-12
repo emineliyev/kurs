@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
+import { toastApiError } from '@/api/errors'
 
 export default function StudentProfile() {
   const { t } = useTranslation(['common', 'auth', 'student'])
@@ -19,8 +20,7 @@ export default function StudentProfile() {
       toast.success(t('password_changed', { ns: 'student' }))
       reset()
     } catch (err) {
-      const errors = err.response?.data
-      if (errors) Object.values(errors).flat().forEach((m) => toast.error(m))
+      toastApiError(err)
     } finally { setLoading(false) }
   }
 

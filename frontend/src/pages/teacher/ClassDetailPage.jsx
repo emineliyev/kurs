@@ -8,6 +8,7 @@ import Swal from 'sweetalert2'
 import { classesApi } from '@/api/classes'
 import { authApi } from '@/api/auth'
 import client from '@/api/client'
+import { toastApiError } from '@/api/errors'
 
 export default function ClassDetailPage() {
   const { id } = useParams()
@@ -43,8 +44,7 @@ export default function ClassDetailPage() {
       toast.success(t('student_added', { ns: 'teacher' }))
       reset(); setShowAddStudent(false); load()
     } catch (err) {
-      const errors = err.response?.data
-      if (errors) Object.values(errors).flat().forEach((m) => toast.error(m))
+      toastApiError(err)
     } finally { setAdding(false) }
   }
 

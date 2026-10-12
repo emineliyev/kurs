@@ -8,6 +8,7 @@ import MediaPickerModal from '@/components/common/MediaPickerModal'
 import { renderMath } from '@/utils/math'
 import QuestionTextEditor, { LatexPreview, AnswerMiniEditor } from '@/components/teacher/QuestionTextEditor'
 import Select from '@/components/common/Select'
+import { toastApiError } from '@/api/errors'
 
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -223,9 +224,7 @@ export default function QuestionBankPage() {
         : t('bank_question_updated', { ns: 'teacher' }))
       cancelEdit()
     } catch (err) {
-      const errs = err.response?.data
-      if (errs) Object.values(errs).flat().forEach(m => toast.error(String(m)))
-      else toast.error(t('error_occurred'))
+      toastApiError(err)
     } finally {
       setSaving(false)
     }

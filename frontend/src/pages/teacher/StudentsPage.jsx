@@ -11,6 +11,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import client from '@/api/client'
 import PageSpinner from '@/components/common/PageSpinner'
 import Select from '@/components/common/Select'
+import { toastApiError } from '@/api/errors'
 
 function StudentHistoryModal({ student, onClose }) {
   const { t } = useTranslation(['common', 'teacher'])
@@ -140,10 +141,7 @@ export default function StudentsPage() {
       setShowForm(false)
       loadData()
     } catch (err) {
-      const errs = err.response?.data
-      if (errs?.detail) toast.error(String(errs.detail))
-      else if (errs) Object.values(errs).flat().forEach((m) => toast.error(typeof m === 'object' ? JSON.stringify(m) : String(m)))
-      else toast.error(t('error_occurred'))
+      toastApiError(err)
     } finally { setAdding(false) }
   }
 
@@ -167,9 +165,7 @@ export default function StudentsPage() {
       setEditingStudent(null)
       loadData()
     } catch (err) {
-      const errors = err.response?.data
-      if (errors) Object.values(errors).flat().forEach((m) => toast.error(String(m)))
-      else toast.error(t('error_occurred'))
+      toastApiError(err)
     } finally { setEditSaving(false) }
   }
 
