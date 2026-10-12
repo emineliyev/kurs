@@ -55,7 +55,12 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 class QuestionPublicSerializer(serializers.ModelSerializer):
     """For students - no correct answer info"""
-    answers = AnswerPublicSerializer(many=True, read_only=True)
+    answers = serializers.SerializerMethodField()
+
+    def get_answers(self, obj):
+        # Per-student shuffled order when the exam asks for it
+        order = self.context.get('answer_order', {}).get(obj.pk)
+        return AnswerPublicSerializer(order if order is not None else obj.answers.all(), many=True).data
 
     class Meta:
         model = Question

@@ -24,6 +24,42 @@ def copy_image(source, question):
         source.close()
 
 
+def shuffled_for_student(questions, exam, student):
+    """
+    Question/answer order for one student, stable across reloads.
+    A passage stays first in its block with the questions that follow it;
+    image_mcq choices are not shuffled (their A/B/C/D labels are printed on the image).
+    """
+    import random
+    rng = random.Random(f'{exam.pk}:{student.pk}')
+    questions = list(questions)
+    if exam.randomize_questions:
+        blocks, current = [], None
+        for q in questions:
+            if q.question_type == Question.TYPE_PASSAGE:
+                current = [q]
+                blocks.append(current)
+            elif current is not None:
+                current.append(q)
+            else:
+                blocks.append([q])
+        for block in blocks:
+            if block[0].question_type == Question.TYPE_PASSAGE:
+                rest = block[1:]
+                rng.shuffle(rest)
+                block[1:] = rest
+        rng.shuffle(blocks)
+        questions = [q for block in blocks for q in block]
+    answer_order = {}
+    if exam.randomize_answers:
+        for q in questions:
+            answers = list(q.answers.all())
+            if q.question_type != Question.TYPE_IMAGE_MCQ:
+                rng.shuffle(answers)
+            answer_order[q.pk] = answers
+    return questions, answer_order
+
+
 class TestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
@@ -37,10 +73,12 @@ class TestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_teacher:
             return Test.objects.filter(teacher=user).prefetch_related('class_rooms')
+        # Students reach a test only through an exam scheduled for one of their classes;
+        # the questions themselves are served only while that exam is in progress.
         enrolled_classes = user.enrollments.filter(is_active=True).values_list('class_room_id', flat=True)
         return Test.objects.filter(
-            class_rooms__in=enrolled_classes,
-            is_published=True
+            exams__class_room__in=enrolled_classes,
+            exams__is_active=True,
         ).distinct().prefetch_related('class_rooms')
 
     def get_permissions(self):
@@ -177,15 +215,17 @@ class TestViewSet(viewsets.ModelViewSet):
             from django.utils import timezone
             from apps.exams.models import ExamResult
             now = timezone.now()
-            in_exam = ExamResult.objects.filter(
+            result = ExamResult.objects.select_related('exam').filter(
                 student=user, exam__test=test, exam__is_active=True,
                 exam__start_time__lte=now, exam__end_time__gte=now,
                 status=ExamResult.STATUS_IN_PROGRESS,
-            ).exists()
-            if not in_exam:
+            ).first()
+            if not result:
                 return Response({'detail': 'Suallar yalnız imtahan zamanı əlçatandır.'},
                                 status=status.HTTP_403_FORBIDDEN)
-            serializer = QuestionPublicSerializer(questions, many=True, context={'request': request})
+            ordered, answer_order = shuffled_for_student(questions, result.exam, user)
+            serializer = QuestionPublicSerializer(
+                ordered, many=True, context={'request': request, 'answer_order': answer_order})
         else:
             serializer = QuestionSerializer(questions, many=True, context={'request': request})
         return Response(serializer.data)
