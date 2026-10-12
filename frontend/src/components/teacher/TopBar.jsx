@@ -6,7 +6,7 @@ import LanguageSwitcher from '@/components/common/LanguageSwitcher'
 import { authApi } from '@/api/auth'
 import { examsApi } from '@/api/exams'
 import toast from 'react-hot-toast'
-import Swal from 'sweetalert2'
+import Swal from '@/utils/swal'
 
 export default function TopBar({ onMenuToggle }) {
   const { t } = useTranslation(['common', 'auth'])

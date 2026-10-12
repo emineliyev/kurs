@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import Swal from 'sweetalert2'
+import Swal from '@/utils/swal'
 import { bankApi } from '@/api/questionBank'
 import FormulaLibrary from '@/components/teacher/FormulaLibrary'
 import MediaPickerModal from '@/components/common/MediaPickerModal'

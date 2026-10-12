@@ -33,6 +33,11 @@
            text-white font-semibold px-4 py-2.5 rounded-xl transition-all duration-150
            shadow-sm hover:shadow-md disabled:opacity-50;
   }
+  .btn-warning {
+    @apply inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 active:bg-amber-700
+           text-white font-semibold px-4 py-2.5 rounded-xl transition-all duration-150
+           shadow-sm hover:shadow-md disabled:opacity-50;
+  }
   .btn-ghost {
     @apply inline-flex items-center gap-2 text-slate-600 hover:text-primary-700
            hover:bg-primary-50 font-medium px-3 py-2 rounded-xl transition-all duration-150;
@@ -126,3 +131,51 @@
 
 /* Toggle switch */
 .peer:checked ~ .peer-checked\:translate-x-4 { transform: translateX(1rem); }
+
+/* ── SweetAlert2 in the platform style (see src/utils/swal.js) ─────────────── */
+.kurs-swal-container.swal2-backdrop-show {
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+}
+.kurs-swal {
+  @apply rounded-2xl border border-slate-200 shadow-2xl font-sans;
+  width: min(28rem, calc(100vw - 2rem)) !important;
+  padding: 1.75rem 1.5rem 1.5rem !important;
+}
+.kurs-swal .swal2-icon {
+  font-size: 0.7rem;
+  margin: 0.25rem auto 0.75rem;
+  border-width: 3px;
+}
+.kurs-swal .swal2-icon.swal2-warning  { border-color: #fcd34d; color: #f59e0b; }
+.kurs-swal .swal2-icon.swal2-error    { border-color: #fca5a5; color: #ef4444; }
+.kurs-swal .swal2-icon.swal2-error [class^='swal2-x-mark-line'] { background-color: #ef4444; }
+.kurs-swal .swal2-icon.swal2-info     { border-color: #93c5fd; color: #1F4ED8; }
+.kurs-swal .swal2-icon.swal2-question { border-color: #93c5fd; color: #143587; }
+.kurs-swal .swal2-icon.swal2-success  { border-color: #86efac; color: #22C55E; }
+.kurs-swal .swal2-icon.swal2-success [class^='swal2-success-line'] { background-color: #22C55E; }
+.kurs-swal .swal2-icon.swal2-success .swal2-success-ring { border-color: #86efac; }
+.kurs-swal-title {
+  @apply text-lg font-bold text-slate-900;
+  padding: 0 !important;
+}
+.kurs-swal-text {
+  @apply text-sm text-slate-600 leading-relaxed;
+  margin: 0.5rem 0 0 !important;
+  padding: 0 !important;
+}
+.kurs-swal-actions {
+  @apply w-full justify-center gap-3;
+  margin: 1.5rem 0 0 !important;
+}
+.kurs-swal-actions button { margin: 0 !important; }
+.kurs-swal-actions .btn-primary,
+.kurs-swal-actions .btn-secondary,
+.kurs-swal-actions .btn-danger,
+.kurs-swal-actions .btn-warning { @apply justify-center min-w-[7.5rem] text-sm; }
+.kurs-swal-actions button:focus { outline: none; }
+.kurs-swal-actions button:focus-visible,
+.kurs-swal-actions .btn-primary:focus { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35); }
+.kurs-swal-actions .btn-danger:focus  { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3); }
+.kurs-swal-actions .btn-warning:focus { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35); }
+.kurs-swal-actions .btn-secondary:focus { box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.35); }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
-import Swal from 'sweetalert2'
+import Swal from '@/utils/swal'
 import { subscriptionsApi } from '@/api/subscriptions'
 import PageSpinner from '@/components/common/PageSpinner'
 
