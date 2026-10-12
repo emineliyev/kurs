@@ -155,7 +155,6 @@ function PlanCard({ plan, sub, onAction, loadingPlan }) {
 
       <ul className="space-y-2 text-sm text-slate-600 flex-1 mb-5">
         {[
-          { icon: 'bi-file-earmark-text', label: t('tests_per_month_label', { ns: 'teacher' }), val: plan.max_tests_per_month },
           { icon: 'bi-journal-check',     label: t('exams_per_month_label', { ns: 'teacher' }), val: plan.max_exams_per_month },
           { icon: 'bi-people',            label: t('classes'),                                  val: plan.max_classes },
           { icon: 'bi-person',            label: t('students'),                                 val: plan.max_students },
@@ -209,7 +208,6 @@ function CompareTable({ plans, sub }) {
   const limitRows = [
     { icon: 'bi-person',            label: t('students'),                                  field: 'max_students' },
     { icon: 'bi-people',            label: t('classes'),                                   field: 'max_classes' },
-    { icon: 'bi-file-earmark-text', label: t('tests_per_month_label', { ns: 'teacher' }),  field: 'max_tests_per_month' },
     { icon: 'bi-journal-check',     label: t('exams_per_month_label', { ns: 'teacher' }),  field: 'max_exams_per_month' },
   ]
 
@@ -503,8 +501,7 @@ export default function SubscriptionPage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <UsageBar used={sub.tests_used_this_month} max={sub.plan_details?.max_tests_per_month} label={t('tests_this_month', { ns: 'teacher' })}   icon="bi-file-earmark-text" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <UsageBar used={sub.exams_used_this_month} max={sub.plan_details?.max_exams_per_month} label={t('exams_this_month', { ns: 'teacher' })} icon="bi-journal-check" />
             <UsageBar used={sub.classes_used}          max={sub.plan_details?.max_classes}          label={t('classes')}          icon="bi-people" />
             <UsageBar used={sub.students_used}         max={sub.plan_details?.max_students}         label={t('students')}         icon="bi-person" />

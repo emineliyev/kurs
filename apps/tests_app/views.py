@@ -99,8 +99,6 @@ class TestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         is_publishing = not test.is_published and request.data.get('is_published') in (True, 'true', 'True', '1', 1)
-        # Only the first publish uses the monthly quota; republishing a draft is free.
-        first_publish = is_publishing and test.published_at is None
         if is_publishing and not request.user.is_email_verified:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Testi yayımlamaq üçün əvvəlcə email ünvanınızı təsdiqləyin.')
@@ -108,29 +106,11 @@ class TestViewSet(viewsets.ModelViewSet):
             errors = test.publish_errors()
             if errors:
                 return Response({'detail': ' '.join(errors)}, status=status.HTTP_400_BAD_REQUEST)
-        if first_publish:
-            from apps.subscriptions.models import Subscription
-            from rest_framework.exceptions import PermissionDenied
-            try:
-                subscription = Subscription.objects.get(teacher=request.user)
-                subscription.reset_monthly_count_if_needed()
-                if not subscription.can_create_test():
-                    raise PermissionDenied(
-                        'Aylıq test limitinə çatmısınız. Abunəliyinizi yeniləyin.'
-                    )
-            except Subscription.DoesNotExist:
-                pass
+        # Tests are unlimited; the monthly quota applies to exams only.
         response = super().update(request, *args, **kwargs)
-        if first_publish and response.status_code < 300:
+        if is_publishing and test.published_at is None and response.status_code < 300:
             from django.utils import timezone
-            from apps.subscriptions.models import Subscription
             Test.objects.filter(pk=test.pk).update(published_at=timezone.now())
-            try:
-                subscription = Subscription.objects.get(teacher=request.user)
-                subscription.tests_used_this_month += 1
-                subscription.save(update_fields=['tests_used_this_month'])
-            except Subscription.DoesNotExist:
-                pass
         return response
 
     def destroy(self, request, *args, **kwargs):

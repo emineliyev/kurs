@@ -305,14 +305,14 @@ export default function LandingPage() {
                     <h3 className="text-xl font-bold text-slate-900">{plan.display_name}</h3>
                     <div className="mt-3 mb-5">
                       <span className={`text-4xl font-bold ${isPro ? 'text-primary-700' : 'text-slate-900'}`}>
-                        {plan.price > 0 ? plan.price : t('landing_free')}
+                        {Number(plan.price) > 0 ? plan.price : t('landing_free')}
                       </span>
-                      {plan.price > 0 && <span className="text-slate-400 ml-1 text-sm">{t('landing_per_month')}</span>}
+                      {Number(plan.price) > 0 && <span className="text-slate-400 ml-1 text-sm">{t('landing_per_month')}</span>}
                     </div>
                     <ul className="space-y-3 flex-1 text-sm">
                       <li className="flex items-start gap-2 text-slate-600">
                         <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
-                        {plan.max_tests_per_month === -1 ? t('landing_unlimited_tests') : t('landing_n_tests', { count: plan.max_tests_per_month })}
+                        {t('landing_unlimited_tests')}
                       </li>
                       <li className="flex items-start gap-2 text-slate-600">
                         <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
@@ -326,7 +326,7 @@ export default function LandingPage() {
                         <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
                         {plan.max_students === -1 ? t('landing_unlimited_students') : t('landing_n_students', { count: plan.max_students })}
                       </li>
-                      {plan.price === 0 && (
+                      {Number(plan.price) === 0 && (
                         <li className="flex items-start gap-2 text-slate-600">
                           <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
                           {t('landing_full_access_1mo')}

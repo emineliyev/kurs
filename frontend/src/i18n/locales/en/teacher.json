@@ -171,7 +171,7 @@
   "compare_duration_days": "{{count}} days",
   "compare_limits": "Limits",
   "compare_included": "Included in all plans",
-  "compare_feat_tests": "Test builder (images, formulas, tables)",
+  "compare_feat_tests": "Unlimited tests (images, formulas, tables)",
   "compare_feat_bank": "Question bank",
   "compare_feat_exams": "Timed exams",
   "compare_feat_anticheat": "Anti-cheat (tab switch tracking)",

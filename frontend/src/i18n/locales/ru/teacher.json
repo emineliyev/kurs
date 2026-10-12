@@ -171,7 +171,7 @@
   "compare_duration_days": "{{count}} дней",
   "compare_limits": "Лимиты",
   "compare_included": "Входит во все планы",
-  "compare_feat_tests": "Создание тестов (изображения, формулы, таблицы)",
+  "compare_feat_tests": "Неограниченное создание тестов (изображения, формулы, таблицы)",
   "compare_feat_bank": "Банк вопросов",
   "compare_feat_exams": "Экзамены по времени",
   "compare_feat_anticheat": "Анти-чит (отслеживание смены вкладок)",
