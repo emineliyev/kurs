@@ -204,6 +204,8 @@ export default function PaymentPage() {
 
   const [plans, setPlans]           = useState([])
   const [requisites, setRequisites] = useState([])
+  const [exhausted, setExhausted]   = useState([])   // methods whose cards are full today
+  const [paidTo, setPaidTo]         = useState('')
   const [loading, setLoading]       = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted]   = useState(false)
@@ -229,7 +231,10 @@ export default function PaymentPage() {
     Promise.all(requests).then(([p, r, preview]) => {
       const paid = p.data.filter(pl => pl.price > 0)
       setPlans(paid)
-      setRequisites(r.data)
+      const reqs = Array.isArray(r.data) ? r.data : (r.data.requisites || [])
+      setRequisites(reqs)
+      setExhausted(r.data.exhausted_methods || [])
+      setPaidTo(reqs[0] ? String(reqs[0].id) : '')
       if (planId) setValue('plan_id', planId)
       if (preview) setProrationAmount(preview.data.charged_amount)
     }).catch(() => {
@@ -250,6 +255,7 @@ export default function PaymentPage() {
     formData.append('amount', amount)
     formData.append('order_type', orderType)
     formData.append('screenshot', screenshot)
+    if (paidTo) formData.append('requisite_id', paidTo)
     if (data.user_note) formData.append('user_note', data.user_note)
 
     try {
@@ -330,15 +336,30 @@ export default function PaymentPage() {
           <span className="w-6 h-6 rounded-full bg-primary-700 text-white text-xs flex items-center justify-center font-bold">1</span>
           {t('payment_requisites', { ns: 'teacher' })}
         </h2>
-        <p className="text-xs text-slate-400 mb-4 ml-8">{t('pay_to_one_of', { ns: 'teacher' })}</p>
+        <p className="text-xs text-slate-400 mb-4 ml-8">
+          {requisites.length > 1 ? t('pay_to_one_of', { ns: 'teacher' }) : t('pay_to_this', { ns: 'teacher' })}
+        </p>
 
         {requisites.length === 0 ? (
-          <div className="text-center py-6 text-slate-400 text-sm">
-            <i className="bi bi-info-circle text-2xl block mb-2"></i>
-            {t('no_requisites', { ns: 'teacher' })}
-          </div>
+          exhausted.length > 0 ? (
+            <div className="text-center py-6 px-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+              <i className="bi bi-hourglass-split text-2xl block mb-2 text-amber-500"></i>
+              <p className="font-semibold">{t('cards_full_title', { ns: 'teacher' })}</p>
+              <p className="text-xs mt-1">{t('cards_full_text', { ns: 'teacher' })}</p>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-slate-400 text-sm">
+              <i className="bi bi-info-circle text-2xl block mb-2"></i>
+              {t('no_requisites', { ns: 'teacher' })}
+            </div>
+          )
         ) : (
           <div className="space-y-3">
+            {exhausted.length > 0 && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center gap-1.5">
+                <i className="bi bi-info-circle"></i>{t('cards_full_partial', { ns: 'teacher' })}
+              </p>
+            )}
             {requisites.map(req => <RequisiteCard key={req.id} req={req} />)}
           </div>
         )}
@@ -383,6 +404,19 @@ export default function PaymentPage() {
               <p className="text-red-500 text-xs mt-1">{t('select_plan_required', { ns: 'teacher' })}</p>
             )}
           </div>
+
+          {requisites.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                {t('paid_to_label', { ns: 'teacher' })} <span className="text-red-500">*</span>
+              </label>
+              <Select value={paidTo} onChange={(e) => setPaidTo(e.target.value)} className="input-field">
+                {requisites.map(r => (
+                  <option key={r.id} value={r.id}>{r.label} — {r.account_number}</option>
+                ))}
+              </Select>
+            </div>
+          )}
 
           {/* Amount (read-only display) */}
           {selectedPlan && (

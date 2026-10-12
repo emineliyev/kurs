@@ -31,10 +31,15 @@ class SubmitPaymentRequestSerializer(serializers.ModelSerializer):
         source='plan',
         write_only=True,
     )
+    requisite_id = serializers.PrimaryKeyRelatedField(
+        queryset=PaymentRequisite.objects.all(),
+        source='requisite',
+        write_only=True, required=False, allow_null=True,
+    )
 
     class Meta:
         model = PaymentRequest
-        fields = ['plan_id', 'amount', 'order_type', 'screenshot', 'user_note']
+        fields = ['plan_id', 'requisite_id', 'amount', 'order_type', 'screenshot', 'user_note']
 
     def validate_amount(self, value):
         if value <= 0:

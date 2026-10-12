@@ -52,6 +52,7 @@
   "error_occurred": "An error occurred",
   "deleted": "Deleted",
   "select_option": "— Select —",
+  "select": "select",
   "min_6_chars": "Min. 6 characters",
   "min_10_chars": "Enter at least 10 characters",
   "add": "Add",

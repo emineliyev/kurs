@@ -13,21 +13,30 @@ from .tasks import send_approval_email_task, send_rejection_email_task
 
 @admin.register(PaymentRequisite)
 class PaymentRequisiteAdmin(admin.ModelAdmin):
-    list_display  = ['label', 'method_display_badge', 'account_number', 'account_name', 'is_active', 'sort_order', 'updated_at']
-    list_editable = ['is_active', 'sort_order']
+    list_display  = ['label', 'method_display_badge', 'account_number', 'account_name', 'today_usage', 'daily_limit', 'is_active', 'sort_order']
+    list_editable = ['daily_limit', 'is_active', 'sort_order']
     list_filter   = ['method', 'is_active']
     search_fields = ['label', 'account_number', 'account_name']
     ordering      = ['sort_order', 'method']
 
     fieldsets = (
         ('Rekvizit məlumatları', {
-            'fields': ('method', 'label', 'account_number', 'account_name', 'is_active', 'sort_order')
+            'fields': ('method', 'label', 'account_number', 'account_name', 'daily_limit', 'is_active', 'sort_order')
         }),
         ('Əlavə', {
             'fields': ('note',),
             'classes': ('collapse',),
         }),
     )
+
+    @admin.display(description='Bu gün')
+    def today_usage(self, obj):
+        from .rotation import transfers_today
+        used = transfers_today(obj)
+        if obj.daily_limit is None:
+            return f'{used} / ∞'
+        color = '#dc2626' if used >= obj.daily_limit else '#059669'
+        return format_html('<b style="color:{}">{} / {}</b>', color, used, obj.daily_limit)
 
     @admin.display(description='Üsul')
     def method_display_badge(self, obj):
@@ -44,7 +53,7 @@ class PaymentRequisiteAdmin(admin.ModelAdmin):
 @admin.register(PaymentRequest)
 class PaymentRequestAdmin(admin.ModelAdmin):
     list_display  = [
-        'id', 'teacher_link', 'plan', 'amount_display',
+        'id', 'teacher_link', 'plan', 'amount_display', 'requisite',
         'order_type_badge', 'status_badge', 'screenshot_thumb',
         'created_at',
     ]
@@ -53,14 +62,14 @@ class PaymentRequestAdmin(admin.ModelAdmin):
     ordering      = ['-created_at']
     actions       = ['approve_payments', 'reject_payments']
     readonly_fields = [
-        'teacher', 'plan', 'amount', 'currency', 'order_type',
+        'teacher', 'plan', 'requisite', 'amount', 'currency', 'order_type',
         'screenshot_preview', 'user_note', 'created_at', 'updated_at',
         'reviewed_by', 'reviewed_at',
     ]
 
     fieldsets = (
         ('Sorğu məlumatları', {
-            'fields': ('teacher', 'plan', 'amount', 'currency', 'order_type', 'created_at')
+            'fields': ('teacher', 'plan', 'requisite', 'amount', 'currency', 'order_type', 'created_at')
         }),
         ('İstifadəçi yükləməsi', {
             'fields': ('screenshot_preview', 'user_note')

@@ -25,6 +25,10 @@ class PaymentRequisite(models.Model):
     account_name   = models.CharField(max_length=100, verbose_name='Hesab sahibinin adı')
     note           = models.TextField(blank=True, verbose_name='Əlavə qeyd', help_text='İstifadəçiyə göstəriləcək xüsusi təlimat')
     is_active      = models.BooleanField(default=True, verbose_name='Aktiv')
+    daily_limit    = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name='Gündəlik limit',
+        help_text='Gündə neçə köçürmə qəbul edir. Boş qalsa limitsizdir. Bakı vaxtı ilə 00:00-da sıfırlanır.',
+    )
     sort_order     = models.PositiveSmallIntegerField(default=0, verbose_name='Sıra')
     updated_at     = models.DateTimeField(auto_now=True)
 
@@ -62,6 +66,10 @@ class PaymentRequest(models.Model):
 
     teacher          = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payment_requests', verbose_name='Müəllim')
     plan             = models.ForeignKey(Plan, on_delete=models.PROTECT, related_name='payment_requests', verbose_name='Plan')
+    requisite        = models.ForeignKey(
+        PaymentRequisite, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='payment_requests', verbose_name='Rekvizit',
+    )
     amount           = models.DecimalField(max_digits=8, decimal_places=2, verbose_name='Məbləğ')
     currency         = models.CharField(max_length=3, default='AZN')
     order_type       = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_NEW_SUB, verbose_name='Əməliyyat növü')
@@ -89,3 +97,16 @@ class PaymentRequest(models.Model):
 
     def __str__(self):
         return f'{self.teacher.email} — {self.plan.display_name} — {self.get_status_display()}'
+
+
+class PaymentHold(models.Model):
+    """
+    A short reservation of a limited requisite for a teacher who is on the payment page,
+    so two teachers can't both be sent to a card with one transfer left.
+    """
+    requisite  = models.ForeignKey(PaymentRequisite, on_delete=models.CASCADE, related_name='holds')
+    teacher    = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payment_holds')
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        unique_together = ['requisite', 'teacher']
