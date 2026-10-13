@@ -701,6 +701,7 @@ export default function TestCreatePage() {
           text: '',
           points: 1,
           order: questions.length + i,
+          hide_choices: true,   // A–E are already printed inside the cut image
           answers: LABELS.slice(0, it.choiceCount).map((label, j) => ({ text: label, is_correct: j === it.answer, order: j })),
         })
         const fd = new FormData()
@@ -713,6 +714,7 @@ export default function TestCreatePage() {
           _id: res.data.id, _saved: true,
           _choiceCount: it.choiceCount,
           _correctIndex: it.answer ?? -1,
+          _hideChoices: true,
         })
         toast.loading(t('bulk_adding', { ns: 'teacher', done: i + 1, total }), { id: tid })
       }

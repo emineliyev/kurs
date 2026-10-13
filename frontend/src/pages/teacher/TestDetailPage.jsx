@@ -97,6 +97,11 @@ export default function TestDetailPage() {
             {test?.question_count} {t('q_word_questions', { ns: 'teacher' })} · {test?.total_points} {t('q_word_points', { ns: 'teacher' })}
           </p>
         </div>
+        {questions.length > 0 && (
+          <Link to={`/teacher/tests/${id}/print`} className="btn-secondary">
+            <i className="bi bi-printer"></i> {t('print_open', { ns: 'teacher' })}
+          </Link>
+        )}
         {test?.is_published && (
           <button onClick={() => setScheduling(true)} className="btn-primary">
             <i className="bi bi-calendar-plus"></i> {t('schedule_exam', { ns: 'teacher' })}

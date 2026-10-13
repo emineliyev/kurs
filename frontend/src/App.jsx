@@ -27,6 +27,7 @@ import TeacherDashboard from '@/pages/teacher/DashboardPage'
 import TestsPage from '@/pages/teacher/TestsPage'
 import TestCreatePage from '@/pages/teacher/TestCreatePage'
 import TestDetailPage from '@/pages/teacher/TestDetailPage'
+import TestPrintPage from '@/pages/teacher/TestPrintPage'
 import ClassesPage from '@/pages/teacher/ClassesPage'
 import ClassDetailPage from '@/pages/teacher/ClassDetailPage'
 import StudentsPage from '@/pages/teacher/StudentsPage'
@@ -66,6 +67,12 @@ export default function App() {
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/403" element={<ErrorPage code={403} />} />
       <Route path="/500" element={<ErrorPage code={500} />} />
+
+      {/* Printable test — full page, no app layout */}
+      <Route
+        path="/teacher/tests/:id/print"
+        element={<ProtectedRoute role="teacher"><TestPrintPage /></ProtectedRoute>}
+      />
 
       {/* Teacher routes */}
       <Route

@@ -571,5 +571,22 @@
   "bulk_drop_title": "Drop a PDF or page photos here",
   "bulk_drop_hint": "You can pick several files · PDF, JPG, PNG",
   "bulk_adding": "Adding questions… {{done}} / {{total}}",
-  "bulk_added": "{{count}} questions added"
+  "bulk_added": "{{count}} questions added",
+  "print_btn": "Print / PDF",
+  "print_open": "Print",
+  "print_variants": "Variants",
+  "print_columns": "Columns",
+  "print_font": "Font",
+  "print_student_fields": "Name & class fields",
+  "print_answer_key": "Answer key",
+  "print_school_ph": "School / course name (optional)",
+  "print_hint": "In the print dialog pick a printer, or choose “Save as PDF” to get a PDF.",
+  "print_variant": "Variant",
+  "print_name": "Full name",
+  "print_class": "Class",
+  "print_date": "Date",
+  "print_answer_line": "Answer:",
+  "print_key_title": "Answer key",
+  "print_answer": "Answer",
+  "print_manual": "Teacher grades"
 }

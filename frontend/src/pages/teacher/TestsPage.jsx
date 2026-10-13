@@ -146,6 +146,12 @@ export default function TestsPage() {
                             <i className="bi bi-pencil text-xs"></i>
                           </Link>
                         )}
+                        {test.question_count > 0 && (
+                          <Link to={`/teacher/tests/${test.id}/print`} title={t('print_open', { ns: 'teacher' })}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                            <i className="bi bi-printer text-xs"></i>
+                          </Link>
+                        )}
                         <button onClick={() => onDuplicate(test.id)} title={t('copy')} disabled={duplicatingId === test.id}
                           className="w-7 h-7 rounded-lg flex items-center justify-center bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors disabled:opacity-50">
                           <i className={`bi ${duplicatingId === test.id ? 'bi-arrow-repeat animate-spin' : 'bi-copy'} text-xs`}></i>
@@ -194,7 +200,13 @@ export default function TestsPage() {
                         <i className="bi bi-pencil text-sm"></i>
                       </Link>
                     )}
-                    <button onClick={() => onDuplicate(test.id)} title={t('copy')} disabled={duplicatingId === test.id}
+                    {test.question_count > 0 && (
+                          <Link to={`/teacher/tests/${test.id}/print`} title={t('print_open', { ns: 'teacher' })}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                            <i className="bi bi-printer text-sm"></i>
+                          </Link>
+                        )}
+                        <button onClick={() => onDuplicate(test.id)} title={t('copy')} disabled={duplicatingId === test.id}
                       className="w-8 h-8 rounded-lg flex items-center justify-center bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors disabled:opacity-50">
                       <i className={`bi ${duplicatingId === test.id ? 'bi-arrow-repeat animate-spin' : 'bi-copy'} text-sm`}></i>
                     </button>

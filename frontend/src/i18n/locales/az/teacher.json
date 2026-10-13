@@ -579,5 +579,22 @@
   "bulk_drop_title": "PDF və ya səhifə şəkillərini buraya atın",
   "bulk_drop_hint": "Bir neçə fayl seçə bilərsiniz · PDF, JPG, PNG",
   "bulk_adding": "Suallar əlavə olunur… {{done}} / {{total}}",
-  "bulk_added": "{{count}} sual əlavə olundu"
+  "bulk_added": "{{count}} sual əlavə olundu",
+  "print_btn": "Çap et / PDF",
+  "print_open": "Çap et",
+  "print_variants": "Variant",
+  "print_columns": "Sütun",
+  "print_font": "Şrift",
+  "print_student_fields": "Ad, sinif sahələri",
+  "print_answer_key": "Cavab açarı",
+  "print_school_ph": "Məktəb / kurs adı (istəyə görə)",
+  "print_hint": "Çap pəncərəsində printeri seçin və ya PDF almaq üçün “PDF kimi saxla” seçin.",
+  "print_variant": "Variant",
+  "print_name": "Ad, soyad",
+  "print_class": "Sinif",
+  "print_date": "Tarix",
+  "print_answer_line": "Cavab:",
+  "print_key_title": "Cavab açarı",
+  "print_answer": "Cavab",
+  "print_manual": "Müəllim yoxlayır"
 }

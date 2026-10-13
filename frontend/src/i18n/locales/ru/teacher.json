@@ -571,5 +571,22 @@
   "bulk_drop_title": "Перетащите сюда PDF или фото страниц",
   "bulk_drop_hint": "Можно выбрать несколько файлов · PDF, JPG, PNG",
   "bulk_adding": "Добавление вопросов… {{done}} / {{total}}",
-  "bulk_added": "Добавлено вопросов: {{count}}"
+  "bulk_added": "Добавлено вопросов: {{count}}",
+  "print_btn": "Печать / PDF",
+  "print_open": "Печать",
+  "print_variants": "Варианты",
+  "print_columns": "Колонки",
+  "print_font": "Шрифт",
+  "print_student_fields": "Поля ФИО, класс",
+  "print_answer_key": "Ключ ответов",
+  "print_school_ph": "Название школы / курса (необязательно)",
+  "print_hint": "В окне печати выберите принтер или «Сохранить как PDF», чтобы получить PDF.",
+  "print_variant": "Вариант",
+  "print_name": "Фамилия, имя",
+  "print_class": "Класс",
+  "print_date": "Дата",
+  "print_answer_line": "Ответ:",
+  "print_key_title": "Ключ ответов",
+  "print_answer": "Ответ",
+  "print_manual": "Проверяет учитель"
 }
