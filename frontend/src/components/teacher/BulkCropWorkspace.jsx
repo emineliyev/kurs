@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { AnnotateCanvas, applyLook, loadScript, PDFJS_CDN, PDFJS_WORKER } from '@/components/common/MediaPickerModal'
+import { AnnotateCanvas, applyLook, loadScript, trimWhitespace, PDFJS_CDN, PDFJS_WORKER } from '@/components/common/MediaPickerModal'
 
 /**
  * Full-screen workspace to cut many questions out of PDFs / page photos in one go.
@@ -75,35 +75,6 @@ async function rotatePage(page, dir) {
   ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2)
   const { url } = await blobUrl(canvas)
   return { ...page, url, w: canvas.width, h: canvas.height }
-}
-
-// Shrink the box to the ink inside it (plus a little margin).
-function trimWhitespace(img, r) {
-  const w = Math.max(1, Math.round(r.w)), h = Math.max(1, Math.round(r.h))
-  const c = document.createElement('canvas')
-  c.width = w; c.height = h
-  const ctx = c.getContext('2d', { willReadFrequently: true })
-  ctx.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, w, h)
-  const d = ctx.getImageData(0, 0, w, h).data
-  const rows = new Uint32Array(h), cols = new Uint32Array(w)
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4
-      if (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114 < 200) { rows[y]++; cols[x]++ }
-    }
-  }
-  const first = (arr) => arr.findIndex((v) => v >= 2)
-  const last = (arr) => arr.length - 1 - [...arr].reverse().findIndex((v) => v >= 2)
-  const top = first(rows), left = first(cols)
-  if (top < 0 || left < 0) return r
-  const bottom = last(rows), right = last(cols)
-  const PAD = 10
-  const nx = Math.max(0, left - PAD), ny = Math.max(0, top - PAD)
-  return {
-    x: r.x + nx, y: r.y + ny,
-    w: Math.min(w, right + PAD + 1) - nx,
-    h: Math.min(h, bottom + PAD + 1) - ny,
-  }
 }
 
 async function cropFromPage(pageUrl, rect, look) {

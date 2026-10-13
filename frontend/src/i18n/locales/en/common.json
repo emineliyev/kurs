@@ -201,5 +201,11 @@
   "email_not_verified": "Your email address has not been verified yet. Please check your inbox.",
   "resend": "Resend",
   "bank_title": "Question Bank",
-  "optional": "optional"
+  "optional": "optional",
+  "crop_autotrim": "Trim margins",
+  "crop_autotrim_tip": "White space around the box is removed automatically",
+  "crop_fit_width": "Fit width",
+  "crop_use_whole": "Use the whole image",
+  "crop_hint_draw": "Drag a box around the part you need. Scroll the page with the mouse wheel.",
+  "crop_hint_adjust": "Drag corners and edges to resize, drag inside to move · Enter — crop · Esc — clear"
 }

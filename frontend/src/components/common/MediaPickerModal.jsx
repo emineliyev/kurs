@@ -944,7 +944,7 @@ function DrawCanvas({ onConfirm, onBack }) {
   )
 }
 
-// ── Crop Stage (with viewport zoom + Ctrl-pan) ────────────────────────────────
+// ── Crop Stage (full screen, fit to width, draw a box) ────────────────────────
 const CROP_MAX_SRC = 2400
 
 // Lift paper to white and text to dark. 'enhance' keeps colours, 'bw' gives a scan look.
@@ -995,367 +995,280 @@ function buildWorkingImage(src, quarter, fine, look) {
   return out
 }
 
+// Shrink a box to the ink inside it (plus a little margin). Shared with the bulk cutter.
+function trimWhitespace(source, r) {
+  const w = Math.max(1, Math.round(r.w)), h = Math.max(1, Math.round(r.h))
+  const c = document.createElement('canvas')
+  c.width = w; c.height = h
+  const ctx = c.getContext('2d', { willReadFrequently: true })
+  ctx.drawImage(source, r.x, r.y, r.w, r.h, 0, 0, w, h)
+  const d = ctx.getImageData(0, 0, w, h).data
+  const rows = new Uint32Array(h), cols = new Uint32Array(w)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      if (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114 < 200) { rows[y]++; cols[x]++ }
+    }
+  }
+  const first = (arr) => arr.findIndex((v) => v >= 2)
+  const last = (arr) => arr.length - 1 - [...arr].reverse().findIndex((v) => v >= 2)
+  const top = first(rows), left = first(cols)
+  if (top < 0 || left < 0) return r
+  const bottom = last(rows), right = last(cols)
+  const PAD = 10
+  const nx = Math.max(0, left - PAD), ny = Math.max(0, top - PAD)
+  return { x: r.x + nx, y: r.y + ny, w: Math.min(w, right + PAD + 1) - nx, h: Math.min(h, bottom + PAD + 1) - ny }
+}
+
+const HANDLES = [
+  ['nw', 0, 0, 'nwse-resize'], ['n', 0.5, 0, 'ns-resize'], ['ne', 1, 0, 'nesw-resize'], ['e', 1, 0.5, 'ew-resize'],
+  ['se', 1, 1, 'nwse-resize'], ['s', 0.5, 1, 'ns-resize'], ['sw', 0, 1, 'nesw-resize'], ['w', 0, 0.5, 'ew-resize'],
+]
+
+/**
+ * Full-screen cropper for a single question image.
+ * The image is fitted to the width and scrolls vertically; draw a box (white margins
+ * are trimmed), adjust it with 8 handles or move it, then crop. Without a box the
+ * whole image is used. Rotation, straightening and the Enhance / B&W looks apply.
+ */
 function CropCanvas({ dataUrl, onCropConfirm, onBack }) {
   const { t } = useTranslation('common')
-  const canvasRef  = useRef(null)
-  const srcRef     = useRef(null)   // original <img>
-  const imgRef     = useRef(null)   // working canvas (rotated / enhanced)
-  const viewRef    = useRef({ x: 0, y: 0, zoom: 1 })
-  const baseZoom   = useRef(1)
-  const cropRef    = useRef({ x: 0, y: 0, w: 0, h: 0 })
-  const dragState  = useRef(null)
-  const rafRef     = useRef(null)
-  const guidesRef  = useRef(false)
-  const guidesTimer = useRef(null)
+  const srcRef      = useRef(null)    // original <img>
+  const workRef     = useRef(null)    // working canvas (rotated / straightened / enhanced)
+  const scrollRef   = useRef(null)
+  const stageRef    = useRef(null)
+  const dragRef     = useRef(null)
   const lastQuarter = useRef(0)
+  const guideTimer  = useRef(null)
   const [loaded, setLoaded]   = useState(false)
-  const [zoomPct, setZoomPct] = useState(100)
+  const [workUrl, setWorkUrl] = useState(null)
+  const [size, setSize]       = useState({ w: 1, h: 1 })   // working image size (px)
   const [quarter, setQuarter] = useState(0)
   const [fine, setFine]       = useState(0)
   const [look, setLook]       = useState('original')
+  const [autoTrim, setAutoTrim] = useState(true)
+  const [zoom, setZoom]       = useState(1)
+  const [fitW, setFitW]       = useState(800)
+  const [box, setBox]         = useState(null)            // selection in image px
+  const [guides, setGuides]   = useState(false)
 
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current
-    const img    = imgRef.current
-    if (!canvas || !img) return
-    const ctx = canvas.getContext('2d')
-    const { x: vx, y: vy, zoom } = viewRef.current
-    const W = canvas.width, H = canvas.height
-    const srcW = W / zoom, srcH = H / zoom
-
-    ctx.clearRect(0, 0, W, H)
-    ctx.drawImage(img, vx, vy, srcW, srcH, 0, 0, W, H)
-    ctx.fillStyle = 'rgba(0,0,0,0.45)'
-    ctx.fillRect(0, 0, W, H)
-
-    const { x, y, w, h } = cropRef.current
-    if (w > 0 && h > 0) {
-      const cx = (x - vx) * zoom, cy = (y - vy) * zoom
-      const cw = w * zoom,         ch = h * zoom
-      ctx.clearRect(cx, cy, cw, ch)
-      ctx.drawImage(img, x, y, w, h, cx, cy, cw, ch)
-      // Border
-      ctx.strokeStyle = '#3B82F6'; ctx.lineWidth = 2; ctx.setLineDash([])
-      ctx.strokeRect(cx, cy, cw, ch)
-      // Grid thirds
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4])
-      for (let i = 1; i < 3; i++) {
-        ctx.beginPath(); ctx.moveTo(cx + cw * i / 3, cy); ctx.lineTo(cx + cw * i / 3, cy + ch); ctx.stroke()
-        ctx.beginPath(); ctx.moveTo(cx, cy + ch * i / 3); ctx.lineTo(cx + cw, cy + ch * i / 3); ctx.stroke()
-      }
-      ctx.setLineDash([])
-      // Corner handles
-      ;[[cx, cy], [cx + cw, cy], [cx, cy + ch], [cx + cw, cy + ch]].forEach(([hx, hy]) => {
-        ctx.fillStyle = '#fff'; ctx.strokeStyle = '#3B82F6'; ctx.lineWidth = 2
-        ctx.beginPath(); ctx.arc(hx, hy, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
-      })
-      // Size label
-      const labelY = cy < 26 ? cy + ch + 22 : cy - 6
-      ctx.fillStyle = 'rgba(30,41,59,0.9)'; ctx.fillRect(cx, labelY - 18, 106, 20)
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif'
-      ctx.fillText(`${Math.round(w)} × ${Math.round(h)} px`, cx + 5, labelY - 4)
-    }
-
-    // Straighten guides: a dense grid to line text rows up against
-    if (guidesRef.current) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1; ctx.setLineDash([])
-      ctx.beginPath()
-      for (let gx = 32; gx < W; gx += 32) { ctx.moveTo(gx + 0.5, 0); ctx.lineTo(gx + 0.5, H) }
-      for (let gy = 32; gy < H; gy += 32) { ctx.moveTo(0, gy + 0.5); ctx.lineTo(W, gy + 0.5) }
-      ctx.stroke()
-    }
-  }, [])
-
-  const sched = useCallback(() => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    rafRef.current = requestAnimationFrame(draw)
-  }, [draw])
-
-  // Fit the working image into the canvas and (optionally) reset the crop box.
-  const layout = useCallback((resetCrop) => {
-    const img = imgRef.current
-    const canvas = canvasRef.current
-    if (!img || !canvas) return
-    const maxW = Math.min(900, window.innerWidth - 32)
-    const maxH = Math.round(window.innerHeight * 0.62)
-    const fz = Math.min(1, maxW / img.width, maxH / img.height)
-    canvas.width = Math.round(img.width * fz)
-    canvas.height = Math.round(img.height * fz)
-    baseZoom.current = fz
-    viewRef.current = { x: 0, y: 0, zoom: fz }
-    if (resetCrop) {
-      cropRef.current = { x: img.width * 0.05, y: img.height * 0.05, w: img.width * 0.90, h: img.height * 0.90 }
-    }
-    setZoomPct(100); sched()
-  }, [sched])
-
+  // Load the source image
   useEffect(() => {
     if (!dataUrl) return
-    setLoaded(false); dragState.current = null
-    setQuarter(0); setFine(0); setLook('original'); lastQuarter.current = 0
+    setLoaded(false); setBox(null); setQuarter(0); setFine(0); setLook('original'); lastQuarter.current = 0
     const img = new Image(); img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      srcRef.current = img
-      imgRef.current = buildWorkingImage(img, 0, 0, 'original')
-      layout(true)
-      setLoaded(true)
-    }
+    img.onload = () => { srcRef.current = img; setLoaded(true) }
     img.onerror = () => console.error('CropCanvas load error')
     img.src = dataUrl
-    return () => { img.onload = null; if (rafRef.current) cancelAnimationFrame(rafRef.current) }
-  }, [dataUrl, layout])
+    return () => { img.onload = null }
+  }, [dataUrl])
 
   // Rebuild the working image when rotation / angle / look change
   useEffect(() => {
     const src = srcRef.current
     if (!loaded || !src) return
-    imgRef.current = buildWorkingImage(src, quarter, fine, look)
-    if (quarter !== lastQuarter.current) {
-      lastQuarter.current = quarter
-      layout(true)          // dimensions changed
-    } else {
-      sched()               // same size: keep crop box and zoom
-    }
-  }, [quarter, fine, look, loaded, layout, sched])
+    let cancelled = false
+    const id = setTimeout(() => {
+      const work = buildWorkingImage(src, quarter, fine, look)
+      workRef.current = work
+      work.toBlob((b) => {
+        if (cancelled) return
+        setWorkUrl((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(b) })
+        setSize({ w: work.width, h: work.height })
+      }, 'image/jpeg', 0.92)
+      if (quarter !== lastQuarter.current) { lastQuarter.current = quarter; setBox(null) }
+    }, 40)
+    return () => { cancelled = true; clearTimeout(id) }
+  }, [quarter, fine, look, loaded])
 
-  const showGuides = () => {
-    guidesRef.current = true
-    clearTimeout(guidesTimer.current)
-    guidesTimer.current = setTimeout(() => { guidesRef.current = false; sched() }, 900)
-    sched()
-  }
-  useEffect(() => () => clearTimeout(guidesTimer.current), [])
-
-  const rotate = (dir) => setQuarter(q => (q + dir + 4) % 4)
-
-  // Non-passive wheel for zoom
+  // Fit the image to the available width
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas || !loaded) return
-    const onWheel = (e) => {
-      e.preventDefault()
-      const r = canvas.getBoundingClientRect()
-      const mx = e.clientX - r.left, my = e.clientY - r.top
-      const v = viewRef.current
-      const factor = e.deltaY < 0 ? 1.15 : (1 / 1.15)
-      const natX = v.x + mx / v.zoom, natY = v.y + my / v.zoom
-      const newZoom = Math.max(baseZoom.current * 0.85, Math.min(baseZoom.current * 14, v.zoom * factor))
-      viewRef.current = { zoom: newZoom, x: natX - mx / newZoom, y: natY - my / newZoom }
-      setZoomPct(Math.round(newZoom / baseZoom.current * 100))
-      sched()
-    }
-    canvas.addEventListener('wheel', onWheel, { passive: false })
-    return () => canvas.removeEventListener('wheel', onWheel)
-  }, [loaded, sched])
+    const el = scrollRef.current
+    if (!el) return
+    const fit = () => setFitW(Math.max(280, el.clientWidth - 48))
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
-  const getCoords = (e) => {
-    const canvas = canvasRef.current
-    if (!canvas) return { x: 0, y: 0 }
-    const r = canvas.getBoundingClientRect()
-    const px = e.touches ? e.touches[0].clientX : e.clientX
-    const py = e.touches ? e.touches[0].clientY : e.clientY
-    const v = viewRef.current
-    return { x: v.x + (px - r.left) / v.zoom, y: v.y + (py - r.top) / v.zoom }
-  }
+  const dispW = Math.min(fitW, size.w * 2) * zoom
+  const scale = dispW / size.w                          // screen px per image px
+  const dispH = size.h * scale
 
-  const onDown = (e) => {
-    e.preventDefault()
-    const canvas = canvasRef.current
-    const r = canvas.getBoundingClientRect()
-    const px = e.touches ? e.touches[0].clientX : e.clientX
-    const py = e.touches ? e.touches[0].clientY : e.clientY
-    // Ctrl+drag or middle button = pan
-    if (e.ctrlKey || e.button === 1) {
-      dragState.current = { type: 'pan', spx: px, spy: py, initView: { ...viewRef.current } }
-      return
-    }
-    const { x, y } = getCoords(e)
-    const c = cropRef.current
-    const v = viewRef.current
-    const HR = 12
-    const corners = [
-      { pos: 'tl', hx: (c.x - v.x) * v.zoom,           hy: (c.y - v.y) * v.zoom           },
-      { pos: 'tr', hx: (c.x + c.w - v.x) * v.zoom,     hy: (c.y - v.y) * v.zoom           },
-      { pos: 'bl', hx: (c.x - v.x) * v.zoom,           hy: (c.y + c.h - v.y) * v.zoom     },
-      { pos: 'br', hx: (c.x + c.w - v.x) * v.zoom,     hy: (c.y + c.h - v.y) * v.zoom     },
-    ]
-    const cpx = px - r.left, cpy = py - r.top
-    for (const h of corners) {
-      if (Math.hypot(cpx - h.hx, cpy - h.hy) < HR) {
-        dragState.current = { type: 'resize', pos: h.pos, startX: x, startY: y, initCrop: { ...c } }
-        return
-      }
-    }
-    if (x > c.x && x < c.x + c.w && y > c.y && y < c.y + c.h) {
-      dragState.current = { type: 'move', startX: x, startY: y, initCrop: { ...c } }
-    } else {
-      dragState.current = { type: 'new', startX: x, startY: y }
-      cropRef.current = { x, y, w: 0, h: 0 }
+  const toImage = (e) => {
+    const r = stageRef.current.getBoundingClientRect()
+    return {
+      x: Math.max(0, Math.min(size.w, (e.clientX - r.left) / scale)),
+      y: Math.max(0, Math.min(size.h, (e.clientY - r.top) / scale)),
     }
   }
 
-  const onMove = (e) => {
-    const ds = dragState.current
-    if (!ds) return
-    e.preventDefault()
-    if (ds.type === 'pan') {
-      const px = e.touches ? e.touches[0].clientX : e.clientX
-      const py = e.touches ? e.touches[0].clientY : e.clientY
-      const dx = (px - ds.spx) / ds.initView.zoom
-      const dy = (py - ds.spy) / ds.initView.zoom
-      viewRef.current = { ...ds.initView, x: ds.initView.x - dx, y: ds.initView.y - dy }
-      sched(); return
+  const onPointerDown = (e, mode = 'new', handle = null) => {
+    if (e.button !== 0 || !workUrl) return
+    e.preventDefault(); e.stopPropagation()
+    stageRef.current.setPointerCapture(e.pointerId)
+    const p = toImage(e)
+    dragRef.current = { mode, handle, start: p, init: box }
+    if (mode === 'new') setBox({ x: p.x, y: p.y, w: 0, h: 0 })
+  }
+
+  const onPointerMove = (e) => {
+    const d = dragRef.current
+    if (!d) return
+    const p = toImage(e)
+    if (d.mode === 'new') {
+      setBox({ x: Math.min(d.start.x, p.x), y: Math.min(d.start.y, p.y), w: Math.abs(p.x - d.start.x), h: Math.abs(p.y - d.start.y) })
+    } else if (d.mode === 'move') {
+      const b = d.init
+      setBox({ ...b,
+        x: Math.max(0, Math.min(size.w - b.w, b.x + p.x - d.start.x)),
+        y: Math.max(0, Math.min(size.h - b.h, b.y + p.y - d.start.y)) })
+    } else if (d.mode === 'resize') {
+      let { x, y, w, h } = d.init
+      let x2 = x + w, y2 = y + h
+      if (d.handle.includes('w')) x = Math.min(p.x, x2 - 10)
+      if (d.handle.includes('e')) x2 = Math.max(p.x, x + 10)
+      if (d.handle.includes('n')) y = Math.min(p.y, y2 - 10)
+      if (d.handle.includes('s')) y2 = Math.max(p.y, y + 10)
+      setBox({ x, y, w: x2 - x, h: y2 - y })
     }
-    const { x, y } = getCoords(e)
-    const img = imgRef.current
-    const maxW = img.width, maxH = img.height
-    const ic = ds.initCrop || cropRef.current
-    if (ds.type === 'move') {
-      const dx = x - ds.startX, dy = y - ds.startY
-      cropRef.current = {
-        ...ic,
-        x: Math.max(0, Math.min(maxW - ic.w, ic.x + dx)),
-        y: Math.max(0, Math.min(maxH - ic.h, ic.y + dy)),
-      }
-    } else if (ds.type === 'new') {
-      const nx = Math.min(ds.startX, x), ny = Math.min(ds.startY, y)
-      cropRef.current = {
-        x: Math.max(0, nx), y: Math.max(0, ny),
-        w: Math.min(maxW - Math.max(0, nx), Math.abs(x - ds.startX)),
-        h: Math.min(maxH - Math.max(0, ny), Math.abs(y - ds.startY)),
-      }
-    } else if (ds.type === 'resize') {
-      const { pos } = ds
-      if (pos === 'br')      cropRef.current = { ...ic, w: Math.max(10, x - ic.x),           h: Math.max(10, y - ic.y) }
-      else if (pos === 'bl') { const w = Math.max(10, ic.x + ic.w - x);  cropRef.current = { ...ic, x, w, h: Math.max(10, y - ic.y) } }
-      else if (pos === 'tr') { const h = Math.max(10, ic.y + ic.h - y);  cropRef.current = { ...ic, y, w: Math.max(10, x - ic.x), h } }
-      else                   { const w = Math.max(10, ic.x + ic.w - x), h = Math.max(10, ic.y + ic.h - y); cropRef.current = { ...ic, x, y, w, h } }
-    }
-    sched()
   }
 
-  const onUp = () => { dragState.current = null }
-
-  const zoomBy = (factor) => {
-    const v = viewRef.current
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const cx = canvas.width / 2, cy = canvas.height / 2
-    const natX = v.x + cx / v.zoom, natY = v.y + cy / v.zoom
-    const newZoom = Math.max(baseZoom.current * 0.85, Math.min(baseZoom.current * 14, v.zoom * factor))
-    viewRef.current = { zoom: newZoom, x: natX - cx / newZoom, y: natY - cy / newZoom }
-    setZoomPct(Math.round(newZoom / baseZoom.current * 100))
-    sched()
+  const onPointerUp = () => {
+    const d = dragRef.current
+    dragRef.current = null
+    if (!d || d.mode !== 'new') return
+    setBox((b) => {
+      if (!b || b.w * scale < 12 || b.h * scale < 12) return null
+      return autoTrim && workRef.current ? trimWhitespace(workRef.current, b) : b
+    })
   }
 
-  const fitView = () => {
-    viewRef.current = { x: 0, y: 0, zoom: baseZoom.current }
-    setZoomPct(100); sched()
+  const rotate = (dir) => setQuarter((q) => (q + dir + 4) % 4)
+  const showGuides = () => {
+    setGuides(true)
+    clearTimeout(guideTimer.current)
+    guideTimer.current = setTimeout(() => setGuides(false), 900)
   }
+  useEffect(() => () => clearTimeout(guideTimer.current), [])
 
-  const confirm = () => {
-    const c = cropRef.current
-    if (c.w < 5 || c.h < 5) return
-    const img = imgRef.current
-    if (!img) return
+  const confirm = useCallback(() => {
+    const work = workRef.current
+    if (!work) return
+    const c = box && box.w > 4 && box.h > 4 ? box : { x: 0, y: 0, w: work.width, h: work.height }
     // Export: upscale small crops to min 600px width, cap at 1600px
     const EXPORT_W = Math.min(Math.max(Math.round(c.w), 600), 1600)
-    const scale = EXPORT_W / c.w
+    const k = EXPORT_W / c.w
     const off = document.createElement('canvas')
-    off.width = EXPORT_W; off.height = Math.round(c.h * scale)
+    off.width = EXPORT_W; off.height = Math.round(c.h * k)
     const octx = off.getContext('2d')
     octx.imageSmoothingQuality = 'high'
-    octx.drawImage(img, c.x, c.y, c.w, c.h, 0, 0, off.width, off.height)
-    const dataUrl = off.toDataURL('image/jpeg', 0.92)
-    off.toBlob(blob => {
-      onCropConfirm(new File([blob], 'cropped.jpg', { type: 'image/jpeg' }), URL.createObjectURL(blob), dataUrl)
+    octx.drawImage(work, c.x, c.y, c.w, c.h, 0, 0, off.width, off.height)
+    const url = off.toDataURL('image/jpeg', 0.92)
+    off.toBlob((blob) => {
+      onCropConfirm(new File([blob], 'cropped.jpg', { type: 'image/jpeg' }), URL.createObjectURL(blob), url)
     }, 'image/jpeg', 0.92)
-  }
+  }, [box, onCropConfirm])
 
-  const iconBtn = 'w-7 h-7 rounded border border-slate-200 bg-white hover:bg-slate-100 flex items-center justify-center text-slate-600 disabled:opacity-40'
-  const LOOKS = [
-    { id: 'original', icon: 'bi-image',          labelKey: 'filter_original' },
-    { id: 'enhance',  icon: 'bi-brightness-high', labelKey: 'filter_enhance' },
-    { id: 'bw',       icon: 'bi-file-earmark-text', labelKey: 'filter_bw'    },
-  ]
+  // Enter crops, Esc clears the box (or goes back)
+  useEffect(() => {
+    const onKey = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return
+      if (e.key === 'Enter') { e.preventDefault(); confirm() }
+      else if (e.key === 'Escape') { e.preventDefault(); if (box) setBox(null); else onBack() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [box, confirm, onBack])
+
+  const iconBtn = 'w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 flex items-center justify-center text-slate-600 disabled:opacity-40'
+  const LOOKS = [['original', 'bi-image', 'filter_original'], ['enhance', 'bi-brightness-high', 'filter_enhance'], ['bw', 'bi-file-earmark-text', 'filter_bw']]
+  const sel = box && { left: box.x * scale, top: box.y * scale, width: box.w * scale, height: box.h * scale }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-4 py-2 border-b bg-slate-50 shrink-0">
-        <button onClick={onBack} className="text-slate-500 hover:text-slate-700 flex items-center gap-1 text-sm">
+    <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col">
+      {/* Toolbar */}
+      <div className="flex items-center gap-x-3 gap-y-2 px-4 py-2.5 bg-white border-b border-slate-200 shrink-0 flex-wrap">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800">
           <i className="bi bi-arrow-left"></i> {t('back')}
         </button>
-        <span className="text-xs text-slate-400 flex-1 hidden sm:block">{t('zoom_hint')}</span>
-        {/* Zoom controls */}
-        <div className="flex items-center gap-1 ml-auto">
-          <button onClick={() => zoomBy(1 / 1.3)} className={iconBtn}>
-            <i className="bi bi-dash text-sm"></i>
-          </button>
-          <span className="text-xs text-slate-600 w-12 text-center font-mono">{zoomPct}%</span>
-          <button onClick={() => zoomBy(1.3)} className={iconBtn}>
-            <i className="bi bi-plus text-sm"></i>
-          </button>
-          <button onClick={fitView}
-            className="ml-1 h-7 px-2 rounded border border-slate-200 bg-white hover:bg-slate-100 text-xs text-slate-600">
-            Fit
-          </button>
-        </div>
-      </div>
-
-      {/* Rotate / straighten / look */}
-      <div className="flex items-center gap-x-4 gap-y-2 px-4 py-2 border-b bg-white shrink-0 flex-wrap">
+        <h2 className="font-semibold text-slate-900 flex items-center gap-2 mr-1">
+          <i className="bi bi-crop text-primary-700"></i>{t('modal_crop_title')}
+        </h2>
         <div className="flex items-center gap-1">
-          <button onClick={() => rotate(-1)} disabled={!loaded} title={t('rotate_left')} className={iconBtn}>
-            <i className="bi bi-arrow-counterclockwise text-sm"></i>
-          </button>
-          <button onClick={() => rotate(1)} disabled={!loaded} title={t('rotate_right')} className={iconBtn}>
-            <i className="bi bi-arrow-clockwise text-sm"></i>
-          </button>
+          <button onClick={() => rotate(-1)} disabled={!loaded} title={t('rotate_left')} className={iconBtn}><i className="bi bi-arrow-counterclockwise"></i></button>
+          <button onClick={() => rotate(1)} disabled={!loaded} title={t('rotate_right')} className={iconBtn}><i className="bi bi-arrow-clockwise"></i></button>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 flex items-center gap-1">
-            <i className="bi bi-rulers"></i> {t('straighten')}
-          </span>
-          <input type="range" min={-15} max={15} step={0.5} value={fine} disabled={!loaded}
-            aria-label={t('straighten')}
-            onChange={e => { setFine(Number(e.target.value)); showGuides() }}
-            onPointerDown={showGuides}
-            className="w-32 sm:w-44 accent-primary-600" />
-          <span className="text-xs font-mono text-slate-600 w-12 text-right">{fine > 0 ? '+' : ''}{fine.toFixed(1)}°</span>
+          <span className="text-xs text-slate-500 flex items-center gap-1"><i className="bi bi-rulers"></i> {t('straighten')}</span>
+          <input type="range" min={-15} max={15} step={0.5} value={fine} disabled={!loaded} aria-label={t('straighten')}
+            onChange={(e) => { setFine(Number(e.target.value)); showGuides() }} onPointerDown={showGuides}
+            className="w-28 sm:w-36 accent-primary-600" />
+          <span className="text-xs font-mono text-slate-600 w-11 text-right">{fine > 0 ? '+' : ''}{fine.toFixed(1)}°</span>
           <button onClick={() => setFine(0)} disabled={!loaded || fine === 0} title={t('reset_angle')}
-            className="h-7 px-2 rounded border border-slate-200 bg-white hover:bg-slate-100 text-xs text-slate-600 disabled:opacity-40">
-            0°
-          </button>
+            className="h-8 px-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-xs text-slate-600 disabled:opacity-40">0°</button>
         </div>
-        <div className="flex items-center gap-1 sm:ml-auto" title={t('filter_tip')}>
-          {LOOKS.map(l => (
-            <button key={l.id} onClick={() => setLook(l.id)} disabled={!loaded}
-              className={`h-7 px-2.5 rounded-lg flex items-center gap-1.5 text-xs font-medium transition-colors border disabled:opacity-40 ${
-                look === l.id ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}`}>
-              <i className={`bi ${l.icon}`}></i> {t(l.labelKey)}
+        <div className="flex items-center gap-1" title={t('filter_tip')}>
+          {LOOKS.map(([id, icon, key]) => (
+            <button key={id} onClick={() => setLook(id)} disabled={!loaded}
+              className={`h-8 px-2.5 rounded-lg flex items-center gap-1.5 text-xs font-medium border disabled:opacity-40 ${look === id ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'}`}>
+              <i className={`bi ${icon}`}></i> {t(key)}
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="flex-1 min-h-0 flex items-center justify-center bg-slate-900 p-3">
-        {!loaded && <i className="bi bi-arrow-repeat animate-spin text-3xl text-slate-400"></i>}
-        <canvas ref={canvasRef}
-          className={`cursor-crosshair touch-none select-none${!loaded ? ' opacity-0' : ''}`}
-          style={{ display: 'block' }}
-          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
-          onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
-        />
-      </div>
-
-      <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50 shrink-0">
-        <p className="text-xs text-slate-400 hidden sm:block">{t('crop_hint')}</p>
-        <div className="flex gap-2 ml-auto">
-          <button onClick={onBack} className="btn-secondary text-sm py-2">{t('cancel')}</button>
-          <button onClick={confirm} disabled={!loaded} className="btn-primary text-sm py-2">
-            <i className="bi bi-scissors"></i> {t('crop_action')}
-          </button>
+        <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none" title={t('crop_autotrim_tip')}>
+          <input type="checkbox" checked={autoTrim} onChange={(e) => setAutoTrim(e.target.checked)} className="accent-primary-600" />
+          {t('crop_autotrim')}
+        </label>
+        <div className="flex items-center gap-1 ml-auto">
+          <button onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.2).toFixed(2)))} className={iconBtn}><i className="bi bi-dash"></i></button>
+          <span className="text-xs font-mono w-11 text-center text-slate-600">{Math.round(zoom * 100)}%</span>
+          <button onClick={() => setZoom((z) => Math.min(4, +(z + 0.2).toFixed(2)))} className={iconBtn}><i className="bi bi-plus"></i></button>
+          <button onClick={() => setZoom(1)} title={t('crop_fit_width')} className={iconBtn}><i className="bi bi-arrows-angle-expand"></i></button>
         </div>
+        <button onClick={confirm} disabled={!workUrl} className="btn-primary text-sm py-2 disabled:opacity-50">
+          <i className={`bi ${box ? 'bi-scissors' : 'bi-check2'}`}></i>
+          {box ? t('crop_action') : t('crop_use_whole')}
+        </button>
+      </div>
+
+      {/* Image */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto">
+        {!workUrl ? (
+          <div className="h-full flex items-center justify-center"><i className="bi bi-arrow-repeat animate-spin text-3xl text-slate-400"></i></div>
+        ) : (
+          <div className="py-6 px-6 flex flex-col items-center">
+            <p className="text-xs text-slate-500 mb-2">{box ? t('crop_hint_adjust') : t('crop_hint_draw')}</p>
+            <div ref={stageRef} className="relative bg-white shadow-md select-none touch-none cursor-crosshair shrink-0"
+              style={{ width: dispW, height: dispH }}
+              onPointerDown={(e) => onPointerDown(e, 'new')} onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
+              <img src={workUrl} alt="" draggable={false} className="absolute inset-0 w-full h-full pointer-events-none" />
+              {guides && (
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  backgroundImage: 'linear-gradient(rgba(37,99,235,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,.35) 1px, transparent 1px)',
+                  backgroundSize: '32px 32px' }} />
+              )}
+              {sel && (
+                <>
+                  {/* dim outside the selection */}
+                  <div className="absolute pointer-events-none" style={{ ...sel, boxShadow: '0 0 0 9999px rgba(15,23,42,.45)' }} />
+                  <div className="absolute border-2 border-primary-500 cursor-move" style={sel}
+                    onPointerDown={(e) => onPointerDown(e, 'move')}>
+                    {HANDLES.map(([id, fx, fy, cursor]) => (
+                      <span key={id} onPointerDown={(e) => onPointerDown(e, 'resize', id)}
+                        className="absolute w-3.5 h-3.5 bg-white border-2 border-primary-600 rounded-full"
+                        style={{ left: `calc(${fx * 100}% - 7px)`, top: `calc(${fy * 100}% - 7px)`, cursor }} />
+                    ))}
+                    <span className="absolute -top-6 left-0 px-1.5 py-0.5 rounded bg-slate-800/90 text-white text-[11px] font-mono whitespace-nowrap">
+                      {Math.round(box.w)} × {Math.round(box.h)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1449,13 +1362,11 @@ export default function MediaPickerModal({ onPick, onClose }) {
   )
 
   if (stage === 'crop') return (
-    <Shell title={t('modal_crop_title')} icon="bi-crop" maxW="max-w-5xl">
-      <CropCanvas
-        dataUrl={cropSrc}
-        onCropConfirm={onCropped}
-        onBack={() => setStage(pdfPages.length ? 'pdf' : 'pick')}
-      />
-    </Shell>
+    <CropCanvas
+      dataUrl={cropSrc}
+      onCropConfirm={onCropped}
+      onBack={() => setStage(pdfPages.length ? 'pdf' : 'pick')}
+    />
   )
 
   if (stage === 'annotate') return (
@@ -1604,4 +1515,4 @@ export default function MediaPickerModal({ onPick, onClose }) {
 }
 
 // Shared with the bulk PDF question cutter
-export { AnnotateCanvas, applyLook, loadScript, PDFJS_CDN, PDFJS_WORKER }
+export { AnnotateCanvas, applyLook, loadScript, trimWhitespace, PDFJS_CDN, PDFJS_WORKER }

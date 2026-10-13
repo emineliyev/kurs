@@ -201,5 +201,11 @@
   "email_not_verified": "Email ünvanınız hələ təsdiqlənməyib. Zəhmət olmasa inbox-unuzu yoxlayın.",
   "resend": "Yenidən göndər",
   "bank_title": "Sual Bankı",
-  "optional": "istəyə bağlı"
+  "optional": "istəyə bağlı",
+  "crop_autotrim": "Boşluqları kəs",
+  "crop_autotrim_tip": "Çərçivə çəkiləndə ətrafdakı ağ boşluqlar avtomatik kəsilir",
+  "crop_fit_width": "Eninə sığdır",
+  "crop_use_whole": "Bütöv şəkli istifadə et",
+  "crop_hint_draw": "Kəsmək istədiyiniz hissəni siçanla çərçivəyə alın. Səhifəni siçanın təkəri ilə sürüşdürün.",
+  "crop_hint_adjust": "Künc və kənarlardan ölçünü dəyişin, içindən tutub yerini dəyişin · Enter — kəs · Esc — sil"
 }
