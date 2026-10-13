@@ -10,3 +10,9 @@ def create_user_profile(sender, instance, created, **kwargs):
             TeacherProfile.objects.create(user=instance)
         elif instance.role == User.ROLE_STUDENT:
             StudentProfile.objects.create(user=instance)
+
+
+from core.media_cleanup import track  # noqa: E402
+
+track(TeacherProfile, 'avatar')
+track(StudentProfile, 'avatar')
