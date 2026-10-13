@@ -326,16 +326,10 @@ export default function QuestionBankPage() {
           <p className="text-sm text-slate-500 mt-1">{t('bank_subtitle', { ns: 'teacher' })}</p>
         </div>
         {editingId === null && (
-          <div className="flex flex-wrap gap-2 justify-end">
-            <button onClick={() => setShowBulk(true)} title={t('bulk_open_hint', { ns: 'teacher' })} className="btn-secondary">
-              <i className="bi bi-file-earmark-pdf text-red-500"></i>
-              {t('bulk_open', { ns: 'teacher' })}
-            </button>
-            <button onClick={startCreate} className="btn-primary">
-              <i className="bi bi-plus-lg"></i>
-              {t('new_bank_question', { ns: 'teacher' })}
-            </button>
-          </div>
+          <button onClick={startCreate} className="btn-primary">
+            <i className="bi bi-plus-lg"></i>
+            {t('new_bank_question', { ns: 'teacher' })}
+          </button>
         )}
       </div>
 
