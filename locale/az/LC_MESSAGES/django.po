@@ -124,3 +124,7 @@ msgstr "Token etibarsızdır."
 
 msgid "Token is invalid or expired"
 msgstr "Token etibarsız və ya müddəti bitmiş."
+
+#: admin action button (missing from Django's own az translation)
+msgid "Run"
+msgstr "İcra et"

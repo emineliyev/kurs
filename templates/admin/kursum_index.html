@@ -1,0 +1,124 @@
+{% extends "admin/index.html" %}
+{% comment %}Kursum dashboard above the standard app list (see apps/accounts/admin_site.py).{% endcomment %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  /* Django limits the index to 600px; give the dashboard the full width */
+  .dashboard #content { width: auto; max-width: 1240px; }
+  .dashboard #content-main { width: calc(100% - 300px); }
+  @media (max-width: 1024px) { .dashboard #content-main { width: 100%; } }
+  .kd { margin: 0 0 24px; }
+  a.kd-stat, a.kd-stat:hover, a.kd-stat * { text-decoration: none !important; display: block; }
+  a.kd-stat:hover { border-color: var(--link-fg); }
+  .kd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kd-stat { border: 1px solid var(--hairline-color); border-radius: 10px; padding: 14px 16px; background: var(--body-bg); }
+  .kd-stat b { display: block; font-size: 26px; line-height: 1.1; color: var(--body-fg); }
+  .kd-stat span { color: var(--body-quiet-color); font-size: 12px; }
+  .kd-stat small { color: #16a34a; font-weight: 600; }
+  .kd-stat.alert { border-color: #f59e0b; background: rgba(245, 158, 11, .08); }
+  .kd-stat.alert b { color: #d97706; }
+  .kd-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .kd-box { border: 1px solid var(--hairline-color); border-radius: 10px; overflow: hidden; }
+  .kd-box h3 { margin: 0; padding: 10px 14px; font-size: 13px; background: var(--darkened-bg); color: var(--body-fg);
+               display: flex; justify-content: space-between; align-items: center; text-transform: none; letter-spacing: 0; }
+  .kd-box h3 a { font-weight: 400; font-size: 12px; }
+  .kd-box table { width: 100%; border: 0; margin: 0; }
+  .kd-box td { padding: 8px 14px; border-top: 1px solid var(--hairline-color); vertical-align: middle; }
+  .kd-empty { padding: 14px; color: var(--body-quiet-color); font-size: 12px; }
+  .kd-bar { height: 6px; border-radius: 3px; background: var(--hairline-color); overflow: hidden; margin-top: 4px; }
+  .kd-bar i { display: block; height: 100%; background: #16a34a; }
+  .kd-bar i.full { background: #dc2626; }
+  .kd-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+              background: rgba(37, 99, 235, .12); color: #2563eb; }
+  .kd-warn { color: #d97706; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kd">
+  <div class="kd-grid">
+    <a href="{% url 'admin:payments_paymentrequest_changelist' %}?status__exact=pending" class="kd-stat{% if dash_pending_count %} alert{% endif %}">
+      <b>{{ dash_pending_count }}</b><span>Gözləyən ödəniş sorğusu</span>
+    </a>
+    <a href="{% url 'admin:accounts_user_changelist' %}?role__exact=teacher" class="kd-stat">
+      <b>{{ dash_teachers }}</b><span>Müəllim</span>
+      {% if dash_new_teachers %}<small>+{{ dash_new_teachers }} bu həftə</small>{% endif %}
+    </a>
+    <a href="{% url 'admin:accounts_user_changelist' %}?role__exact=student" class="kd-stat">
+      <b>{{ dash_students }}</b><span>Şagird</span>
+    </a>
+    <a href="{% url 'admin:exams_exam_changelist' %}" class="kd-stat">
+      <b>{{ dash_exams_today }}</b><span>Bu gün başlayan imtahan</span>
+    </a>
+    <a href="{% url 'admin:accounts_feedback_changelist' %}?is_read__exact=0" class="kd-stat{% if dash_unread_feedback %} alert{% endif %}">
+      <b>{{ dash_unread_feedback }}</b><span>Oxunmamış rəy</span>
+    </a>
+  </div>
+
+  <div class="kd-cols">
+    <div class="kd-box">
+      <h3>Gözləyən ödənişlər <a href="{% url 'admin:payments_paymentrequest_changelist' %}?status__exact=pending">Hamısı →</a></h3>
+      {% if dash_pending %}
+        <table>
+          {% for p in dash_pending %}
+            <tr>
+              <td><a href="{% url 'admin:payments_paymentrequest_change' p.id %}">{{ p.teacher.get_full_name|default:p.teacher.email }}</a></td>
+              <td>{{ p.plan.display_name }}</td>
+              <td><b>{{ p.amount }} {{ p.currency }}</b></td>
+              <td style="color:var(--body-quiet-color);font-size:12px">{{ p.created_at|date:"d.m H:i" }}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}<div class="kd-empty">Gözləyən sorğu yoxdur.</div>{% endif %}
+    </div>
+
+    <div class="kd-box">
+      <h3>Kartlar — bu gün <a href="{% url 'admin:payments_paymentrequisite_changelist' %}">Rekvizitlər →</a></h3>
+      {% if dash_cards %}
+        <table>
+          {% for c in dash_cards %}
+            <tr>
+              <td>{{ c.requisite.label }}<br><small style="color:var(--body-quiet-color)">{{ c.requisite.get_method_display }}</small></td>
+              <td style="width:45%">
+                {% if c.limit is None %}
+                  {{ c.used }} / ∞
+                {% else %}
+                  <span{% if c.full %} class="kd-warn"{% endif %}>{{ c.used }} / {{ c.limit }}{% if c.full %} — dolub{% endif %}</span>
+                  <div class="kd-bar"><i class="{% if c.full %}full{% endif %}" style="width:{% widthratio c.used c.limit 100 %}%"></i></div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}<div class="kd-empty">Aktiv rekvizit yoxdur.</div>{% endif %}
+    </div>
+
+    <div class="kd-box">
+      <h3>7 gün ərzində bitən abunəliklər <a href="{% url 'admin:subscriptions_subscription_changelist' %}">Abunəliklər →</a></h3>
+      {% if dash_expiring %}
+        <table>
+          {% for s in dash_expiring %}
+            <tr>
+              <td><a href="{% url 'admin:subscriptions_subscription_change' s.id %}">{{ s.teacher.get_full_name|default:s.teacher.email }}</a></td>
+              <td><span class="kd-badge">{{ s.plan.display_name }}</span></td>
+              <td>{{ s.end_date|date:"d.m.Y" }} <small style="color:var(--body-quiet-color)">({{ s.days_remaining }} gün)</small></td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}<div class="kd-empty">Yaxın günlərdə bitən abunəlik yoxdur.</div>{% endif %}
+    </div>
+
+    <div class="kd-box">
+      <h3>Aktiv abunəliklər — plana görə</h3>
+      {% if dash_by_plan %}
+        <table>
+          {% for row in dash_by_plan %}
+            <tr><td>{{ row.plan__display_name }}</td><td style="text-align:right"><b>{{ row.n }}</b></td></tr>
+          {% endfor %}
+        </table>
+      {% else %}<div class="kd-empty">Aktiv abunəlik yoxdur.</div>{% endif %}
+    </div>
+  </div>
+</div>
+{{ block.super }}
+{% endblock %}

@@ -8,24 +8,28 @@ class Plan(models.Model):
     PLAN_STANDARD = 'standard'
     PLAN_PRO      = 'pro'
     PLAN_CHOICES  = [
-        (PLAN_FREE,     'Free Trial'),
+        (PLAN_FREE,     'Pulsuz sınaq'),
         (PLAN_STANDARD, 'Standard'),
         (PLAN_PRO,      'Pro'),
     ]
     # Determines upgrade vs downgrade direction
     PLAN_TIER = {PLAN_FREE: 0, PLAN_STANDARD: 1, PLAN_PRO: 2}
 
-    name         = models.CharField(max_length=50, choices=PLAN_CHOICES, unique=True)
-    display_name = models.CharField(max_length=100)
-    price        = models.DecimalField(max_digits=8, decimal_places=2, default=0)
-    max_tests_per_month = models.IntegerField(default=-1, help_text='-1 means unlimited')
-    max_exams_per_month = models.IntegerField(default=-1, help_text='-1 means unlimited')
-    max_classes         = models.IntegerField(default=-1, help_text='-1 means unlimited')
-    max_students        = models.IntegerField(default=-1, help_text='-1 means unlimited')
-    duration_days       = models.PositiveSmallIntegerField(default=30)
-    is_active    = models.BooleanField(default=True)
-    description  = models.TextField(blank=True)
-    created_at   = models.DateTimeField(auto_now_add=True)
+    name         = models.CharField(max_length=50, choices=PLAN_CHOICES, unique=True, verbose_name='Kod')
+    display_name = models.CharField(max_length=100, verbose_name='Görünən ad')
+    price        = models.DecimalField(max_digits=8, decimal_places=2, default=0, verbose_name='Qiymət (AZN)')
+    max_tests_per_month = models.IntegerField(default=-1, help_text='-1 = limitsiz', verbose_name='Aylıq test limiti')
+    max_exams_per_month = models.IntegerField(default=-1, help_text='-1 = limitsiz', verbose_name='Aylıq imtahan limiti')
+    max_classes         = models.IntegerField(default=-1, help_text='-1 = limitsiz', verbose_name='Sinif limiti')
+    max_students        = models.IntegerField(default=-1, help_text='-1 = limitsiz', verbose_name='Şagird limiti')
+    duration_days       = models.PositiveSmallIntegerField(default=30, verbose_name='Müddət (gün)')
+    is_active    = models.BooleanField(default=True, verbose_name='Aktiv')
+    description  = models.TextField(blank=True, verbose_name='Təsvir')
+    created_at   = models.DateTimeField(auto_now_add=True, verbose_name='Yaradılıb')
+
+    class Meta:
+        verbose_name = 'Plan'
+        verbose_name_plural = 'Planlar'
 
     def __str__(self):
         return self.display_name
@@ -43,34 +47,38 @@ class Subscription(models.Model):
     STATUS_CANCELLED = 'cancelled'
     STATUS_TRIAL     = 'trial'
     STATUS_CHOICES   = [
-        (STATUS_ACTIVE,    'Active'),
-        (STATUS_EXPIRED,   'Expired'),
-        (STATUS_CANCELLED, 'Cancelled'),
-        (STATUS_TRIAL,     'Free Trial'),
+        (STATUS_ACTIVE,    'Aktiv'),
+        (STATUS_EXPIRED,   'Bitib'),
+        (STATUS_CANCELLED, 'Ləğv edilib'),
+        (STATUS_TRIAL,     'Sınaq'),
     ]
 
-    teacher              = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
-    plan                 = models.ForeignKey(Plan, on_delete=models.PROTECT, related_name='subscriptions')
-    status               = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_TRIAL)
-    start_date           = models.DateTimeField(default=timezone.now)
-    end_date             = models.DateTimeField()
+    teacher              = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription', verbose_name='Müəllim')
+    plan                 = models.ForeignKey(Plan, on_delete=models.PROTECT, related_name='subscriptions', verbose_name='Plan')
+    status               = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_TRIAL, verbose_name='Status')
+    start_date           = models.DateTimeField(default=timezone.now, verbose_name='Başlama tarixi')
+    end_date             = models.DateTimeField(verbose_name='Bitmə tarixi')
 
     # Scheduled downgrade — applied when end_date is reached
     pending_plan         = models.ForeignKey(
         Plan, null=True, blank=True,
         on_delete=models.SET_NULL, related_name='pending_subscriptions'
-    )
-    pending_change_date  = models.DateTimeField(null=True, blank=True)
+    , verbose_name='Növbəti plan')
+    pending_change_date  = models.DateTimeField(null=True, blank=True, verbose_name='Plan dəyişmə tarixi')
 
     # Cancellation tracking
-    cancelled_at         = models.DateTimeField(null=True, blank=True)
+    cancelled_at         = models.DateTimeField(null=True, blank=True, verbose_name='Ləğv tarixi')
 
-    payment_reference       = models.CharField(max_length=200, blank=True)
-    tests_used_this_month   = models.PositiveIntegerField(default=0)
-    exams_used_this_month   = models.PositiveIntegerField(default=0)
-    last_reset_date         = models.DateField(auto_now_add=True)
-    created_at              = models.DateTimeField(auto_now_add=True)
-    updated_at              = models.DateTimeField(auto_now=True)
+    payment_reference       = models.CharField(max_length=200, blank=True, verbose_name='Ödəniş istinadı')
+    tests_used_this_month   = models.PositiveIntegerField(default=0, verbose_name='Bu ay testlər')
+    exams_used_this_month   = models.PositiveIntegerField(default=0, verbose_name='Bu ay imtahanlar')
+    last_reset_date         = models.DateField(auto_now_add=True, verbose_name='Son sıfırlama')
+    created_at              = models.DateTimeField(auto_now_add=True, verbose_name='Yaradılıb')
+    updated_at              = models.DateTimeField(auto_now=True, verbose_name='Yenilənib')
+
+    class Meta:
+        verbose_name = 'Abunəlik'
+        verbose_name_plural = 'Abunəliklər'
 
     def __str__(self):
         return f'{self.teacher.get_full_name()} — {self.plan.display_name}'

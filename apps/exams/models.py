@@ -6,18 +6,20 @@ from apps.tests_app.models import Test, Question, Answer
 
 
 class Exam(models.Model):
-    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='exams')
-    class_room = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='exams')
-    title = models.CharField(max_length=300, blank=True)
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    duration_minutes = models.PositiveSmallIntegerField(default=60)
-    randomize_questions = models.BooleanField(default=False)
-    randomize_answers = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='exams', verbose_name='Test')
+    class_room = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='exams', verbose_name='Sinif')
+    title = models.CharField(max_length=300, blank=True, verbose_name='Başlıq')
+    start_time = models.DateTimeField(verbose_name='Başlama vaxtı')
+    end_time = models.DateTimeField(verbose_name='Bitmə vaxtı')
+    duration_minutes = models.PositiveSmallIntegerField(default=60, verbose_name='Müddət (dəq.)')
+    randomize_questions = models.BooleanField(default=False, verbose_name='Sualları qarışdır')
+    randomize_answers = models.BooleanField(default=False, verbose_name='Cavabları qarışdır')
+    is_active = models.BooleanField(default=True, verbose_name='Aktiv')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Yaradılıb')
 
     class Meta:
+        verbose_name = 'İmtahan'
+        verbose_name_plural = 'İmtahanlar'
         ordering = ['-start_time']
 
     def __str__(self):
@@ -47,24 +49,26 @@ class ExamResult(models.Model):
     STATUS_SUBMITTED = 'submitted'
     STATUS_EXPIRED = 'expired'
     STATUS_CHOICES = [
-        (STATUS_IN_PROGRESS, 'In Progress'),
-        (STATUS_SUBMITTED, 'Submitted'),
-        (STATUS_EXPIRED, 'Expired'),
+        (STATUS_IN_PROGRESS, 'Davam edir'),
+        (STATUS_SUBMITTED, 'Təhvil verilib'),
+        (STATUS_EXPIRED, 'Vaxtı bitib'),
     ]
 
-    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='results')
-    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exam_results')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_IN_PROGRESS)
-    score = models.FloatField(null=True, blank=True)
-    total_points = models.PositiveSmallIntegerField(default=0)
-    percentage = models.FloatField(null=True, blank=True)
-    passed = models.BooleanField(null=True, blank=True)
-    tab_switch_count = models.PositiveSmallIntegerField(default=0)
-    started_at = models.DateTimeField(auto_now_add=True)
-    submitted_at = models.DateTimeField(null=True, blank=True)
-    pdf_report_url = models.URLField(blank=True)
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='results', verbose_name='İmtahan')
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exam_results', verbose_name='Şagird')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_IN_PROGRESS, verbose_name='Status')
+    score = models.FloatField(null=True, blank=True, verbose_name='Bal')
+    total_points = models.PositiveSmallIntegerField(default=0, verbose_name='Ümumi bal')
+    percentage = models.FloatField(null=True, blank=True, verbose_name='Faiz')
+    passed = models.BooleanField(null=True, blank=True, verbose_name='Keçdi')
+    tab_switch_count = models.PositiveSmallIntegerField(default=0, verbose_name='Tab dəyişmə sayı')
+    started_at = models.DateTimeField(auto_now_add=True, verbose_name='Başlayıb')
+    submitted_at = models.DateTimeField(null=True, blank=True, verbose_name='Təhvil verib')
+    pdf_report_url = models.URLField(blank=True, verbose_name='PDF hesabat')
 
     class Meta:
+        verbose_name = 'İmtahan nəticəsi'
+        verbose_name_plural = 'İmtahan nəticələri'
         unique_together = ['exam', 'student']
         ordering = ['-started_at']
 
@@ -73,16 +77,18 @@ class ExamResult(models.Model):
 
 
 class StudentAnswer(models.Model):
-    result = models.ForeignKey(ExamResult, on_delete=models.CASCADE, related_name='answers')
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    selected_answer = models.ForeignKey(Answer, on_delete=models.SET_NULL, null=True, blank=True)
-    open_text = models.TextField(blank=True)
-    answer_text = models.TextField(blank=True, help_text='Student text for short_answer/numeric/long_answer')
-    is_correct = models.BooleanField(null=True, blank=True)
-    points_earned = models.FloatField(default=0)
+    result = models.ForeignKey(ExamResult, on_delete=models.CASCADE, related_name='answers', verbose_name='Nəticə')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, verbose_name='Sual')
+    selected_answer = models.ForeignKey(Answer, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Seçilmiş cavab')
+    open_text = models.TextField(blank=True, verbose_name='Açıq cavab')
+    answer_text = models.TextField(blank=True, help_text='Qısa cavab, rəqəm və uzun cavab sualları üçün şagirdin yazdığı', verbose_name='Cavab mətni')
+    is_correct = models.BooleanField(null=True, blank=True, verbose_name='Düzgündür')
+    points_earned = models.FloatField(default=0, verbose_name='Qazanılan bal')
 
     class Meta:
+        verbose_name = 'Şagird cavabı'
+        verbose_name_plural = 'Şagird cavabları'
         unique_together = ['result', 'question']
 
     def __str__(self):
-        return f'Answer: {self.result.student.username} - Q{self.question.order}'
+        return f'{self.result.student.username} — sual {self.question.order}'

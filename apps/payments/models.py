@@ -104,9 +104,11 @@ class PaymentHold(models.Model):
     A short reservation of a limited requisite for a teacher who is on the payment page,
     so two teachers can't both be sent to a card with one transfer left.
     """
-    requisite  = models.ForeignKey(PaymentRequisite, on_delete=models.CASCADE, related_name='holds')
-    teacher    = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payment_holds')
-    expires_at = models.DateTimeField()
+    requisite  = models.ForeignKey(PaymentRequisite, on_delete=models.CASCADE, related_name='holds', verbose_name='Rekvizit')
+    teacher    = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payment_holds', verbose_name='Müəllim')
+    expires_at = models.DateTimeField(verbose_name='Bitmə vaxtı')
 
     class Meta:
+        verbose_name = 'Rekvizit rezervi'
+        verbose_name_plural = 'Rekvizit rezervləri'
         unique_together = ['requisite', 'teacher']
