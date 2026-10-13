@@ -14,7 +14,8 @@ class TeacherDashboardView(APIView):
         user = request.user
         classes = Class.objects.filter(teacher=user, is_active=True)
         total_classes = classes.count()
-        total_students = sum(c.student_count for c in classes)
+        from apps.accounts.students import active_student_count
+        total_students = active_student_count(user)
 
         from apps.tests_app.models import Test
         total_tests = Test.objects.filter(teacher=user).count()
@@ -182,12 +183,8 @@ class StudentResultsForTeacherView(APIView):
     permission_classes = [IsTeacher]
 
     def get(self, request, student_id):
-        from apps.classes.models import ClassEnrollment
-        enrolled = ClassEnrollment.objects.filter(
-            student_id=student_id,
-            class_room__teacher=request.user,
-        ).exists()
-        if not enrolled:
+        from apps.accounts.students import students_of
+        if not students_of(request.user).filter(pk=student_id).exists():
             return Response({'detail': 'Not found.'}, status=404)
 
         results = ExamResult.objects.filter(

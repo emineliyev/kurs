@@ -45,9 +45,7 @@ class EnrollStudentSerializer(serializers.Serializer):
     student_id = serializers.IntegerField()
 
     def validate_student_id(self, value):
-        from apps.accounts.models import User
-        try:
-            user = User.objects.get(id=value, role='student')
-        except User.DoesNotExist:
-            raise serializers.ValidationError('Student not found.')
+        from apps.accounts.students import students_of
+        if not students_of(self.context['request'].user).filter(pk=value, is_active=True).exists():
+            raise serializers.ValidationError('Şagird tapılmadı.')
         return value

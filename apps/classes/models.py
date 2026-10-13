@@ -40,7 +40,7 @@ class Class(models.Model):
 
     @property
     def student_count(self):
-        return self.enrollments.filter(is_active=True).count()
+        return self.enrollments.filter(is_active=True, student__is_active=True).count()
 
 
 class ClassEnrollment(models.Model):

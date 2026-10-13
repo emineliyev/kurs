@@ -46,8 +46,5 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return obj.teacher.classes.filter(is_active=True).count()
 
     def get_students_used(self, obj):
-        from apps.classes.models import ClassEnrollment
-        return ClassEnrollment.objects.filter(
-            class_room__teacher=obj.teacher,
-            is_active=True
-        ).values('student').distinct().count()
+        from apps.accounts.students import active_student_count
+        return active_student_count(obj.teacher)

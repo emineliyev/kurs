@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import PageSpinner from '@/components/common/PageSpinner'
 import Swal from '@/utils/swal'
 import { classesApi } from '@/api/classes'
-import { authApi } from '@/api/auth'
-import client from '@/api/client'
 import { toastApiError } from '@/api/errors'
+import StudentFormModal, { showCredentials } from '@/components/teacher/StudentFormModal'
 
 export default function ClassDetailPage() {
   const { id } = useParams()
@@ -17,8 +15,6 @@ export default function ClassDetailPage() {
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAddStudent, setShowAddStudent] = useState(false)
-  const [adding, setAdding] = useState(false)
-  const { register, handleSubmit, reset } = useForm()
 
   const load = async () => {
     setLoading(true)
@@ -36,16 +32,10 @@ export default function ClassDetailPage() {
 
   useEffect(() => { load() }, [id])
 
-  const onAddStudent = async (data) => {
-    setAdding(true)
-    try {
-      const res = await client.post('/auth/students/', data)
-      await classesApi.enroll(id, res.data.id)
-      toast.success(t('student_added', { ns: 'teacher' }))
-      reset(); setShowAddStudent(false); load()
-    } catch (err) {
-      toastApiError(err)
-    } finally { setAdding(false) }
+  const onStudentAdded = (student, credentials) => {
+    setShowAddStudent(false)
+    showCredentials(t, credentials)
+    load()
   }
 
   const onUnenroll = async (enrollment) => {
@@ -54,13 +44,17 @@ export default function ClassDetailPage() {
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#EF4444',
-      confirmButtonText: t('yes_delete'),
+      text: t('unenroll_hint', { ns: 'teacher' }),
+      confirmButtonText: t('yes_remove', { ns: 'teacher' }),
       cancelButtonText: t('no_cancel'),
     })
-    if (result.isConfirmed) {
+    if (!result.isConfirmed) return
+    try {
       await classesApi.unenroll(id, enrollment.student)
       toast.success(t('student_unenrolled', { ns: 'teacher' }))
       load()
+    } catch (err) {
+      toastApiError(err)
     }
   }
 
@@ -84,27 +78,14 @@ export default function ClassDetailPage() {
       <div className="card">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <h2 className="font-semibold">{t('students_with_count', { ns: 'teacher', count: students.length })}</h2>
-          <button onClick={() => setShowAddStudent(!showAddStudent)} className="btn-primary text-sm">
+          <button onClick={() => setShowAddStudent(true)} className="btn-primary text-sm">
             <i className="bi bi-person-plus"></i> {t('add_student', { ns: 'teacher' })}
           </button>
         </div>
 
         {showAddStudent && (
-          <div className="p-5 bg-slate-50 border-b border-slate-100">
-            <h4 className="font-medium mb-3">{t('new_student', { ns: 'teacher' })}</h4>
-            <form onSubmit={handleSubmit(onAddStudent)} className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <input {...register('first_name', { required: true })} placeholder={t('first_name_field', { ns: 'teacher' })} className="input-field" />
-              <input {...register('last_name', { required: true })} placeholder={t('last_name_field', { ns: 'teacher' })} className="input-field" />
-              <input {...register('username', { required: true })} placeholder={t('username_field', { ns: 'teacher' })} className="input-field" />
-              <input {...register('password', { required: true })} type="password" placeholder={t('password_field', { ns: 'teacher' })} className="input-field" />
-              <div className="col-span-2 md:col-span-4 flex gap-2">
-                <button type="submit" disabled={adding} className="btn-primary text-sm">
-                  {adding ? <i className="bi bi-arrow-repeat animate-spin"></i> : <i className="bi bi-plus-lg"></i>} {t('add')}
-                </button>
-                <button type="button" onClick={() => { setShowAddStudent(false); reset() }} className="btn-secondary text-sm">{t('cancel')}</button>
-              </div>
-            </form>
-          </div>
+          <StudentFormModal classes={[cls]} defaultClassId={cls.id}
+            onClose={() => setShowAddStudent(false)} onSaved={onStudentAdded} />
         )}
 
         <table className="w-full text-sm">
@@ -125,7 +106,7 @@ export default function ClassDetailPage() {
                 <td className="px-5 py-3 text-slate-500">{s.student_username}</td>
                 <td className="px-5 py-3 text-slate-400 text-xs">{s.enrolled_at?.slice(0, 10)}</td>
                 <td className="px-5 py-3">
-                  <button onClick={() => onUnenroll(s)} className="text-red-400 hover:text-red-600 transition-colors">
+                  <button onClick={() => onUnenroll(s)} title={t('unenroll', { ns: 'teacher' })} className="text-red-400 hover:text-red-600 transition-colors">
                     <i className="bi bi-person-dash"></i>
                   </button>
                 </td>

@@ -90,10 +90,8 @@ class DowngradeSubscriptionView(APIView):
 
         # Check if user exceeds new plan limits
         classes_used  = sub.teacher.classes.filter(is_active=True).count()
-        from apps.classes.models import ClassEnrollment
-        students_used = ClassEnrollment.objects.filter(
-            class_room__teacher=sub.teacher, is_active=True
-        ).values('student').distinct().count()
+        from apps.accounts.students import active_student_count
+        students_used = active_student_count(sub.teacher)
 
         errors = []
         if plan.max_classes != -1 and classes_used > plan.max_classes:

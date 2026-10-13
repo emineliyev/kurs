@@ -98,8 +98,9 @@ def _send_password_reset_email(user):
 from .serializers import (
     TeacherRegisterSerializer, LoginSerializer,
     UserSerializer, PasswordChangeSerializer, StudentCreateSerializer,
-    TeacherProfileSerializer, StudentUpdateSerializer, FeedbackSerializer
+    TeacherProfileSerializer, StudentUpdateSerializer, FeedbackSerializer, StudentSerializer
 )
+from .students import students_of, student_limit_error
 
 
 class IsTeacher(BasePermission):
@@ -222,86 +223,77 @@ class PasswordChangeView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class StudentCreateView(APIView):
+def _with_classes(queryset, teacher):
+    from django.db.models import Prefetch
+    from apps.classes.models import ClassEnrollment
+    return queryset.prefetch_related(Prefetch(
+        'enrollments',
+        queryset=ClassEnrollment.objects.filter(is_active=True, class_room__teacher=teacher)
+                                        .select_related('class_room').order_by('class_room__name'),
+        to_attr='active_enrollments',
+    ))
+
+
+class StudentListCreateView(APIView):
+    """GET: the teacher's students (?archived=1 for archived ones). POST: create + enroll in one step."""
     permission_classes = [IsTeacher]
 
+    def get(self, request):
+        archived = request.query_params.get('archived') in ('1', 'true')
+        qs = students_of(request.user).filter(is_active=not archived).order_by('first_name', 'last_name')
+        return Response(StudentSerializer(_with_classes(qs, request.user), many=True).data)
+
     def post(self, request):
-        class_id = request.data.get('class_id')
-        # Check subscription and enrollment limit BEFORE creating the student account
-        from apps.subscriptions.models import Subscription
-        from apps.classes.models import ClassEnrollment
-        try:
-            sub = Subscription.objects.select_related('plan').get(teacher=request.user)
-            if not sub.is_active:
-                return Response({'detail': Subscription.EXPIRED_MESSAGE}, status=status.HTTP_403_FORBIDDEN)
-            if class_id and sub.plan.max_students != -1:
-                current = ClassEnrollment.objects.filter(
-                    class_room__teacher=request.user, is_active=True
-                ).values('student').distinct().count()
-                if current >= sub.plan.max_students:
-                    return Response(
-                        {'detail': f'Şagird limitinə çatmısınız ({sub.plan.max_students}). Abunəliyinizi yeniləyin.'},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
-        except Subscription.DoesNotExist:
-            pass
-
-        serializer = StudentCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            student = serializer.save()
-            # Enroll in class atomically if class_id was provided
-            if class_id:
-                from apps.classes.models import Class, ClassEnrollment
-                try:
-                    class_obj = Class.objects.get(id=class_id, teacher=request.user)
-                    ClassEnrollment.objects.get_or_create(
-                        student=student, class_room=class_obj,
-                        defaults={'is_active': True}
-                    )
-                except Class.DoesNotExist:
-                    pass
-            return Response(UserSerializer(student).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        error = student_limit_error(request.user)
+        if error:
+            return Response({'detail': error}, status=status.HTTP_403_FORBIDDEN)
+        serializer = StudentCreateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        student = serializer.save()
+        student = _with_classes(students_of(request.user), request.user).get(pk=student.pk)
+        return Response(StudentSerializer(student).data, status=status.HTTP_201_CREATED)
 
 
-class StudentUpdateView(APIView):
+def _own_student(request, student_id):
+    return _with_classes(students_of(request.user), request.user).filter(pk=student_id).first()
+
+
+class StudentDetailView(APIView):
+    """PATCH: edit (names, username, password, classes). DELETE: archive — can't log in, keeps results."""
     permission_classes = [IsTeacher]
 
     def patch(self, request, student_id):
-        from apps.classes.models import ClassEnrollment
-        enrolled = ClassEnrollment.objects.filter(
-            student_id=student_id,
-            class_room__teacher=request.user,
-            is_active=True
-        ).exists()
-        if not enrolled:
+        student = _own_student(request, student_id)
+        if student is None:
             return Response({'detail': 'Şagird tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
-        try:
-            student = User.objects.get(id=student_id, role=User.ROLE_STUDENT)
-        except User.DoesNotExist:
-            return Response({'detail': 'Şagird tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
-
-        serializer = StudentUpdateSerializer(student, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(UserSerializer(student).data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = StudentUpdateSerializer(student, data=request.data, partial=True, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(StudentSerializer(_own_student(request, student_id)).data)
 
     def delete(self, request, student_id):
-        from apps.classes.models import ClassEnrollment
-        enrolled = ClassEnrollment.objects.filter(
-            student_id=student_id,
-            class_room__teacher=request.user,
-        ).exists()
-        if not enrolled:
-            return Response({'detail': 'Şagird tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
-        try:
-            student = User.objects.get(id=student_id, role=User.ROLE_STUDENT)
-        except User.DoesNotExist:
+        student = _own_student(request, student_id)
+        if student is None:
             return Response({'detail': 'Şagird tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
         student.is_active = False
         student.save(update_fields=['is_active'])
-        return Response({'detail': 'Şagirdin hesabı deaktivləşdirildi.'}, status=status.HTTP_200_OK)
+        return Response({'detail': 'Şagird arxivə köçürüldü.'})
+
+
+class StudentRestoreView(APIView):
+    permission_classes = [IsTeacher]
+
+    def post(self, request, student_id):
+        student = _own_student(request, student_id)
+        if student is None:
+            return Response({'detail': 'Şagird tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+        if not student.is_active:
+            error = student_limit_error(request.user)
+            if error:
+                return Response({'detail': error}, status=status.HTTP_403_FORBIDDEN)
+            student.is_active = True
+            student.save(update_fields=['is_active'])
+        return Response(StudentSerializer(student).data)
 
 
 class GoogleAuthView(APIView):

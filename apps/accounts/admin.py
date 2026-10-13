@@ -79,11 +79,12 @@ class UserAdmin(BaseUserAdmin):
     list_editable = ['is_email_verified']
     search_fields = ['email', 'username', 'first_name', 'last_name']
     ordering = ['-created_at']
-    list_select_related = ['subscription__plan']
+    list_select_related = ['subscription__plan', 'created_by']
+    autocomplete_fields = ['created_by']
     actions = ['activate_users', 'block_users', 'mark_email_verified', 'mark_email_unverified']
     fieldsets = (
         (None, {'fields': ('email', 'username', 'password')}),
-        ('Şəxsi məlumat', {'fields': ('first_name', 'last_name', 'role')}),
+        ('Şəxsi məlumat', {'fields': ('first_name', 'last_name', 'role', 'created_by')}),
         ('İcazələr', {
             'fields': ('is_active', 'is_email_verified', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
             'classes': ('collapse',),
@@ -111,6 +112,8 @@ class UserAdmin(BaseUserAdmin):
 
     @admin.display(description='Plan / bitmə')
     def plan_info(self, obj):
+        if obj.is_student:
+            return f'Müəllim: {obj.created_by}' if obj.created_by_id else '—'
         if not obj.is_teacher:
             return '—'
         sub = getattr(obj, 'subscription', None)

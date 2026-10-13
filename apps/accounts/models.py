@@ -13,12 +13,16 @@ class User(AbstractBaseUser, PermissionsMixin):
         (ROLE_ADMIN,   'Admin'),
     ]
 
-    email = models.EmailField(unique=True, verbose_name='E-poçt')
+    # Students sign in with username only, so their email stays empty (NULL — unique allows many)
+    email = models.EmailField(unique=True, null=True, blank=True, verbose_name='E-poçt')
     username = models.CharField(max_length=50, unique=True, verbose_name='İstifadəçi adı')
     first_name = models.CharField(max_length=100, blank=True, default='', verbose_name='Ad')
     last_name = models.CharField(max_length=100, blank=True, default='', verbose_name='Soyad')
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, blank=True, default='', verbose_name='Rol')
     is_active = models.BooleanField(default=True, verbose_name='Aktiv')
+    # The teacher who owns a student account; only that teacher may edit, archive or enroll it
+    created_by = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name='created_students', verbose_name='Yaradan müəllim')
     is_staff = models.BooleanField(default=False, verbose_name='Admin panelinə giriş')
     is_email_verified = models.BooleanField(default=False, verbose_name='E-poçt təsdiqlənib')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Qeydiyyat tarixi')
@@ -35,7 +39,12 @@ class User(AbstractBaseUser, PermissionsMixin):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.get_full_name()} ({self.email})'
+        return f'{self.get_full_name()} ({self.email or self.username})'
+
+    def save(self, *args, **kwargs):
+        if not self.email:
+            self.email = None  # '' would collide with the next empty email on the unique index
+        super().save(*args, **kwargs)
 
     def get_full_name(self):
         return f'{self.first_name} {self.last_name}'.strip()
@@ -63,7 +72,7 @@ class TeacherProfile(models.Model):
         verbose_name_plural = 'Müəllim profilləri'
 
     def __str__(self):
-        return self.user.get_full_name() or self.user.email
+        return self.user.get_full_name() or self.user.email or self.user.username
 
 
 class Feedback(models.Model):

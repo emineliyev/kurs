@@ -2,7 +2,7 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     TeacherRegisterView, LoginView, LogoutView,
-    ProfileView, PasswordChangeView, StudentCreateView, StudentUpdateView,
+    ProfileView, PasswordChangeView, StudentListCreateView, StudentDetailView, StudentRestoreView,
     GoogleAuthView, FeedbackCreateView, VerifyEmailView, ResendVerificationView,
     PasswordResetRequestView, PasswordResetConfirmView,
 )
@@ -14,8 +14,9 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('profile/', ProfileView.as_view(), name='profile'),
     path('password/change/', PasswordChangeView.as_view(), name='password-change'),
-    path('students/', StudentCreateView.as_view(), name='student-create'),
-    path('students/<int:student_id>/', StudentUpdateView.as_view(), name='student-update'),
+    path('students/', StudentListCreateView.as_view(), name='student-create'),
+    path('students/<int:student_id>/', StudentDetailView.as_view(), name='student-update'),
+    path('students/<int:student_id>/restore/', StudentRestoreView.as_view(), name='student-restore'),
     path('google/', GoogleAuthView.as_view(), name='google-auth'),
     path('feedback/', FeedbackCreateView.as_view(), name='feedback'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
