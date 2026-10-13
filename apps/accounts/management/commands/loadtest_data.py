@@ -14,6 +14,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
+from apps.accounts.hashers import STUDENT_HASHER
 from apps.accounts.models import StudentProfile, User
 from apps.classes.models import Class, ClassEnrollment
 from apps.exams.models import Exam, ExamResult
@@ -54,7 +55,9 @@ class Command(BaseCommand):
             self.stderr.write('Load-test məlumatları artıq var. Əvvəlcə: python manage.py loadtest_data --delete')
             return
 
-        password = make_password(PASSWORD)  # hash once — hashing per user would take minutes
+        # hash once — hashing per user would take minutes
+        password = make_password(PASSWORD)
+        student_password = make_password(PASSWORD, hasher=STUDENT_HASHER)
         plan = Plan.objects.order_by('-price').first()
         now = timezone.now()
         with transaction.atomic():
@@ -67,7 +70,7 @@ class Command(BaseCommand):
                                                 start_date=now, end_date=now + timedelta(days=30))
                 cls = Class.objects.create(teacher=teacher, name=f'Yük sinfi {t}')
                 students = User.objects.bulk_create([
-                    User(username=f'{PREFIX}s{t}_{s}', email=None, password=password, first_name='Şagird',
+                    User(username=f'{PREFIX}s{t}_{s}', email=None, password=student_password, first_name='Şagird',
                          last_name=f'{t}-{s}', role=User.ROLE_STUDENT, created_by=teacher)
                     for s in range(1, o['students'] + 1)
                 ])

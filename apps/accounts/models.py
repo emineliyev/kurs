@@ -41,6 +41,26 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f'{self.get_full_name()} ({self.email or self.username})'
 
+    def set_password(self, raw_password):
+        if self.role != self.ROLE_STUDENT:
+            return super().set_password(raw_password)
+        from django.contrib.auth.hashers import make_password
+        from .hashers import STUDENT_HASHER
+        self.password = make_password(raw_password, hasher=STUDENT_HASHER)
+        self._password = raw_password
+
+    def check_password(self, raw_password):
+        if self.role != self.ROLE_STUDENT:
+            return super().check_password(raw_password)
+        from django.contrib.auth.hashers import check_password
+        from .hashers import STUDENT_HASHER
+
+        def upgrade(raw):  # an older (slow-hashed) student password moves to the student hasher once
+            self.set_password(raw)
+            self._password = None
+            self.save(update_fields=['password'])
+        return check_password(raw_password, self.password, upgrade, preferred=STUDENT_HASHER)
+
     def save(self, *args, **kwargs):
         if not self.email:
             self.email = None  # '' would collide with the next empty email on the unique index
