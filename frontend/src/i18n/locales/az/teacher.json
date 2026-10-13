@@ -605,5 +605,6 @@
   "restore_student": "Bərpa et",
   "student_restored": "Şagird bərpa edildi",
   "unenroll_hint": "Şagird yalnız bu sinifdən çıxarılacaq, hesabı “Şagirdlər” bölməsində qalacaq.",
-  "yes_remove": "Bəli, çıxar"
+  "yes_remove": "Bəli, çıxar",
+  "bank_already_added": "Əlavə edilib"
 }

@@ -164,6 +164,7 @@ class TestViewSet(viewsets.ModelViewSet):
                 correct_answer=question.correct_answer,
                 tolerance=question.tolerance,
                 hide_choices=question.hide_choices,
+                source_bank_question_id=question.source_bank_question_id,
             )
             if question.image:
                 copy_image(question.image, new_question)
@@ -284,6 +285,8 @@ class BankQuestionViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Test tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
         if test.is_locked:
             return Response({'detail': Test.LOCKED_MESSAGE}, status=status.HTTP_403_FORBIDDEN)
+        if test.questions.filter(source_bank_question=bank_q).exists():
+            return Response({'detail': 'Bu sual artıq bu testə əlavə edilib.'}, status=status.HTTP_400_BAD_REQUEST)
 
         new_order = test.questions.count()
         new_q = Question.objects.create(
@@ -296,6 +299,7 @@ class BankQuestionViewSet(viewsets.ModelViewSet):
             tolerance=bank_q.tolerance,
             points=bank_q.points,
             order=new_order,
+            source_bank_question=bank_q,
         )
         if bank_q.image:
             copy_image(bank_q.image, new_q)

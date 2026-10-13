@@ -108,6 +108,9 @@ class Question(models.Model):
     points = models.PositiveSmallIntegerField(default=1, verbose_name='Bal')
     order = models.PositiveSmallIntegerField(default=0, verbose_name='Sıra')
     hide_choices = models.BooleanField(default=False, help_text='Şəkilli suallarda A–E artıq şəklin içindədirsə', verbose_name='Çapda variantları gizlət')
+    # Bank question this was copied from — the same bank question can be added to a test only once
+    source_bank_question = models.ForeignKey('BankQuestion', null=True, blank=True, on_delete=models.SET_NULL,
+                                             related_name='copies', verbose_name='Sual bankından')
 
     class Meta:
         verbose_name = 'Sual'

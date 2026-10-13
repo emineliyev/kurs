@@ -619,6 +619,7 @@ export default function TestCreatePage() {
           ? (q.answers?.findIndex(a => a.is_correct) ?? -1)
           : q.answers?.findIndex(a => a.is_correct) ?? undefined,
         _hideChoices: q.hide_choices || false,
+        _bankId: q.source_bank_question || null,
         _dndId: newDndId(),
       }))
       setQuestions(loadedQs.length ? loadedQs : [defaultQuestion('multiple_choice')])
@@ -756,8 +757,11 @@ export default function TestCreatePage() {
     }
   }
 
+  // Bank questions already in this test (removing the copy from the test makes it addable again)
+  const addedBankIds = new Set(questions.map(q => q._bankId).filter(Boolean))
+
   const handleAddFromBank = async (bankQ) => {
-    if (!createdTest?.id) return
+    if (!createdTest?.id || addedBankIds.has(bankQ.id)) return
     setAddingBankId(bankQ.id)
     try {
       const res = await bankApi.copyToTest(bankQ.id, createdTest.id)
@@ -781,11 +785,12 @@ export default function TestCreatePage() {
           ? (q.answers?.findIndex(a => a.is_correct) ?? -1)
           : q.answers?.findIndex(a => a.is_correct) ?? undefined,
         _hideChoices: false,
+        _bankId: bankQ.id,
         _dndId: newDndId(),
       }])
       toast.success(t('bank_added_to_test', { ns: 'teacher' }))
-    } catch {
-      toast.error(t('error_occurred'))
+    } catch (err) {
+      toastApiError(err)
     } finally {
       setAddingBankId(null)
     }
@@ -1029,8 +1034,11 @@ export default function TestCreatePage() {
                   ) : bankQuestions.map((q, idx) => {
                     const cfg = TYPE_CONFIG[q.question_type]
                     const typeLabel = t(TYPE_LABEL_KEYS[q.question_type] || '', { ns: 'teacher' })
+                    const added = addedBankIds.has(q.id)
                     return (
-                      <div key={q.id} className="flex items-start gap-3 p-3 border border-slate-200 rounded-xl hover:border-amber-300 hover:bg-amber-50 transition-all">
+                      <div key={q.id} className={`flex items-start gap-3 p-3 border rounded-xl transition-all ${added
+                        ? 'border-green-200 bg-green-50/40'
+                        : 'border-slate-200 hover:border-amber-300 hover:bg-amber-50'}`}>
                         <span className="w-6 h-6 bg-slate-100 rounded-md flex items-center justify-center text-xs font-bold text-slate-500 shrink-0 mt-0.5">
                           {idx + 1}
                         </span>
@@ -1050,14 +1058,22 @@ export default function TestCreatePage() {
                             </div>
                           )}
                         </div>
-                        <button onClick={() => handleAddFromBank(q)}
-                          disabled={addingBankId === q.id}
-                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-primary-700 text-white rounded-lg text-xs font-medium hover:bg-primary-600 disabled:opacity-50 transition-all">
-                          {addingBankId === q.id
-                            ? <i className="bi bi-arrow-repeat animate-spin"></i>
-                            : <i className="bi bi-plus-lg"></i>}
-                          {t('add')}
-                        </button>
+                        {added ? (
+                          <button disabled
+                            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium cursor-not-allowed">
+                            <i className="bi bi-check-lg"></i>
+                            {t('bank_already_added', { ns: 'teacher' })}
+                          </button>
+                        ) : (
+                          <button onClick={() => handleAddFromBank(q)}
+                            disabled={addingBankId !== null}
+                            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-primary-700 text-white rounded-lg text-xs font-medium hover:bg-primary-600 disabled:opacity-50 transition-all">
+                            {addingBankId === q.id
+                              ? <i className="bi bi-arrow-repeat animate-spin"></i>
+                              : <i className="bi bi-plus-lg"></i>}
+                            {t('add')}
+                          </button>
+                        )}
                       </div>
                     )
                   })}

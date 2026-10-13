@@ -597,5 +597,6 @@
   "restore_student": "Restore",
   "student_restored": "Student restored",
   "unenroll_hint": "The student is removed from this class only; the account stays under “Students”.",
-  "yes_remove": "Yes, remove"
+  "yes_remove": "Yes, remove",
+  "bank_already_added": "Added"
 }

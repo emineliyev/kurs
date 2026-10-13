@@ -24,9 +24,9 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'question_type', 'text', 'image', 'math_formula',
             'model_answer', 'correct_answer', 'tolerance',
-            'points', 'order', 'hide_choices', 'answers',
+            'points', 'order', 'hide_choices', 'answers', 'source_bank_question',
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'source_bank_question']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
