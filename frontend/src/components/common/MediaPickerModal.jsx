@@ -127,7 +127,7 @@ function textBox(shape) {
 }
 
 // ── Annotate Stage ────────────────────────────────────────────────────────────
-function AnnotateCanvas({ dataUrl, onConfirm, onSkip, onBack }) {
+function AnnotateCanvas({ dataUrl, onConfirm, onSkip, onBack, initialTool = 'arrow' }) {
   const { t } = useTranslation('common')
   const canvasRef = useRef(null)
   const imgRef    = useRef(null)
@@ -136,7 +136,7 @@ function AnnotateCanvas({ dataUrl, onConfirm, onSkip, onBack }) {
   const downRef   = useRef(false)
   const rafRef    = useRef(null)
   const [loaded, setLoaded] = useState(false)
-  const [tool, setTool]     = useState('arrow')
+  const [tool, setTool]     = useState(initialTool)
   const [color, setColor]   = useState('#ef4444')
   const [lw, setLw]         = useState(2.5)
   const [count, setCount]   = useState(0)
@@ -1602,3 +1602,6 @@ export default function MediaPickerModal({ onPick, onClose }) {
     </div>
   )
 }
+
+// Shared with the bulk PDF question cutter
+export { AnnotateCanvas, applyLook, loadScript, PDFJS_CDN, PDFJS_WORKER }

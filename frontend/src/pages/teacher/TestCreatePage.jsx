@@ -10,6 +10,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { testsApi } from '@/api/tests'
 import { bankApi } from '@/api/questionBank'
 import ExamScheduleForm from '@/components/teacher/ExamScheduleForm'
+import BulkCropWorkspace from '@/components/teacher/BulkCropWorkspace'
 import FormulaLibrary from '@/components/teacher/FormulaLibrary'
 import MediaPickerModal from '@/components/common/MediaPickerModal'
 import { renderMath, MathText } from '@/utils/math'
@@ -561,6 +562,9 @@ export default function TestCreatePage() {
   const [questions, setQuestions]     = useState([defaultQuestion('multiple_choice')])
   const [publishing, setPublishing]   = useState(false)
   const [showBankModal, setShowBankModal] = useState(false)
+  const [showBulk, setShowBulk]   = useState(false)
+  const [bulkBusy, setBulkBusy]   = useState(false)
+  const [bulkKey, setBulkKey]     = useState(0)   // bump to start the cutter fresh
   const [bankQuestions, setBankQuestions] = useState([])
   const [bankLoading, setBankLoading]     = useState(false)
   const [addingBankId, setAddingBankId]   = useState(null)
@@ -679,6 +683,55 @@ export default function TestCreatePage() {
 
   const addQuestion = (type) => {
     setQuestions(prev => [...prev, defaultQuestion(type)])
+  }
+
+  // Questions cut in the PDF workspace → image questions with their answer keys
+  const onBulkDone = async (items) => {
+    if (!createdTest?.id || !items.length) return
+    setBulkBusy(true)
+    const total = items.length
+    const tid = toast.loading(t('bulk_adding', { ns: 'teacher', done: 0, total }))
+    const added = []
+    try {
+      for (let i = 0; i < total; i++) {
+        const it = items[i]
+        const res = await testsApi.createQuestion({
+          test: createdTest.id,
+          question_type: 'image_mcq',
+          text: '',
+          points: 1,
+          order: questions.length + i,
+          answers: LABELS.slice(0, it.choiceCount).map((label, j) => ({ text: label, is_correct: j === it.answer, order: j })),
+        })
+        const fd = new FormData()
+        fd.append('image', it.file)
+        const up = await testsApi.updateQuestion(res.data.id, fd)
+        added.push({
+          ...defaultQuestion('image_mcq'),
+          answers: up.data.answers || res.data.answers || [],
+          image: up.data.image, _imagePreview: it.url || up.data.image,
+          _id: res.data.id, _saved: true,
+          _choiceCount: it.choiceCount,
+          _correctIndex: it.answer ?? -1,
+        })
+        toast.loading(t('bulk_adding', { ns: 'teacher', done: i + 1, total }), { id: tid })
+      }
+      toast.success(t('bulk_added', { ns: 'teacher', count: added.length }), { id: tid })
+      setShowBulk(false)
+      setBulkKey((k) => k + 1)
+    } catch (err) {
+      toast.dismiss(tid)
+      toastApiError(err)
+    } finally {
+      // Keep whatever was created, and drop an untouched empty question card
+      if (added.length) {
+        setQuestions((prev) => [
+          ...prev.filter((q) => q._id || !isBlankHtml(q.text) || q._imageFile),
+          ...added,
+        ])
+      }
+      setBulkBusy(false)
+    }
   }
 
   const openBankModal = async () => {
@@ -917,7 +970,12 @@ export default function TestCreatePage() {
                 </button>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-100 flex justify-center">
+            <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap justify-center gap-2">
+              <button onClick={() => setShowBulk(true)} title={t('bulk_open_hint', { ns: 'teacher' })}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded-xl text-sm font-medium transition-all">
+                <i className="bi bi-file-earmark-pdf"></i>
+                {t('bulk_open', { ns: 'teacher' })}
+              </button>
               <button onClick={openBankModal}
                 className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 rounded-xl text-sm font-medium transition-all">
                 <i className="bi bi-bank"></i>
@@ -925,6 +983,14 @@ export default function TestCreatePage() {
               </button>
             </div>
           </div>
+
+          <BulkCropWorkspace
+            key={bulkKey}
+            open={showBulk}
+            busy={bulkBusy}
+            onClose={() => setShowBulk(false)}
+            onDone={onBulkDone}
+          />
 
           {/* Bank picker modal */}
           {showBankModal && (

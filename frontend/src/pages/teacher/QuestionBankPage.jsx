@@ -9,6 +9,7 @@ import { renderMath } from '@/utils/math'
 import QuestionTextEditor, { LatexPreview, AnswerMiniEditor } from '@/components/teacher/QuestionTextEditor'
 import Select from '@/components/common/Select'
 import { toastApiError } from '@/api/errors'
+import BulkCropWorkspace from '@/components/teacher/BulkCropWorkspace'
 
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -69,6 +70,9 @@ function emptyForm(type = 'multiple_choice') {
 export default function QuestionBankPage() {
   const { t } = useTranslation(['common', 'teacher'])
   const [questions, setQuestions]   = useState([])
+  const [showBulk, setShowBulk]     = useState(false)
+  const [bulkBusy, setBulkBusy]     = useState(false)
+  const [bulkKey, setBulkKey]       = useState(0)
   const [loading, setLoading]       = useState(true)
   const [saving, setSaving]         = useState(false)
   const [editingId, setEditingId]   = useState(null)
@@ -230,6 +234,38 @@ export default function QuestionBankPage() {
     }
   }
 
+  // Questions cut in the PDF workspace → image questions in the bank
+  const onBulkDone = async (items) => {
+    setBulkBusy(true)
+    const total = items.length
+    const tid = toast.loading(t('bulk_adding', { ns: 'teacher', done: 0, total }))
+    let done = 0
+    try {
+      for (const it of items) {
+        const fd = new FormData()
+        fd.append('question_type', 'image_mcq')
+        fd.append('text', '')
+        fd.append('points', 1)
+        fd.append('answers', JSON.stringify(
+          ['A', 'B', 'C', 'D', 'E'].slice(0, it.choiceCount)
+            .map((label, j) => ({ text: label, is_correct: j === it.answer, order: j }))))
+        fd.append('image', it.file)
+        const res = await bankApi.create(fd)
+        setQuestions((prev) => [res.data, ...prev])
+        done++
+        toast.loading(t('bulk_adding', { ns: 'teacher', done, total }), { id: tid })
+      }
+      toast.success(t('bulk_added', { ns: 'teacher', count: done }), { id: tid })
+      setShowBulk(false)
+      setBulkKey((k) => k + 1)
+    } catch (err) {
+      toast.dismiss(tid)
+      toastApiError(err)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
   const handleDelete = async (id) => {
     const result = await Swal.fire({
       title: t('bank_delete_confirm', { ns: 'teacher' }),
@@ -290,12 +326,21 @@ export default function QuestionBankPage() {
           <p className="text-sm text-slate-500 mt-1">{t('bank_subtitle', { ns: 'teacher' })}</p>
         </div>
         {editingId === null && (
-          <button onClick={startCreate} className="btn-primary">
-            <i className="bi bi-plus-lg"></i>
-            {t('new_bank_question', { ns: 'teacher' })}
-          </button>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <button onClick={() => setShowBulk(true)} title={t('bulk_open_hint', { ns: 'teacher' })} className="btn-secondary">
+              <i className="bi bi-file-earmark-pdf text-red-500"></i>
+              {t('bulk_open', { ns: 'teacher' })}
+            </button>
+            <button onClick={startCreate} className="btn-primary">
+              <i className="bi bi-plus-lg"></i>
+              {t('new_bank_question', { ns: 'teacher' })}
+            </button>
+          </div>
         )}
       </div>
+
+      <BulkCropWorkspace key={bulkKey} open={showBulk} busy={bulkBusy}
+        onClose={() => setShowBulk(false)} onDone={onBulkDone} />
 
       {/* Create / Edit Form */}
       {editingId !== null && (
