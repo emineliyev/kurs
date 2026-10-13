@@ -118,7 +118,7 @@ class UserAdmin(BaseUserAdmin):
             return '—'
         sub = getattr(obj, 'subscription', None)
         if sub is None:
-            return format_html('<span style="color:#d97706">Abunəlik yoxdur</span>')
+            return format_html('<span style="color:{}">{}</span>', '#d97706', 'Abunəlik yoxdur')
         color = '#16a34a' if sub.is_active else '#dc2626'
         return format_html('{} <span style="color:{}">· {}</span>',
                            sub.plan.display_name, color, sub.end_date.strftime('%d.%m.%Y'))
