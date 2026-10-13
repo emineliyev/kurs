@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -101,33 +102,39 @@ class ExamViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[IsStudent])
     def submit(self, request, pk=None):
         exam = self.get_object()
-        user = request.user
-
-        try:
-            result = ExamResult.objects.get(exam=exam, student=user, status=ExamResult.STATUS_IN_PROGRESS)
-        except ExamResult.DoesNotExist:
-            return Response({'detail': 'No active exam session found.'}, status=status.HTTP_400_BAD_REQUEST)
-
         serializer = SubmitExamSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # One transaction: all answers + the score are saved together (no half-graded result), and the
+        # row lock makes a double-clicked submit wait and then see the result is already submitted
+        with transaction.atomic():
+            result = (ExamResult.objects.select_for_update()
+                      .filter(exam=exam, student=request.user, status=ExamResult.STATUS_IN_PROGRESS).first())
+            if result is None:
+                return Response({'detail': 'No active exam session found.'}, status=status.HTTP_400_BAD_REQUEST)
+            return self._grade(exam, result, serializer.validated_data['answers'])
 
-        answers_data = serializer.validated_data['answers']
+    def _grade(self, exam, result, answers_data):
+        # Grade against the exam's own questions: each counts once, unanswered ones still count
+        # toward the total, and answers for other tests' questions are ignored
+        submitted = {}
+        for answer_data in answers_data:
+            submitted.setdefault(answer_data['question'].id, answer_data)
+
         total_points = 0
         earned_points = 0
 
-        for answer_data in answers_data:
-            question = answer_data['question']
+        # Passage is display-only — not graded
+        for question in exam.test.questions.exclude(question_type='passage'):
+            total_points += question.points
+            answer_data = submitted.get(question.id)
+            if answer_data is None:
+                continue
             selected_answer = answer_data.get('selected_answer')
+            if selected_answer is not None and selected_answer.question_id != question.id:
+                selected_answer = None  # an answer id from another question
             open_text = answer_data.get('open_text', '')
             answer_text = answer_data.get('answer_text', '')
-
-            # Passage is display-only — skip grading entirely
-            if question.question_type == 'passage':
-                continue
-
-            # All gradable questions count toward total
-            total_points += question.points
 
             if question.question_type in ('long_answer', 'open'):
                 # Manual grading — store text, no auto-grade
