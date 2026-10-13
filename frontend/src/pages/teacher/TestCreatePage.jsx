@@ -102,7 +102,7 @@ function ImageBlock({ preview, onRemove, onRecrop }) {
 }
 
 // ── QuestionCard ──────────────────────────────────────────────────────────────
-function QuestionCard({ question, index, onUpdate, onRemove, testId }) {
+function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk }) {
   const { t } = useTranslation(['common', 'teacher'])
   const [saving, setSaving]           = useState(false)
   const [saved, setSaved]             = useState(false)
@@ -490,6 +490,13 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId }) {
                 <span className="hidden sm:inline">{t(TYPE_LABEL_KEYS[type], { ns: 'teacher' })}</span>
               </button>
             ))}
+            {onOpenBulk && !question._id && (
+              <button type="button" onClick={onOpenBulk} title={t('bulk_open_hint', { ns: 'teacher' })}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-all border-red-200 bg-red-50 text-red-700 hover:bg-red-100">
+                <i className="bi bi-file-earmark-pdf"></i>
+                <span className="hidden sm:inline">{t('bulk_open', { ns: 'teacher' })}</span>
+              </button>
+            )}
             {saved && <span className="text-xs text-green-600 font-medium flex items-center gap-1"><i className="bi bi-check-circle-fill"></i> {t('q_saved_badge', { ns: 'teacher' })}</span>}
           </div>
           <div className="flex items-center gap-2">
@@ -950,6 +957,7 @@ export default function TestCreatePage() {
                     onUpdate={updateQuestion}
                     onRemove={removeQuestion}
                     testId={createdTest?.id}
+                    onOpenBulk={() => setShowBulk(true)}
                   />
                 ))}
               </div>

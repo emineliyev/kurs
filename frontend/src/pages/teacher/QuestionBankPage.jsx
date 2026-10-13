@@ -368,6 +368,13 @@ export default function QuestionBankPage() {
                   {t(TYPE_LABEL_KEYS[type], { ns: 'teacher' })}
                 </button>
               ))}
+              {editingId === 'new' && (
+                <button type="button" onClick={() => { cancelEdit(); setShowBulk(true) }} title={t('bulk_open_hint', { ns: 'teacher' })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all border-red-200 bg-red-50 text-red-700 hover:bg-red-100">
+                  <i className="bi bi-file-earmark-pdf"></i>
+                  {t('bulk_open', { ns: 'teacher' })}
+                </button>
+              )}
             </div>
 
             {/* Points */}

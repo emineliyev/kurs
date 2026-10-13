@@ -123,8 +123,6 @@ export default function DashboardPage() {
                 <th className="text-left px-4 py-3 text-slate-500 font-medium w-10">#</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('full_name')}</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('grade', { ns: 'teacher' })}</th>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('group', { ns: 'teacher' })}</th>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('class_name', { ns: 'teacher' })}</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('percentage', { ns: 'teacher' })}</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('status')}</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('date')}</th>
@@ -132,14 +130,21 @@ export default function DashboardPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {pageResults.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-8 text-slate-400">{t('no_data')}</td></tr>
+                <tr><td colSpan={6} className="text-center py-8 text-slate-400">{t('no_data')}</td></tr>
               ) : pageResults.map((r, i) => (
                 <tr key={i} className="hover:bg-slate-50">
                   <td className="px-4 py-3 text-slate-400 text-xs">{(page - 1) * PAGE_SIZE + i + 1}</td>
                   <td className="px-4 py-3 font-medium">{r.student_name}</td>
-                  <td className="px-4 py-3 text-slate-700">{r.class_grade ? `${r.class_grade}` : '—'}</td>
-                  <td className="px-4 py-3 text-slate-700">{r.class_group || '—'}</td>
-                  <td className="px-4 py-3 text-slate-600 text-xs">{r.class_name || '—'}</td>
+                  <td className="px-4 py-3">
+                    {/* Class name always; grade and group underneath when the class has them */}
+                    <span className="font-medium text-slate-700">{r.class_name || '—'}</span>
+                    {(r.class_grade || r.class_group) && (
+                      <span className="block text-xs text-slate-400">
+                        {[r.class_grade && t('grade_nth', { ns: 'teacher', grade: r.class_grade }),
+                          r.class_group && t('group_nth', { ns: 'teacher', group: r.class_group })].filter(Boolean).join(' · ')}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span className="font-semibold">{r.percentage?.toFixed(1)}%</span>
                   </td>
