@@ -52,8 +52,10 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
         )}
       </div>
 
+      {/* Both sections flow one after another; the whole menu scrolls on short screens */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
       {/* Main nav */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+      <nav className="p-3 space-y-1">
         {expanded && (
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-3 pt-1 pb-2">
             {t('main_section')}
@@ -77,7 +79,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
       </nav>
 
       {/* Bottom nav */}
-      <div className="p-3 border-t border-slate-100 space-y-1 shrink-0">
+      <div className={`p-3 pt-3 border-t border-slate-100 space-y-1 ${expanded ? 'mx-3 px-0' : ''}`}>
         <a
           href="https://www.youtube.com/@kursumapp"
           target="_blank"
@@ -102,6 +104,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
             {expanded && <span>{t(item.labelKey)}</span>}
           </NavLink>
         ))}
+      </div>
       </div>
     </aside>
   )
