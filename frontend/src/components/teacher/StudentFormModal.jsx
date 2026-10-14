@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { toastApiError } from '@/api/errors'
 import Select from '@/components/common/Select'
 import Swal from '@/utils/swal'
+import { PasswordStrength, isStrongPassword } from '@/components/common/PasswordRules'
 
 const USERNAME_RE = /^[a-z0-9._]{3,50}$/
 const TRANSLIT = { ə: 'e', ı: 'i', i̇: 'i', ö: 'o', ü: 'u', ş: 's', ç: 'c', ğ: 'g' }
@@ -18,9 +19,13 @@ export function suggestUsername(first, last) {
   return [clean(first), clean(last)].filter(Boolean).join('.').slice(0, 50)
 }
 
+// Strong but easy to read off a sheet and type: Word + digits + symbol, e.g. "Kamek47!".
+// No look-alikes (0/O, 1/l/I) so a child copying it by hand doesn't get it wrong.
 function randomPassword() {
-  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'
-  return Array.from(crypto.getRandomValues(new Uint32Array(6)), (n) => chars[n % chars.length]).join('')
+  const pick = (set) => set[crypto.getRandomValues(new Uint32Array(1))[0] % set.length]
+  const cons = 'bdfghkmnprstvz', vow = 'aeiu', digits = '23456789', symbols = '!@#$%&*?'
+  const word = pick(cons).toUpperCase() + pick(vow) + pick(cons) + pick(vow) + pick(cons)
+  return word + pick(digits) + pick(digits) + pick(symbols)
 }
 
 /** Show the new student's login so the teacher can hand it over. */
@@ -49,11 +54,13 @@ export default function StudentFormModal({ student, classes, defaultClassId, onC
   const [showPass, setShowPass] = useState(isNew)
   const [usernameTouched, setUsernameTouched] = useState(!isNew)
   const [classIds, setClassIds] = useState(() => (student?.classes || []).map((c) => c.id))
-  const { register, handleSubmit, setValue, getValues, setError, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, setValue, getValues, setError, watch, formState: { errors, isSubmitting } } = useForm({
     defaultValues: isNew
       ? { first_name: '', last_name: '', username: '', password: randomPassword(), class_id: defaultClassId ? String(defaultClassId) : '' }
       : { first_name: student.first_name, last_name: student.last_name, username: student.username, password: '' },
   })
+
+  const password = watch('password')
 
   const onNameChange = () => {
     if (!usernameTouched) setValue('username', suggestUsername(getValues('first_name'), getValues('last_name')))
@@ -131,8 +138,12 @@ export default function StudentFormModal({ student, classes, defaultClassId, onC
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <input
-                  {...register('password', { required: isNew, minLength: { value: 6, message: t('min_6_chars') } })}
-                  type={showPass ? 'text' : 'password'} placeholder={t('min_6_chars')}
+                  {...register('password', {
+                    required: isNew,
+                    // empty while editing = keep the current password
+                    validate: (v) => (!v && !isNew) || isStrongPassword(v) || t('password_weak_error', { ns: 'auth' }),
+                  })}
+                  type={showPass ? 'text' : 'password'}
                   className={`input-field pr-10 font-mono ${errors.password ? 'border-red-300' : ''}`} autoComplete="new-password"
                 />
                 <button type="button" onClick={() => setShowPass((v) => !v)}
@@ -145,7 +156,8 @@ export default function StudentFormModal({ student, classes, defaultClassId, onC
                 <i className="bi bi-shuffle"></i>
               </button>
             </div>
-            {fieldError('password', t('min_6_chars'))}
+            {fieldError('password', t('password_weak_error', { ns: 'auth' }))}
+            {(isNew || password) && <PasswordStrength password={password || ''} alwaysShow={isNew} />}
           </div>
 
           {isNew ? (

@@ -85,6 +85,13 @@ def _clean_username(value, instance=None):
     return value
 
 
+def _strong_student_password(value):
+    """Teacher-set student passwords follow the same rules as everyone else's."""
+    if len(value) < 8:
+        raise serializers.ValidationError('Şifrə ən azı 8 simvol olmalıdır.')
+    return validate_strong_password(value)
+
+
 def _teacher_classes(serializer):
     from apps.classes.models import Class
     return Class.objects.filter(teacher=serializer.context['request'].user)
@@ -108,7 +115,7 @@ class StudentCreateSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(max_length=100)
     last_name = serializers.CharField(max_length=100)
     username = serializers.CharField(max_length=50)
-    password = serializers.CharField(write_only=True, min_length=6)
+    password = serializers.CharField(write_only=True)
     class_id = serializers.IntegerField(write_only=True)
 
     class Meta:
@@ -117,6 +124,9 @@ class StudentCreateSerializer(serializers.ModelSerializer):
 
     def validate_username(self, value):
         return _clean_username(value)
+
+    def validate_password(self, value):
+        return _strong_student_password(value)
 
     def validate_class_id(self, value):
         if not _teacher_classes(self).filter(pk=value).exists():
@@ -177,7 +187,7 @@ class StudentUpdateSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(max_length=100)
     last_name = serializers.CharField(max_length=100)
     username = serializers.CharField(max_length=50)
-    password = serializers.CharField(write_only=True, required=False, min_length=6, allow_blank=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     # Full set of the teacher's classes the student should be in; omitted = leave as is
     class_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
 
@@ -187,6 +197,11 @@ class StudentUpdateSerializer(serializers.ModelSerializer):
 
     def validate_username(self, value):
         return _clean_username(value, self.instance)
+
+    def validate_password(self, value):
+        if not value:
+            return value  # blank = keep the current password
+        return _strong_student_password(value)
 
     def validate_class_ids(self, value):
         value = set(value)
