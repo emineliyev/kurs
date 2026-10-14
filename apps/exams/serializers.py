@@ -184,6 +184,22 @@ class ExamResultDetailSerializer(ExamResultSerializer):
     class Meta(ExamResultSerializer.Meta):
         fields = ExamResultSerializer.Meta.fields + ['answers_review']
 
+    def to_representation(self, instance):
+        """Questions and choices in the same order this student saw them (A/B/C must match the exam)."""
+        from apps.tests_app.views import shuffled_for_student
+        data = super().to_representation(instance)
+        exam = instance.exam
+        questions, answer_order = shuffled_for_student(
+            exam.test.questions.prefetch_related('answers'), exam, instance.student)
+        q_pos = {q.pk: i for i, q in enumerate(questions)}
+        data['answers_review'] = sorted(data['answers_review'], key=lambda a: q_pos.get(a['question'], len(q_pos)))
+        for review in data['answers_review']:
+            seen = answer_order.get(review['question'])
+            if seen and review['all_answers']:
+                pos = {a.pk: i for i, a in enumerate(seen)}
+                review['all_answers'].sort(key=lambda a: pos.get(a['id'], len(pos)))
+        return data
+
 
 class SubmitExamSerializer(serializers.Serializer):
     answers = StudentAnswerSerializer(many=True)
