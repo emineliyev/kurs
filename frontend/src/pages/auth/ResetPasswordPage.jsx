@@ -4,22 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { authApi } from '@/api/auth'
-
-const PASSWORD_RULES = [
-  { key: 'upper', test: (v) => /[A-Z]/.test(v) },
-  { key: 'lower', test: (v) => /[a-z]/.test(v) },
-  { key: 'digit', test: (v) => /\d/.test(v) },
-  { key: 'special', test: (v) => /[!@#$%^&*(),.?":{}|<>]/.test(v) },
-  { key: 'length', test: (v) => v.length >= 8 },
-]
-
-const RULE_LABEL_KEYS = {
-  upper: 'rule_upper',
-  lower: 'rule_lower',
-  digit: 'rule_digit',
-  special: 'rule_special',
-  length: 'rule_length',
-}
+import { PasswordStrength, isStrongPassword } from '@/components/common/PasswordRules'
 
 export default function ResetPasswordPage() {
   const { t } = useTranslation('auth')
@@ -30,7 +15,7 @@ export default function ResetPasswordPage() {
   const [show, setShow] = useState(false)
   const { register, handleSubmit, watch } = useForm()
   const password = watch('new_password', '')
-  const passwordOk = PASSWORD_RULES.every(r => r.test(password))
+  const passwordOk = isStrongPassword(password)
 
   if (!token) {
     return (
@@ -89,16 +74,7 @@ export default function ResetPasswordPage() {
               <i className={`bi ${show ? 'bi-eye-slash' : 'bi-eye'}`}></i>
             </button>
           </div>
-          {password && (
-            <div className="mt-2 grid grid-cols-2 gap-1">
-              {PASSWORD_RULES.map(r => (
-                <div key={r.key} className={`flex items-center gap-1 text-xs ${r.test(password) ? 'text-green-600' : 'text-slate-400'}`}>
-                  <i className={`bi ${r.test(password) ? 'bi-check-circle-fill' : 'bi-circle'} text-xs`}></i>
-                  {t(RULE_LABEL_KEYS[r.key])}
-                </div>
-              ))}
-            </div>
-          )}
+          <PasswordStrength password={password} alwaysShow />
         </div>
 
         <div>

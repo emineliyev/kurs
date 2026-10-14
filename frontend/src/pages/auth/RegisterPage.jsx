@@ -6,50 +6,7 @@ import ReCAPTCHA from 'react-google-recaptcha'
 import toast from 'react-hot-toast'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
-
-const PASSWORD_RULES = [
-  { key: 'upper', test: (v) => /[A-Z]/.test(v) },
-  { key: 'lower', test: (v) => /[a-z]/.test(v) },
-  { key: 'digit', test: (v) => /\d/.test(v) },
-  { key: 'special', test: (v) => /[!@#$%^&*(),.?":{}|<>]/.test(v) },
-  { key: 'length', test: (v) => v.length >= 8 },
-]
-
-const RULE_LABEL_KEYS = {
-  upper: 'rule_upper',
-  lower: 'rule_lower',
-  digit: 'rule_digit',
-  special: 'rule_special',
-  length: 'rule_length',
-}
-
-function PasswordStrength({ password }) {
-  const { t } = useTranslation('auth')
-  if (!password) return null
-  const passed = PASSWORD_RULES.filter(r => r.test(password)).length
-  const pct = (passed / PASSWORD_RULES.length) * 100
-  const color = passed <= 2 ? 'bg-red-500' : passed <= 3 ? 'bg-amber-500' : passed <= 4 ? 'bg-yellow-400' : 'bg-green-500'
-  const label = passed <= 2 ? t('pw_strength_weak') : passed <= 3 ? t('pw_strength_medium') : passed <= 4 ? t('pw_strength_good') : t('pw_strength_strong')
-
-  return (
-    <div className="mt-2 space-y-2">
-      <div className="flex items-center gap-2">
-        <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all duration-300 ${color}`} style={{ width: `${pct}%` }}></div>
-        </div>
-        <span className={`text-xs font-medium ${passed <= 2 ? 'text-red-500' : passed <= 4 ? 'text-amber-500' : 'text-green-600'}`}>{label}</span>
-      </div>
-      <div className="grid grid-cols-2 gap-1">
-        {PASSWORD_RULES.map(r => (
-          <div key={r.key} className={`flex items-center gap-1 text-xs ${r.test(password) ? 'text-green-600' : 'text-slate-400'}`}>
-            <i className={`bi ${r.test(password) ? 'bi-check-circle-fill' : 'bi-circle'} text-xs`}></i>
-            {t(RULE_LABEL_KEYS[r.key])}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+import { PasswordStrength, isStrongPassword } from '@/components/common/PasswordRules'
 
 function FieldInput({ label, error, success, children }) {
   return (
@@ -80,7 +37,7 @@ export default function RegisterPage() {
   const firstName = watch('first_name', '')
   const lastName = watch('last_name', '')
 
-  const passwordOk = PASSWORD_RULES.every(r => r.test(password))
+  const passwordOk = isStrongPassword(password)
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const passwordMatch = password && passwordConfirm && password === passwordConfirm
 

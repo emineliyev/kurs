@@ -69,5 +69,9 @@
   "review_after_end": "Correct answers will be shown after the exam ends ({{time}}).",
   "auto_submitted_note": "Time ran out — the exam was submitted automatically with the answers saved until then.",
   "partial_points": "Partial: {{earned}} / {{max}} points",
-  "missed_exam": "Missed"
+  "missed_exam": "Missed",
+  "change_password_info": "The new password must meet all the rules below. After the change, the old password from your teacher stops working — if you forget the new one, your teacher can reset it.",
+  "old_password_wrong": "The current password is incorrect.",
+  "rule_not_same_as_old": "Different from the current one",
+  "special_chars_allowed": "Allowed special characters:"
 }

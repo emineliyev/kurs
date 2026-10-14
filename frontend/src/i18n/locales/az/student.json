@@ -69,5 +69,9 @@
   "review_after_end": "Düzgün cavablar imtahan bitəndən sonra ({{time}}) görünəcək.",
   "auto_submitted_note": "Vaxt bitdi — imtahan o ana qədər yadda saxlanmış cavablarla avtomatik təhvil verildi.",
   "partial_points": "Qismən: {{earned}} / {{max}} bal",
-  "missed_exam": "İştirak etməmisiniz"
+  "missed_exam": "İştirak etməmisiniz",
+  "change_password_info": "Yeni şifrə aşağıdakı qaydaların hamısına uyğun olmalıdır. Dəyişəndən sonra müəllimin verdiyi köhnə şifrə işləməyəcək — yeni şifrəni unutsanız, müəlliminiz onu sıfırlaya bilər.",
+  "old_password_wrong": "Hazırkı şifrə düz deyil.",
+  "rule_not_same_as_old": "Hazırkı şifrədən fərqli",
+  "special_chars_allowed": "Qəbul olunan xüsusi işarələr:"
 }
