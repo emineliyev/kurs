@@ -15,7 +15,6 @@
   "your_score": "Your score",
   "change_password": "Change Password",
   "enrolled_classes": "Enrolled Classes",
-
   "welcome_greeting": "Welcome!",
   "stat_exams": "Exams",
   "stat_passed": "Passed",
@@ -65,5 +64,10 @@
   "numeric_answer_entered": "Answer entered",
   "question_navigator": "Question Navigator",
   "passage_reading_label": "Reading Text",
-  "passage_no_answer_hint": "This block requires no answer — just read it."
+  "passage_no_answer_hint": "This block requires no answer — just read it.",
+  "answers_restored": "Your earlier answers were restored",
+  "review_after_end": "Correct answers will be shown after the exam ends ({{time}}).",
+  "auto_submitted_note": "Time ran out — the exam was submitted automatically with the answers saved until then.",
+  "partial_points": "Partial: {{earned}} / {{max}} points",
+  "missed_exam": "Missed"
 }

@@ -40,11 +40,23 @@ class SubmitPaymentRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentRequest
         fields = ['plan_id', 'requisite_id', 'amount', 'order_type', 'screenshot', 'user_note']
+        extra_kwargs = {'amount': {'required': False}}
 
-    def validate_amount(self, value):
-        if value <= 0:
-            raise serializers.ValidationError('Məbləğ 0-dan böyük olmalıdır.')
-        return value
+    def validate(self, attrs):
+        # The price is the server's to decide, not the form's: plan price, or the prorated
+        # difference for an upgrade (same formula as the preview the teacher saw)
+        plan = attrs['plan']
+        amount = plan.price
+        if attrs.get('order_type') == PaymentRequest.TYPE_UPGRADE:
+            from apps.subscriptions.models import Subscription
+            sub = Subscription.objects.select_related('plan').filter(teacher=self.context['request'].user).first()
+            if sub is not None and sub.is_active and plan.tier > sub.plan.tier:
+                amount = sub.calculate_upgrade_proration(plan)
+        if amount <= 0:
+            raise serializers.ValidationError({'amount': 'Bu plan üçün ödəniş tələb olunmur.'})
+        from decimal import Decimal
+        attrs['amount'] = Decimal(str(round(float(amount), 2)))
+        return attrs
 
     def validate_screenshot(self, value):
         max_mb = 5

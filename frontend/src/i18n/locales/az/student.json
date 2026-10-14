@@ -15,7 +15,6 @@
   "tab_switch_warning": "Xəbərdarlıq: Tab dəyişdiniz! Bu qeyd olunacaq.",
   "change_password": "Şifrəni dəyiş",
   "enrolled_classes": "Qeydiyyatlı siniflər",
-
   "welcome_greeting": "Xoş gəldiniz!",
   "stat_exams": "İmtahan",
   "stat_passed": "Keçdi",
@@ -65,5 +64,10 @@
   "numeric_answer_entered": "Cavab daxil edildi",
   "question_navigator": "Sual naviqatoru",
   "passage_reading_label": "Oxu mətni",
-  "passage_no_answer_hint": "Bu blok üçün cavab verilmir, sadəcə oxuyun."
+  "passage_no_answer_hint": "Bu blok üçün cavab verilmir, sadəcə oxuyun.",
+  "answers_restored": "Əvvəlki cavablarınız bərpa olundu",
+  "review_after_end": "Düzgün cavablar imtahan bitəndən sonra ({{time}}) görünəcək.",
+  "auto_submitted_note": "Vaxt bitdi — imtahan o ana qədər yadda saxlanmış cavablarla avtomatik təhvil verildi.",
+  "partial_points": "Qismən: {{earned}} / {{max}} bal",
+  "missed_exam": "İştirak etməmisiniz"
 }

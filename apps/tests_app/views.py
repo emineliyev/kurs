@@ -278,7 +278,10 @@ class QuestionViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'ordered_ids must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
         questions = Question.objects.filter(
             id__in=ordered_ids, test__teacher=request.user
-        )
+        ).select_related('test')
+        # Same lock as editing: once students have answered, the order they saw (and their review) stays
+        if any(t.is_locked for t in {q.test for q in questions}):
+            return Response({'detail': Test.LOCKED_MESSAGE}, status=status.HTTP_403_FORBIDDEN)
         id_to_q = {q.id: q for q in questions}
         for new_order, qid in enumerate(ordered_ids):
             if qid in id_to_q:

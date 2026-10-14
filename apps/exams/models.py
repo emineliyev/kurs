@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import models
 from django.utils import timezone
 from apps.accounts.models import User
@@ -65,6 +67,13 @@ class ExamResult(models.Model):
     started_at = models.DateTimeField(auto_now_add=True, verbose_name='Başlayıb')
     submitted_at = models.DateTimeField(null=True, blank=True, verbose_name='Təhvil verib')
     pdf_report_url = models.URLField(blank=True, verbose_name='PDF hesabat')
+    # Answers saved while the student works ({question_id: {...}}, same shape as the exam page keeps them):
+    # survive a reload/another device, and are graded if the time runs out before "Submit"
+    draft_answers = models.JSONField(default=dict, blank=True, verbose_name='Yadda saxlanmış cavablar')
+    auto_submitted = models.BooleanField(default=False, verbose_name='Vaxt bitəndə avtomatik təhvil')
+
+    # Slack for a slow network between the timer hitting zero and the submit arriving
+    GRACE = timedelta(minutes=2)
 
     class Meta:
         verbose_name = 'İmtahan nəticəsi'
@@ -74,6 +83,15 @@ class ExamResult(models.Model):
 
     def __str__(self):
         return f'{self.student.get_full_name()} - {self.exam}'
+
+    @property
+    def deadline(self):
+        """When this student's time is up: their own duration, but never past the exam's end."""
+        return min(self.started_at + timedelta(minutes=self.exam.duration_minutes), self.exam.end_time)
+
+    @property
+    def is_overdue(self):
+        return timezone.now() > self.deadline + self.GRACE
 
 
 class StudentAnswer(models.Model):

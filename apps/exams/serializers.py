@@ -172,6 +172,7 @@ class ExamResultSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.get_full_name', read_only=True)
     student_username = serializers.CharField(source='student.username', read_only=True)
     needs_grading = serializers.SerializerMethodField()
+    deadline = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = ExamResult
@@ -179,7 +180,7 @@ class ExamResultSerializer(serializers.ModelSerializer):
             'id', 'exam', 'student', 'student_name', 'student_username',
             'status', 'score', 'total_points', 'percentage', 'passed',
             'tab_switch_count', 'started_at', 'submitted_at', 'pdf_report_url',
-            'needs_grading',
+            'needs_grading', 'deadline', 'auto_submitted',
         ]
         read_only_fields = [
             'id', 'student', 'started_at', 'submitted_at',

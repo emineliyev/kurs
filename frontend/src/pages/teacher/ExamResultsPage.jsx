@@ -29,13 +29,15 @@ export default function ExamResultsPage() {
   const { t } = useTranslation(['common', 'teacher'])
   const [results, setResults] = useState([])
   const [exam, setExam] = useState(null)
+  const [absent, setAbsent] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([examsApi.get(id), examsApi.results(id)])
-      .then(([examRes, resultsRes]) => {
+    Promise.all([examsApi.get(id), examsApi.results(id), examsApi.absent(id).catch(() => ({ data: [] }))])
+      .then(([examRes, resultsRes, absentRes]) => {
         setExam(examRes.data)
         setResults(resultsRes.data.results || resultsRes.data)
+        setAbsent(absentRes.data)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -47,12 +49,14 @@ export default function ExamResultsPage() {
         ? <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">{t('passed', { ns: 'teacher' })}</span>
         : <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">{t('failed', { ns: 'teacher' })}</span>
     }
-    if (r.status === 'in_progress') return <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">{t('waiting', { ns: 'teacher' })}</span>
+    if (r.status === 'in_progress') return <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">{t('result_in_progress', { ns: 'teacher' })}</span>
     return <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium">{r.status}</span>
   }
 
-  const avg = results.length
-    ? Math.round(results.reduce((s, r) => s + (r.percentage || 0), 0) / results.length)
+  // Only finished work counts: a student still writing isn't a 0%
+  const submitted = results.filter(r => r.status === 'submitted')
+  const avg = submitted.length
+    ? Math.round(submitted.reduce((s, r) => s + (r.percentage || 0), 0) / submitted.length)
     : 0
 
   const excelLabels = {
@@ -72,9 +76,10 @@ export default function ExamResultsPage() {
 
   const statCards = [
     { label: t('participants', { ns: 'teacher' }), value: results.length, icon: 'bi-people', color: 'text-primary-700' },
-    { label: t('passed', { ns: 'teacher' }), value: results.filter(r => r.passed).length, icon: 'bi-check-circle', color: 'text-green-600' },
-    { label: t('failed', { ns: 'teacher' }), value: results.filter(r => !r.passed && r.status === 'submitted').length, icon: 'bi-x-circle', color: 'text-red-500' },
+    { label: t('passed', { ns: 'teacher' }), value: submitted.filter(r => r.passed).length, icon: 'bi-check-circle', color: 'text-green-600' },
+    { label: t('failed', { ns: 'teacher' }), value: submitted.filter(r => !r.passed).length, icon: 'bi-x-circle', color: 'text-red-500' },
     { label: t('average_score', { ns: 'teacher' }), value: `${avg}%`, icon: 'bi-graph-up', color: 'text-amber-500' },
+    { label: t('absent_count', { ns: 'teacher' }), value: absent.length, icon: 'bi-person-x', color: 'text-slate-400' },
   ]
 
   return (
@@ -107,14 +112,14 @@ export default function ExamResultsPage() {
 
       {loading ? (
         <PageSpinner />
-      ) : results.length === 0 ? (
+      ) : results.length === 0 && absent.length === 0 ? (
         <div className="card p-12 text-center text-slate-400">
           <i className="bi bi-bar-chart text-4xl mb-3 block"></i>
           <p>{t('no_results_yet', { ns: 'teacher' })}</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             {statCards.map(({ label, value, icon, color }) => (
               <div key={label} className="card p-4 flex items-center gap-3">
                 <i className={`bi ${icon} text-2xl ${color}`}></i>
@@ -171,6 +176,11 @@ export default function ExamResultsPage() {
                     <td className="px-5 py-3">
                       <div className="flex flex-col gap-1">
                         {statusBadge(r)}
+                        {r.auto_submitted && (
+                          <span className="text-xs text-slate-400 flex items-center gap-1">
+                            <i className="bi bi-alarm"></i> {t('auto_submitted_short', { ns: 'teacher' })}
+                          </span>
+                        )}
                         {r.needs_grading && (
                           <span className="text-xs text-violet-600 flex items-center gap-1">
                             <i className="bi bi-hand-index"></i> {t('manual_grading_pending', { ns: 'teacher' })}
@@ -183,6 +193,22 @@ export default function ExamResultsPage() {
               </tbody>
             </table>
           </div>
+
+          {absent.length > 0 && (
+            <div className="card p-5">
+              <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                <i className="bi bi-person-x text-slate-400"></i>
+                {t('absent_title', { ns: 'teacher', count: absent.length })}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {absent.map((a) => (
+                  <span key={a.student} className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-full text-sm text-slate-600">
+                    {a.student_name || a.student_username}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

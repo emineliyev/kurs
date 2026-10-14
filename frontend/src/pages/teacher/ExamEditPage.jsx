@@ -131,8 +131,9 @@ export default function ExamEditPage() {
     setSaving(true)
     try {
       await testsApi.reorderQuestions(reordered.map(q => q.id))
-    } catch {
-      toast.error(t('error_occurred'))
+    } catch (err) {
+      setQuestions(questions)  // put the order back
+      toast.error(err.response?.data?.detail || t('error_occurred'))
     } finally {
       setSaving(false)
     }
@@ -164,16 +165,27 @@ export default function ExamEditPage() {
       </div>
 
       {/* Info banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-blue-700">
-        <i className="bi bi-info-circle shrink-0"></i>
-        {t('exam_edit_info', { ns: 'teacher' })}
-      </div>
+      {exam?.has_results ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-amber-700">
+          <i className="bi bi-lock shrink-0"></i>
+          {t('exam_order_locked', { ns: 'teacher' })}
+        </div>
+      ) : (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-blue-700">
+          <i className="bi bi-info-circle shrink-0"></i>
+          {t('exam_edit_info', { ns: 'teacher' })}
+        </div>
+      )}
 
       {/* Questions list */}
       {questions.length === 0 ? (
         <div className="card p-12 text-center text-slate-400">
           <i className="bi bi-question-circle text-4xl mb-2 block"></i>
           <p>{t('no_questions_yet', { ns: 'teacher' })}</p>
+        </div>
+      ) : exam?.has_results ? (
+        <div className="space-y-3 pointer-events-none">
+          {questions.map((q, i) => <SortableRow key={q.id} q={q} index={i} t={t} />)}
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

@@ -9,11 +9,14 @@ import { MathText } from '@/utils/math'
 import { LABELS } from '@/utils/examConstants'
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
-function Timer({ totalSeconds, onExpire }) {
-  const [seconds, setSeconds] = useState(totalSeconds)
+// Counts down to the server's deadline (own duration, never past the exam's end). Recomputed from
+// the clock each tick, so a phone that paused the tab doesn't show more time than there really is.
+function Timer({ deadline, onExpire }) {
+  const left = () => Math.max(0, Math.round((deadline - Date.now()) / 1000))
+  const [seconds, setSeconds] = useState(left)
   useEffect(() => {
     if (seconds <= 0) { onExpire(); return }
-    const t = setTimeout(() => setSeconds(s => s - 1), 1000)
+    const t = setTimeout(() => setSeconds(left()), 1000)
     return () => clearTimeout(t)
   }, [seconds])
   const m = Math.floor(seconds / 60), s = seconds % 60
@@ -36,8 +39,10 @@ export default function TakeExamPage() {
   const [currentQ, setCurrentQ] = useState(0)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [remainingSeconds, setRemainingSeconds] = useState(null)
+  const [deadline, setDeadline] = useState(null)
   const tabSwitchWarned = useRef(false)
+  const restored = useRef(false)
+  const storageKey = `kursum-exam-${id}`
 
   useEffect(() => {
     const init = async () => {
@@ -59,12 +64,21 @@ export default function TakeExamPage() {
         }
 
         const startRes = await examsApi.start(id)
-        const totalSec = examData.duration_minutes * 60
-        const elapsed = Math.floor((Date.now() - new Date(startRes.data.started_at).getTime()) / 1000)
-        setRemainingSeconds(Math.max(0, totalSec - elapsed))
+        setDeadline(new Date(startRes.data.deadline).getTime())
 
         const qRes = await testsApi.questions(examData.test)
         setQuestions(qRes.data)
+
+        // Bring back answers given before a reload / on another device: this browser's copy first
+        // (it's the newest), else what the server autosaved
+        let saved = null
+        try { saved = JSON.parse(localStorage.getItem(storageKey) || 'null') } catch { /* ignore */ }
+        const draft = saved && Object.keys(saved).length ? saved : startRes.data.draft_answers
+        if (draft && Object.keys(draft).length) {
+          setAnswers(draft)
+          toast.success(t('answers_restored', { ns: 'student' }), { id: 'answers-restored' })
+        }
+        restored.current = true
       } catch (err) {
         toast.error(err.response?.data?.detail || t('exam_error', { ns: 'student' }))
         navigate('/student/exams')
@@ -72,6 +86,18 @@ export default function TakeExamPage() {
     }
     init()
   }, [id])
+
+  // Keep answers safe: instantly in this browser, and on the server a few seconds after the last change
+  useEffect(() => {
+    if (!restored.current) return
+    try { localStorage.setItem(storageKey, JSON.stringify(answers)) } catch { /* storage full/blocked */ }
+    const timer = setTimeout(() => {
+      examsApi.saveDraft(id, answers).catch((err) => {
+        if (err.response?.status === 400) navigate(`/student/exams/${id}/result`, { replace: true })
+      })
+    }, 3000)
+    return () => clearTimeout(timer)
+  }, [answers])
 
   // Anti-cheat: tab switch detection
   useEffect(() => {
@@ -129,6 +155,7 @@ export default function TakeExamPage() {
     })
     try {
       await examsApi.submit(id, answersPayload)
+      try { localStorage.removeItem(storageKey) } catch { /* ignore */ }
       toast.success(t('exam_completed', { ns: 'student' }))
       navigate(`/student/exams/${id}/result`)
     } catch (err) {
@@ -203,7 +230,7 @@ export default function TakeExamPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {remainingSeconds !== null && <Timer totalSeconds={remainingSeconds} onExpire={onExpire} />}
+          {deadline !== null && <Timer deadline={deadline} onExpire={onExpire} />}
           <button onClick={onSubmit} disabled={submitting} className="btn-primary text-sm">
             {submitting ? <i className="bi bi-arrow-repeat animate-spin"></i> : <><i className="bi bi-send"></i> {t('finish_btn', { ns: 'student' })}</>}
           </button>

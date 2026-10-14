@@ -15,7 +15,6 @@
   "your_score": "Ваш балл",
   "change_password": "Изменить пароль",
   "enrolled_classes": "Записанные классы",
-
   "welcome_greeting": "Добро пожаловать!",
   "stat_exams": "Экзамены",
   "stat_passed": "Сдано",
@@ -65,5 +64,10 @@
   "numeric_answer_entered": "Ответ введён",
   "question_navigator": "Навигатор вопросов",
   "passage_reading_label": "Текст для чтения",
-  "passage_no_answer_hint": "Этот блок не требует ответа — просто прочитайте его."
+  "passage_no_answer_hint": "Этот блок не требует ответа — просто прочитайте его.",
+  "answers_restored": "Ваши прежние ответы восстановлены",
+  "review_after_end": "Правильные ответы будут видны после окончания экзамена ({{time}}).",
+  "auto_submitted_note": "Время вышло — экзамен сдан автоматически с ответами, сохранёнными до этого момента.",
+  "partial_points": "Частично: {{earned}} / {{max}} балл.",
+  "missed_exam": "Не участвовали"
 }

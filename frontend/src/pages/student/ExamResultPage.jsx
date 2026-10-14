@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { format } from 'date-fns'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { examsApi } from '@/api/exams'
@@ -38,9 +39,11 @@ export default function ExamResultPage() {
   const passed = result.passed
   const needsGrading = result.needs_grading
   const answers = result.answers_review || []
+  // While classmates may still be writing, the server sends no per-question review
+  const reviewAt = result.review_available_at ? new Date(result.review_available_at) : null
 
   const correctCount = answers.filter(a => a.is_correct === true).length
-  const wrongCount = answers.filter(a => a.is_correct === false).length
+  const wrongCount = answers.filter(a => a.is_correct === false && !(a.points_earned > 0)).length
   const pendingCount = answers.filter(a => a.is_correct === null || a.is_correct === undefined).length
 
   const circleColor = needsGrading ? 'bg-amber-500' : (passed ? 'bg-green-500' : 'bg-red-500')
@@ -60,8 +63,21 @@ export default function ExamResultPage() {
         <p className="text-slate-500 mt-1 font-semibold">{result.score} / {result.total_points} {t('score_word', { ns: 'student' })}</p>
       </div>
 
+      {result.auto_submitted && (
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-2">
+          <i className="bi bi-alarm mt-0.5"></i>{t('auto_submitted_note', { ns: 'student' })}
+        </p>
+      )}
+
+      {reviewAt && (
+        <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex gap-2">
+          <i className="bi bi-lock mt-0.5"></i>
+          {t('review_after_end', { ns: 'student', time: format(reviewAt, 'dd.MM.yyyy HH:mm') })}
+        </p>
+      )}
+
       {/* Stats */}
-      <div className={`grid gap-3 ${pendingCount > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+      {!reviewAt && <div className={`grid gap-3 ${pendingCount > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <div className="card p-4 text-center">
           <p className="text-2xl font-bold text-green-600">{correctCount}</p>
           <p className="text-xs text-slate-500 mt-1">{t('stat_correct', { ns: 'student' })}</p>
@@ -80,7 +96,7 @@ export default function ExamResultPage() {
           <p className="text-2xl font-bold text-amber-500">{result.tab_switch_count}</p>
           <p className="text-xs text-slate-500 mt-1">{t('stat_tab_switches', { ns: 'student' })}</p>
         </div>
-      </div>
+      </div>}
 
       {/* Review toggle */}
       {answers.length > 0 && (
@@ -96,7 +112,10 @@ export default function ExamResultPage() {
       {/* Answers review */}
       {showReview && (
         <div className="space-y-3">
-          {[...answers].sort((a, b) => a.question_order - b.question_order).map((ans, i) => {
+          {answers.map((raw, i) => {  /* already in the order this student saw */
+            // a hand-graded answer with some (not all) points is "partial", not wrong
+            const partial = raw.is_correct === false && raw.points_earned > 0
+            const ans = partial ? { ...raw, is_correct: null, _partial: true } : raw
             const correctAnswer = ans.all_answers?.find(a => a.is_correct)
             const selectedAnswer = ans.all_answers?.find(a => a.id === ans.selected_answer_id)
             return (
@@ -148,7 +167,10 @@ export default function ExamResultPage() {
                   </div>
                 )}
 
-                {ans.is_correct === null && (
+                {ans._partial && (
+                  <p className="text-xs text-amber-600 pl-8 mt-1"><i className="bi bi-circle-half mr-1"></i>{t('partial_points', { ns: 'student', earned: ans.points_earned, max: ans.question_points })}</p>
+                )}
+                {ans.is_correct === null && !ans._partial && (
                   <p className="text-xs text-amber-500 pl-8 mt-1"><i className="bi bi-hourglass-split mr-1"></i>{t('pending_teacher_review', { ns: 'student' })}</p>
                 )}
                 {ans.is_correct === false && !ans.selected_answer_id && !ans.answer_text && (

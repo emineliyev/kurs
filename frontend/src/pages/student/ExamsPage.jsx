@@ -101,12 +101,17 @@ export default function StudentExams() {
                       {inProgress(exam) ? t('continue_short', { ns: 'student' }) : t('start_short', { ns: 'student' })}
                     </Link>
                   )}
-                  {isDone && (
+                  {isDone && (submitted(exam) ? (
                     <Link to={`/student/exams/${exam.id}/result`}
                       className="shrink-0 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1">
                       <i className="bi bi-eye"></i> {t('result_btn', { ns: 'student' })}
                     </Link>
-                  )}
+                  ) : (
+                    // the exam ended without this student taking it — there's no result to open
+                    <span className="shrink-0 px-3 py-1.5 bg-red-50 text-red-500 rounded-xl text-xs font-semibold flex items-center gap-1">
+                      <i className="bi bi-x-circle"></i> {t('missed_exam', { ns: 'student' })}
+                    </span>
+                  ))}
                 </div>
               </div>
             )

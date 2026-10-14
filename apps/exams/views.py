@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from apps.accounts.permissions import IsTeacher, IsStudent
 from apps.classes.models import ClassEnrollment
+from .grading import draft_to_answers, finalize, finalize_overdue, grade, recalc_totals
 from .models import Exam, ExamResult, StudentAnswer
 from .serializers import ExamSerializer, ExamResultSerializer, ExamResultDetailSerializer, SubmitExamSerializer
 
@@ -33,6 +34,12 @@ class ExamViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsTeacher()]
         return [IsAuthenticated()]
+
+    def list(self, request, *args, **kwargs):
+        if request.user.is_student:
+            # so a timed-out exam shows as finished, not "continue"
+            finalize_overdue(ExamResult.objects.filter(student=request.user))
+        return super().list(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -68,29 +75,47 @@ class ExamViewSet(viewsets.ModelViewSet):
         exam = self.get_object()
         user = request.user
 
-        if not exam.is_ongoing:
-            return Response(
-                {'detail': 'Exam is not currently active.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        result = ExamResult.objects.filter(exam=exam, student=user).first()
+        if result is not None and result.status == ExamResult.STATUS_IN_PROGRESS and result.is_overdue:
+            finalize(result)
+            result.refresh_from_db()
+        if result is not None and result.status != ExamResult.STATUS_IN_PROGRESS:
+            return Response({'detail': 'Bu imtahanı artıq tamamlamısınız.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        enrolled = ClassEnrollment.objects.filter(
-            student=user,
-            class_room=exam.class_room,
-            is_active=True
-        ).exists()
-        if not enrolled:
-            return Response({'detail': 'You are not enrolled in this class.'}, status=status.HTTP_403_FORBIDDEN)
+        if result is None:
+            if not exam.is_ongoing:
+                return Response({'detail': 'İmtahan hazırda aktiv deyil.'}, status=status.HTTP_400_BAD_REQUEST)
+            enrolled = ClassEnrollment.objects.filter(
+                student=user, class_room=exam.class_room, is_active=True
+            ).exists()
+            if not enrolled:
+                return Response({'detail': 'Siz bu sinifdə deyilsiniz.'}, status=status.HTTP_403_FORBIDDEN)
+            result, created = ExamResult.objects.get_or_create(exam=exam, student=user)
+        else:
+            created = False
 
-        result, created = ExamResult.objects.get_or_create(
-            exam=exam,
-            student=user,
-        )
+        # The page restores saved answers from the draft and runs its timer to `deadline`
+        data = ExamResultSerializer(result).data
+        data['draft_answers'] = result.draft_answers
+        return Response(data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
-        if not created and result.status != ExamResult.STATUS_IN_PROGRESS:
-            return Response({'detail': 'You have already completed this exam.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(ExamResultSerializer(result).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+    @action(detail=True, methods=['patch'], permission_classes=[IsStudent])
+    def save_draft(self, request, pk=None):
+        """Autosave of the student's answers while the exam is open."""
+        exam = self.get_object()
+        answers = request.data.get('answers')
+        if not isinstance(answers, dict) or len(answers) > 500:
+            return Response({'detail': 'answers must be an object.'}, status=status.HTTP_400_BAD_REQUEST)
+        result = ExamResult.objects.filter(
+            exam=exam, student=request.user, status=ExamResult.STATUS_IN_PROGRESS).first()
+        if result is None:
+            return Response({'detail': 'Aktiv imtahan sessiyası yoxdur.'}, status=status.HTTP_400_BAD_REQUEST)
+        if result.is_overdue:
+            finalize(result)
+            return Response({'detail': 'İmtahan vaxtı bitib.'}, status=status.HTTP_400_BAD_REQUEST)
+        result.draft_answers = answers
+        result.save(update_fields=['draft_answers'])
+        return Response({'saved': True})
 
     @action(detail=True, methods=['post'], permission_classes=[IsStudent])
     def submit(self, request, pk=None):
@@ -104,111 +129,12 @@ class ExamViewSet(viewsets.ModelViewSet):
             result = (ExamResult.objects.select_for_update()
                       .filter(exam=exam, student=request.user, status=ExamResult.STATUS_IN_PROGRESS).first())
             if result is None:
-                return Response({'detail': 'No active exam session found.'}, status=status.HTTP_400_BAD_REQUEST)
-            return self._grade(exam, result, serializer.validated_data['answers'])
-
-    def _grade(self, exam, result, answers_data):
-        # Grade against the exam's own questions: each counts once, unanswered ones still count
-        # toward the total, and answers for other tests' questions are ignored
-        submitted = {}
-        for answer_data in answers_data:
-            submitted.setdefault(answer_data['question'].id, answer_data)
-
-        total_points = 0
-        earned_points = 0
-
-        # Passage is display-only — not graded
-        for question in exam.test.questions.exclude(question_type='passage'):
-            total_points += question.points
-            answer_data = submitted.get(question.id)
-            if answer_data is None:
-                continue
-            selected_answer = answer_data.get('selected_answer')
-            if selected_answer is not None and selected_answer.question_id != question.id:
-                selected_answer = None  # an answer id from another question
-            open_text = answer_data.get('open_text', '')
-            answer_text = answer_data.get('answer_text', '')
-
-            if question.question_type in ('long_answer', 'open'):
-                # Manual grading — store text, no auto-grade
-                StudentAnswer.objects.update_or_create(
-                    result=result,
-                    question=question,
-                    defaults={
-                        'selected_answer': None,
-                        'open_text': open_text,
-                        'answer_text': answer_text or open_text,
-                        'is_correct': None,
-                        'points_earned': 0,
-                    }
-                )
-
-            elif question.question_type == 'short_answer':
-                correct = (question.correct_answer or '').strip().lower()
-                student_text = (answer_text or '').strip().lower()
-                is_correct = bool(correct and student_text == correct)
-                points = question.points if is_correct else 0
-                StudentAnswer.objects.update_or_create(
-                    result=result,
-                    question=question,
-                    defaults={
-                        'selected_answer': None,
-                        'open_text': '',
-                        'answer_text': answer_text,
-                        'is_correct': is_correct,
-                        'points_earned': points,
-                    }
-                )
-                earned_points += points
-
-            elif question.question_type == 'numeric':
-                try:
-                    student_val = float(answer_text or '')
-                    correct_val = float(question.correct_answer or '')
-                    tol = question.tolerance or 0
-                    is_correct = abs(student_val - correct_val) <= tol
-                except (ValueError, TypeError):
-                    is_correct = False
-                points = question.points if is_correct else 0
-                StudentAnswer.objects.update_or_create(
-                    result=result,
-                    question=question,
-                    defaults={
-                        'selected_answer': None,
-                        'open_text': '',
-                        'answer_text': answer_text,
-                        'is_correct': is_correct,
-                        'points_earned': points,
-                    }
-                )
-                earned_points += points
-
+                return Response({'detail': 'Aktiv imtahan sessiyası yoxdur.'}, status=status.HTTP_400_BAD_REQUEST)
+            if result.is_overdue:
+                # Too late: what was saved before the time ran out is graded, the late answers are not
+                grade(exam, result, draft_to_answers(result.draft_answers), submitted_at=result.deadline, auto=True)
             else:
-                # MCQ types: mcq, true_false, image_mcq, multiple_choice
-                is_correct = bool(selected_answer and selected_answer.is_correct)
-                points = question.points if is_correct else 0
-                StudentAnswer.objects.update_or_create(
-                    result=result,
-                    question=question,
-                    defaults={
-                        'selected_answer': selected_answer,
-                        'open_text': '',
-                        'answer_text': '',
-                        'is_correct': is_correct,
-                        'points_earned': points,
-                    }
-                )
-                earned_points += points
-
-        percentage = (earned_points / total_points * 100) if total_points > 0 else 0
-        result.score = earned_points
-        result.total_points = total_points
-        result.percentage = round(percentage, 2)
-        result.passed = percentage >= exam.test.passing_score
-        result.status = ExamResult.STATUS_SUBMITTED
-        result.submitted_at = timezone.now()
-        result.save()
-
+                grade(exam, result, serializer.validated_data['answers'])
         return Response(ExamResultSerializer(result).data)
 
     @action(detail=True, methods=['post'], permission_classes=[IsTeacher])
@@ -254,16 +180,7 @@ class ExamViewSet(viewsets.ModelViewSet):
         answer.is_correct = awarded_points >= max_pts
         answer.save()
 
-        # Recalculate result score from all answers
-        all_answers = result.answers.all()
-        total = sum(a.question.points for a in all_answers)
-        earned = sum(a.points_earned for a in all_answers)
-        percentage = (earned / total * 100) if total > 0 else 0
-        result.score = earned
-        result.total_points = total
-        result.percentage = round(percentage, 2)
-        result.passed = percentage >= exam.test.passing_score
-        result.save()
+        recalc_totals(result)
 
         return Response({
             'success': True,
@@ -286,13 +203,18 @@ class ExamViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], permission_classes=[IsStudent])
     def my_result(self, request, pk=None):
         exam = self.get_object()
+        finalize_overdue(ExamResult.objects.filter(exam=exam, student=request.user))
         try:
             result = ExamResult.objects.prefetch_related(
                 'answers__question__answers',
                 'answers__selected_answer',
             ).get(exam=exam, student=request.user)
-            serializer = ExamResultDetailSerializer(result, context={'request': request})
-            return Response(serializer.data)
+            data = ExamResultDetailSerializer(result, context={'request': request}).data
+            if timezone.now() <= exam.end_time:
+                # Classmates may still be writing: no correct answers until the exam is over
+                data['answers_review'] = []
+                data['review_available_at'] = exam.end_time
+            return Response(data)
         except ExamResult.DoesNotExist:
             return Response({'detail': 'No result found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -310,9 +232,24 @@ class ExamViewSet(viewsets.ModelViewSet):
         exam = self.get_object()
         if exam.class_room.teacher != request.user:
             return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        finalize_overdue(exam.results.all())
         results = exam.results.select_related('student').prefetch_related('answers__question').order_by('-percentage')
         serializer = ExamResultSerializer(results, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], permission_classes=[IsTeacher])
+    def absent(self, request, pk=None):
+        """Students of the exam's class who haven't started it."""
+        exam = self.get_object()
+        if exam.class_room.teacher != request.user:
+            return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        started = exam.results.values_list('student_id', flat=True)
+        enrollments = (ClassEnrollment.objects
+                       .filter(class_room=exam.class_room, is_active=True, student__is_active=True)
+                       .exclude(student_id__in=started).select_related('student')
+                       .order_by('student__first_name', 'student__last_name'))
+        return Response([{'student': e.student_id, 'student_name': e.student.get_full_name(),
+                          'student_username': e.student.username} for e in enrollments])
 
     @action(detail=True, methods=['get'], permission_classes=[IsTeacher])
     def result_detail(self, request, pk=None):
@@ -325,6 +262,7 @@ class ExamViewSet(viewsets.ModelViewSet):
         if not student_id:
             return Response({'detail': 'student_id query param is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        finalize_overdue(exam.results.filter(student_id=student_id))
         try:
             result = ExamResult.objects.prefetch_related(
                 'answers__question__answers',

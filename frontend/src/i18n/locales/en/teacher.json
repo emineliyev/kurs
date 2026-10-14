@@ -3,9 +3,9 @@
   "test_title": "Test Title",
   "publish_test": "Finish test",
   "q_points_label": "pts",
-  "edit_questions": "Question Order",
+  "edit_questions": "Test question order",
   "drag_to_reorder": "Drag to reorder",
-  "exam_edit_info": "Drag questions to set the order you want. Changes are saved automatically.",
+  "exam_edit_info": "Drag questions to set the order. Note: this is the test’s own order — it applies to every exam using this test. Changes are saved automatically.",
   "saving": "Saving...",
   "add_question": "Add Question",
   "create_class": "Create Class",
@@ -615,5 +615,10 @@
   "exam_passive_text": "The exam disappears from students’ pages and can’t be started. You can turn it back on at any time.",
   "exam_passive_in_progress": "{{count}} student(s) are taking it right now — they can still finish and submit. New students can’t start.",
   "exam_now_passive": "Exam is now passive",
-  "exam_now_active": "Exam is now active"
+  "exam_now_active": "Exam is now active",
+  "exam_order_locked": "Students have taken an exam with this test, so the question order can no longer change.",
+  "result_in_progress": "In progress",
+  "auto_submitted_short": "Auto-submitted at time-up",
+  "absent_count": "Absent",
+  "absent_title": "Didn’t take it ({{count}})"
 }

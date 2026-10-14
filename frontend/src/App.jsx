@@ -1,4 +1,6 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
+import PageSpinner from '@/components/common/PageSpinner'
 import { useAuthStore } from '@/store/authStore'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import TeacherLayout from '@/layouts/TeacherLayout'
@@ -8,52 +10,54 @@ import AuthLayout from '@/layouts/AuthLayout'
 // Landing page
 import LandingPage from '@/pages/LandingPage'
 
+// Pages load on demand: the teacher's editor (PDF, drawing, KaTeX…) isn't downloaded by a student
 // Print pages (no layout)
-import ExamPrintPage from '@/pages/print/ExamPrintPage'
+const ExamPrintPage = lazy(() => import('@/pages/print/ExamPrintPage'))
 
 // Auth pages
-import LoginPage from '@/pages/auth/LoginPage'
-import RegisterPage from '@/pages/auth/RegisterPage'
-import VerifyEmailPage from '@/pages/auth/VerifyEmailPage'
-import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
-import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
+const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
+const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'))
+const VerifyEmailPage = lazy(() => import('@/pages/auth/VerifyEmailPage'))
+const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'))
 
 // Error pages
-import NotFoundPage from '@/pages/NotFoundPage'
-import ErrorPage from '@/pages/ErrorPage'
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
+const ErrorPage = lazy(() => import('@/pages/ErrorPage'))
 
 // Teacher pages
-import TeacherDashboard from '@/pages/teacher/DashboardPage'
-import TestsPage from '@/pages/teacher/TestsPage'
-import TestCreatePage from '@/pages/teacher/TestCreatePage'
-import TestDetailPage from '@/pages/teacher/TestDetailPage'
-import TestPrintPage from '@/pages/teacher/TestPrintPage'
-import ClassesPage from '@/pages/teacher/ClassesPage'
-import ClassDetailPage from '@/pages/teacher/ClassDetailPage'
-import StudentsPage from '@/pages/teacher/StudentsPage'
-import ExamsPage from '@/pages/teacher/ExamsPage'
-import ExamCreatePage from '@/pages/teacher/ExamCreatePage'
-import ExamEditPage from '@/pages/teacher/ExamEditPage'
-import ExamResultsPage from '@/pages/teacher/ExamResultsPage'
-import GradingPage from '@/pages/teacher/GradingPage'
-import AnalyticsPage from '@/pages/teacher/AnalyticsPage'
-import QuestionBankPage from '@/pages/teacher/QuestionBankPage'
-import SubscriptionPage from '@/pages/teacher/SubscriptionPage'
-import FeedbackPage from '@/pages/teacher/FeedbackPage'
-import PaymentPage from '@/pages/teacher/PaymentPage'
-import TeacherProfilePage from '@/pages/teacher/ProfilePage'
+const TeacherDashboard = lazy(() => import('@/pages/teacher/DashboardPage'))
+const TestsPage = lazy(() => import('@/pages/teacher/TestsPage'))
+const TestCreatePage = lazy(() => import('@/pages/teacher/TestCreatePage'))
+const TestDetailPage = lazy(() => import('@/pages/teacher/TestDetailPage'))
+const TestPrintPage = lazy(() => import('@/pages/teacher/TestPrintPage'))
+const ClassesPage = lazy(() => import('@/pages/teacher/ClassesPage'))
+const ClassDetailPage = lazy(() => import('@/pages/teacher/ClassDetailPage'))
+const StudentsPage = lazy(() => import('@/pages/teacher/StudentsPage'))
+const ExamsPage = lazy(() => import('@/pages/teacher/ExamsPage'))
+const ExamCreatePage = lazy(() => import('@/pages/teacher/ExamCreatePage'))
+const ExamEditPage = lazy(() => import('@/pages/teacher/ExamEditPage'))
+const ExamResultsPage = lazy(() => import('@/pages/teacher/ExamResultsPage'))
+const GradingPage = lazy(() => import('@/pages/teacher/GradingPage'))
+const AnalyticsPage = lazy(() => import('@/pages/teacher/AnalyticsPage'))
+const QuestionBankPage = lazy(() => import('@/pages/teacher/QuestionBankPage'))
+const SubscriptionPage = lazy(() => import('@/pages/teacher/SubscriptionPage'))
+const FeedbackPage = lazy(() => import('@/pages/teacher/FeedbackPage'))
+const PaymentPage = lazy(() => import('@/pages/teacher/PaymentPage'))
+const TeacherProfilePage = lazy(() => import('@/pages/teacher/ProfilePage'))
 
 // Student pages
-import StudentHome from '@/pages/student/HomePage'
-import StudentExams from '@/pages/student/ExamsPage'
-import TakeExamPage from '@/pages/student/TakeExamPage'
-import ExamResultPage from '@/pages/student/ExamResultPage'
-import StudentProfile from '@/pages/student/ProfilePage'
+const StudentHome = lazy(() => import('@/pages/student/HomePage'))
+const StudentExams = lazy(() => import('@/pages/student/ExamsPage'))
+const TakeExamPage = lazy(() => import('@/pages/student/TakeExamPage'))
+const ExamResultPage = lazy(() => import('@/pages/student/ExamResultPage'))
+const StudentProfile = lazy(() => import('@/pages/student/ProfilePage'))
 
 export default function App() {
   useAuthStore()
 
   return (
+    <Suspense fallback={<div className="py-16"><PageSpinner /></div>}>
     <Routes>
       {/* Auth routes */}
       <Route element={<AuthLayout />}>
@@ -127,5 +131,6 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    </Suspense>
   )
 }
