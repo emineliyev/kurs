@@ -606,5 +606,22 @@
   "student_restored": "Şagird bərpa edildi",
   "unenroll_hint": "Şagird yalnız bu sinifdən çıxarılacaq, hesabı “Şagirdlər” bölməsində qalacaq.",
   "yes_remove": "Bəli, çıxar",
-  "bank_already_added": "Əlavə edilib"
+  "bank_already_added": "Əlavə edilib",
+  "to_draft": "Qaralamaya qaytar",
+  "to_draft_used": "Şagirdlər bu testlə imtahan veriblər, ona görə qaralamaya qaytarmaq olmaz. Dəyişmək üçün testin surətini çıxarın.",
+  "to_draft_open_exams": "Bu testə {{count}} aktiv imtahan təyin olunub. Əvvəlcə “İmtahanlar” səhifəsində onları passiv edin.",
+  "to_draft_confirm": "“{{title}}” qaralamaya qaytarılsın?",
+  "to_draft_text": "Testi yenidən redaktə edə biləcəksiniz. Hazır olanda yenidən “Testi tamamla” düyməsini basın.",
+  "to_draft_yes": "Bəli, qaytar",
+  "to_draft_done": "Test qaralamaya qaytarıldı",
+  "edit_exam": "İmtahanı redaktə et",
+  "exam_started_locked": "Şagirdlər artıq başlayıb: sinif və başlama vaxtı dəyişdirilə bilməz. Adı, bitmə vaxtını və müddəti dəyişə bilərsiniz.",
+  "exam_passive": "Passiv",
+  "exam_make_passive": "Passiv et",
+  "exam_make_active": "Aktiv et",
+  "exam_passive_confirm": "“{{title}}” passiv edilsin?",
+  "exam_passive_text": "İmtahan şagirdlərin səhifəsində görünməyəcək və ona başlamaq olmayacaq. İstədiyiniz vaxt yenidən aktiv edə bilərsiniz.",
+  "exam_passive_in_progress": "Hazırda {{count}} şagird imtahandadır — onlar işlərini bitirib təhvil verə biləcəklər. Yeni şagird başlaya bilməyəcək.",
+  "exam_now_passive": "İmtahan passiv edildi",
+  "exam_now_active": "İmtahan aktiv edildi"
 }

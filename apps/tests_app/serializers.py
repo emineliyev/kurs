@@ -80,6 +80,10 @@ class TestSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source='teacher.get_full_name', read_only=True)
     class_names = serializers.SerializerMethodField()
 
+    # Why "back to draft" may be refused (annotated in the teacher queryset; see TestViewSet)
+    has_results = serializers.BooleanField(read_only=True, default=False)
+    open_exam_count = serializers.IntegerField(read_only=True, default=0)
+
     def get_class_names(self, obj):
         return [{'id': c.id, 'name': c.name} for c in obj.class_rooms.all()]
 
@@ -95,7 +99,7 @@ class TestSerializer(serializers.ModelSerializer):
             'id', 'title', 'description', 'topic', 'class_rooms', 'class_names',
             'is_published', 'randomize_questions', 'randomize_answers',
             'passing_score', 'question_count', 'total_points',
-            'teacher_name', 'created_at', 'updated_at',
+            'teacher_name', 'created_at', 'updated_at', 'has_results', 'open_exam_count',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

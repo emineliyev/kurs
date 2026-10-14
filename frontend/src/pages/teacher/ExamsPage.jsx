@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { createPortal } from 'react-dom'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import Swal from '@/utils/swal'
 import { examsApi } from '@/api/exams'
+import { classesApi } from '@/api/classes'
+import Select from '@/components/common/Select'
 import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
 import { toastApiError } from '@/api/errors'
@@ -16,23 +19,148 @@ function toLocalDatetimeValue(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+/**
+ * Edit an exam. Before any student has started everything can change; afterwards the class,
+ * start time and shuffle settings are fixed (results belong to them) — title, end and duration stay open.
+ */
+function ExamEditModal({ exam, classes, onClose, onSaved }) {
+  const { t } = useTranslation(['common', 'teacher'])
+  const started = exam.has_results
+  const initial = {
+    title: exam.title || '',
+    class_room: String(exam.class_room),
+    start_time: toLocalDatetimeValue(exam.start_time),
+    end_time: toLocalDatetimeValue(exam.end_time),
+    duration_minutes: exam.duration_minutes,
+  }
+  const { register, handleSubmit, formState: { isSubmitting } } = useForm({ defaultValues: initial })
+
+  const submit = async (data) => {
+    const start = started ? initial.start_time : data.start_time
+    if (start >= data.end_time) { toast.error(t('end_after_start', { ns: 'teacher' })); return }
+    // Send only what changed; times go with their timezone
+    const payload = {}
+    if (data.title.trim() !== initial.title) payload.title = data.title.trim()
+    if (!started && data.class_room && data.class_room !== initial.class_room) payload.class_room = Number(data.class_room)
+    if (!started && data.start_time !== initial.start_time) payload.start_time = new Date(data.start_time).toISOString()
+    if (data.end_time !== initial.end_time) payload.end_time = new Date(data.end_time).toISOString()
+    if (Number(data.duration_minutes) !== Number(initial.duration_minutes)) payload.duration_minutes = Number(data.duration_minutes)
+    if (!Object.keys(payload).length) { onClose(); return }
+    try {
+      await examsApi.update(exam.id, payload)
+      onSaved()
+    } catch (err) {
+      toastApiError(err)
+    }
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <form onSubmit={handleSubmit(submit)} className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h3 className="font-bold text-slate-900 flex items-center gap-2">
+            <i className="bi bi-pencil text-amber-500"></i>{t('edit_exam', { ns: 'teacher' })}
+          </h3>
+          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400">
+            <i className="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <div className="p-5 space-y-4 overflow-y-auto">
+          {started && (
+            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex gap-2">
+              <i className="bi bi-lock mt-0.5"></i>{t('exam_started_locked', { ns: 'teacher' })}
+            </p>
+          )}
+          <div>
+            <label className="block text-sm font-medium mb-1">{t('exam_name', { ns: 'teacher' })}</label>
+            <input {...register('title')} className="input-field" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">{t('grade', { ns: 'teacher' })} *</label>
+            <Select {...register('class_room', { required: !started })} className="input-field" disabled={started}>
+              {classes.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('start_time', { ns: 'teacher' })} *</label>
+              <input {...register('start_time', { required: !started })} type="datetime-local" className="input-field disabled:opacity-50" disabled={started} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('end_time', { ns: 'teacher' })} *</label>
+              <input {...register('end_time', { required: true })} type="datetime-local" className="input-field" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">{t('duration', { ns: 'teacher' })}</label>
+            <input {...register('duration_minutes', { required: true, min: 1 })} type="number" min={1} className="input-field" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 px-5 py-4 border-t border-slate-100">
+          <button type="button" onClick={onClose} className="btn-secondary">{t('cancel')}</button>
+          <button type="submit" disabled={isSubmitting} className="btn-primary">
+            {isSubmitting ? <i className="bi bi-arrow-repeat animate-spin"></i> : <i className="bi bi-check-lg"></i>} {t('save')}
+          </button>
+        </div>
+      </form>
+    </div>,
+    document.body,
+  )
+}
+
+function ActiveSwitch({ exam, onToggle, busy }) {
+  const { t } = useTranslation(['common', 'teacher'])
+  const on = exam.is_active
+  return (
+    <button type="button" role="switch" aria-checked={on} disabled={busy} onClick={() => onToggle(exam)}
+      title={on ? t('exam_make_passive', { ns: 'teacher' }) : t('exam_make_active', { ns: 'teacher' })}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${on ? 'bg-green-500' : 'bg-slate-300'}`}>
+      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-4' : 'translate-x-0.5'}`} />
+    </button>
+  )
+}
 
 export default function ExamsPage() {
   const { t } = useTranslation(['common', 'teacher'])
-  const navigate = useNavigate()
   const [exams, setExams] = useState([])
+  const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(true)
   const [editingExam, setEditingExam] = useState(null)
   const [filter, setFilter] = useState('all')
-  const [saving, setSaving] = useState(false)
-  const { register, handleSubmit, reset } = useForm()
+  const [togglingId, setTogglingId] = useState(null)
 
   const load = () => {
-    setLoading(true)
     examsApi.list().then((res) => setExams(res.data.results || res.data)).finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    classesApi.list().then((res) => setClasses(res.data.results || res.data)).catch(() => {})
+  }, [])
+
+  const onToggleActive = async (exam) => {
+    if (exam.is_active) {
+      const r = await Swal.fire({
+        title: t('exam_passive_confirm', { ns: 'teacher', title: exam.title }),
+        text: exam.in_progress_count > 0
+          ? t('exam_passive_in_progress', { ns: 'teacher', count: exam.in_progress_count })
+          : t('exam_passive_text', { ns: 'teacher' }),
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: t('exam_make_passive', { ns: 'teacher' }),
+        cancelButtonText: t('cancel'),
+      })
+      if (!r.isConfirmed) return
+    }
+    setTogglingId(exam.id)
+    try {
+      await examsApi.update(exam.id, { is_active: !exam.is_active })
+      toast.success(exam.is_active ? t('exam_now_passive', { ns: 'teacher' }) : t('exam_now_active', { ns: 'teacher' }))
+      load()
+    } catch (err) {
+      toastApiError(err)
+    } finally { setTogglingId(null) }
+  }
 
   const onDelete = async (exam) => {
     const r = await Swal.fire({ title: t('confirm_delete'), text: exam.title, icon: 'warning', showCancelButton: true, confirmButtonColor: '#EF4444', confirmButtonText: t('yes_delete'), cancelButtonText: t('no_cancel') })
@@ -48,36 +176,12 @@ export default function ExamsPage() {
     }
   }
 
-  const openEdit = (exam) => {
-    setEditingExam(exam)
-    reset({
-      start_time: toLocalDatetimeValue(exam.start_time),
-      end_time: toLocalDatetimeValue(exam.end_time),
-      duration_minutes: exam.duration_minutes,
-    })
-  }
-
-  const onEditSubmit = async (data) => {
-    if (data.start_time && data.end_time && data.start_time >= data.end_time) {
-      toast.error(t('end_after_start', { ns: 'teacher' }))
-      return
-    }
-    setSaving(true)
-    try {
-      await examsApi.update(editingExam.id, data)
-      toast.success(t('exam_updated', { ns: 'teacher' }))
-      setEditingExam(null)
-      load()
-    } catch (err) {
-      toastApiError(err)
-    } finally { setSaving(false) }
-  }
-
   const onDownloadPdf = (exam) => {
     window.open(`/print/exams/${exam.id}`, '_blank', 'noopener,noreferrer')
   }
 
   const statusBadge = (exam) => {
+    if (!exam.is_active) return <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-medium"><i className="bi bi-eye-slash mr-1"></i>{t('exam_passive', { ns: 'teacher' })}</span>
     if (exam.is_ongoing) return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">{t('active')}</span>
     if (exam.is_upcoming) return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">{t('waiting', { ns: 'teacher' })}</span>
     return <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-medium">{t('finished', { ns: 'teacher' })}</span>
@@ -85,9 +189,10 @@ export default function ExamsPage() {
 
   const visibleExams = exams.filter((e) =>
     filter === 'all' ? true
-    : filter === 'active' ? e.is_ongoing
-    : filter === 'upcoming' ? e.is_upcoming
-    : e.is_finished
+    : filter === 'passive' ? !e.is_active
+    : filter === 'active' ? e.is_active && e.is_ongoing
+    : filter === 'upcoming' ? e.is_active && e.is_upcoming
+    : e.is_active && e.is_finished
   )
 
   return (
@@ -105,6 +210,7 @@ export default function ExamsPage() {
           { key: 'active', label: t('active') },
           { key: 'upcoming', label: t('waiting', { ns: 'teacher' }) },
           { key: 'finished', label: t('finished', { ns: 'teacher' }) },
+          { key: 'passive', label: t('exam_passive', { ns: 'teacher' }) },
         ].map((f) => (
           <button
             key={f.key}
@@ -119,34 +225,8 @@ export default function ExamsPage() {
       </div>
 
       {editingExam && (
-        <div className="card p-5 border border-primary-200">
-          <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <i className="bi bi-pencil text-primary-700"></i>
-            {t('edit_exam_time', { ns: 'teacher', title: editingExam.title })}
-          </h3>
-          <form onSubmit={handleSubmit(onEditSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">{t('start_time', { ns: 'teacher' })} *</label>
-                <input {...register('start_time', { required: true })} type="datetime-local" className="input-field" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">{t('end_time', { ns: 'teacher' })} *</label>
-                <input {...register('end_time', { required: true })} type="datetime-local" className="input-field" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">{t('duration', { ns: 'teacher' })}</label>
-              <input {...register('duration_minutes')} type="number" min={5} className="input-field" />
-            </div>
-            <div className="flex gap-3">
-              <button type="submit" disabled={saving} className="btn-primary">
-                {saving ? <i className="bi bi-arrow-repeat animate-spin"></i> : <i className="bi bi-check-lg"></i>} {t('save')}
-              </button>
-              <button type="button" onClick={() => setEditingExam(null)} className="btn-secondary">{t('cancel')}</button>
-            </div>
-          </form>
-        </div>
+        <ExamEditModal exam={editingExam} classes={classes} onClose={() => setEditingExam(null)}
+          onSaved={() => { setEditingExam(null); toast.success(t('exam_updated', { ns: 'teacher' })); load() }} />
       )}
 
       {loading ? (
@@ -189,7 +269,12 @@ export default function ExamsPage() {
                     <td className="px-5 py-3 text-slate-500">{exam.class_name}</td>
                     <td className="px-5 py-3 text-slate-400 text-xs">{exam.start_time ? format(new Date(exam.start_time), 'dd.MM.yyyy HH:mm') : '—'}</td>
                     <td className="px-5 py-3 text-slate-400 text-xs">{exam.end_time ? format(new Date(exam.end_time), 'dd.MM.yyyy HH:mm') : '—'}</td>
-                    <td className="px-5 py-3">{statusBadge(exam)}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <ActiveSwitch exam={exam} onToggle={onToggleActive} busy={togglingId === exam.id} />
+                        {statusBadge(exam)}
+                      </div>
+                    </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1.5 justify-end">
                         <Link to={`/teacher/exams/${exam.id}/results`} title={t('results', { ns: 'teacher' })}
@@ -204,12 +289,10 @@ export default function ExamsPage() {
                           className="w-7 h-7 rounded-lg flex items-center justify-center bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors">
                           <i className="bi bi-list-ol text-xs"></i>
                         </Link>
-                        {exam.is_upcoming && (
-                          <button onClick={() => openEdit(exam)} title={t('edit_time', { ns: 'teacher' })}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
-                            <i className="bi bi-pencil text-xs"></i>
-                          </button>
-                        )}
+                        <button onClick={() => setEditingExam(exam)} title={t('edit')}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
+                          <i className="bi bi-pencil text-xs"></i>
+                        </button>
                         <button onClick={() => onDelete(exam)} title={t('delete')}
                           className="w-7 h-7 rounded-lg flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
                           <i className="bi bi-trash text-xs"></i>
@@ -238,7 +321,10 @@ export default function ExamsPage() {
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">{exam.class_name}</p>
                   </div>
-                  {statusBadge(exam)}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <ActiveSwitch exam={exam} onToggle={onToggleActive} busy={togglingId === exam.id} />
+                    {statusBadge(exam)}
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-slate-400">
                   <span><i className="bi bi-play-circle mr-1"></i>{exam.start_time ? format(new Date(exam.start_time), 'dd.MM.yy HH:mm') : '—'}</span>
@@ -257,12 +343,10 @@ export default function ExamsPage() {
                     className="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors">
                     <i className="bi bi-list-ol text-sm"></i>
                   </Link>
-                  {exam.is_upcoming && (
-                    <button onClick={() => openEdit(exam)} title={t('edit')}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
-                      <i className="bi bi-pencil text-sm"></i>
-                    </button>
-                  )}
+                  <button onClick={() => setEditingExam(exam)} title={t('edit')}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
+                    <i className="bi bi-pencil text-sm"></i>
+                  </button>
                   <button onClick={() => onDelete(exam)} title={t('delete')}
                     className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
                     <i className="bi bi-trash text-sm"></i>

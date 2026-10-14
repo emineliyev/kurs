@@ -62,7 +62,7 @@ export default function AnalyticsPage() {
   const { t } = useTranslation(['common', 'teacher'])
   const months = t('months', { ns: 'teacher', returnObjects: true })
   const [classes, setClasses] = useState([])
-  const [selectedClass, setSelectedClass] = useState(null)
+  const [selectedClass, setSelectedClass] = useState('all')  // 'all' = every class of the teacher
   const [exams, setExams] = useState([])
   const [selectedExam, setSelectedExam] = useState('')
   const [stats, setStats] = useState(null)
@@ -76,7 +76,6 @@ export default function AnalyticsPage() {
     classesApi.list().then((res) => {
       const cls = res.data.results || res.data
       setClasses(cls)
-      if (cls.length > 0) setSelectedClass(cls[0].id)
     })
   }, [])
 
@@ -84,7 +83,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (!selectedClass) return
     setSelectedExam('')
-    examsApi.list({ class_room: selectedClass }).then((res) => {
+    examsApi.list(selectedClass === 'all' ? {} : { class_room: selectedClass }).then((res) => {
       setExams(res.data.results || res.data)
     }).catch(() => setExams([]))
   }, [selectedClass])
@@ -101,7 +100,7 @@ export default function AnalyticsPage() {
   }, [selectedClass, selectedMonth, selectedYear, filterByDate, selectedExam])
 
   const chartData = stats?.student_stats?.slice(0, 10).map((s) => ({
-    name: `${s.student__first_name} ${s.student__last_name[0]}.`,
+    name: [s.student__first_name, s.student__last_name ? `${s.student__last_name[0]}.` : ''].filter(Boolean).join(' '),
     avg: Math.round(s.avg_percentage || 0),
   })) || []
 
@@ -117,7 +116,8 @@ export default function AnalyticsPage() {
             onChange={(e) => setSelectedClass(e.target.value)}
             className="input-field w-48"
           >
-            {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="all">{t('all_classes', { ns: 'teacher' })}</option>
+            {classes.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
           </Select>
 
           {/* Exam filter */}
@@ -127,7 +127,9 @@ export default function AnalyticsPage() {
             className="input-field w-48"
           >
             <option value="">{t('all_exams', { ns: 'teacher' })}</option>
-            {exams.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
+            {exams.map((e) => (
+              <option key={e.id} value={String(e.id)}>{selectedClass === 'all' ? `${e.title} · ${e.class_name}` : e.title}</option>
+            ))}
           </Select>
 
           {/* Date filter toggle pill */}
@@ -167,7 +169,9 @@ export default function AnalyticsPage() {
           {stats && (
             <button
               onClick={() => {
-                const cls = classes.find((c) => String(c.id) === String(selectedClass))
+                const cls = selectedClass === 'all'
+                  ? { name: t('all_classes', { ns: 'teacher' }) }
+                  : classes.find((c) => String(c.id) === String(selectedClass))
                 const params = {}
                 if (filterByDate) { params.month = selectedMonth; params.year = selectedYear }
                 if (selectedExam) params.exam = selectedExam

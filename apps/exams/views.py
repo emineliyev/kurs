@@ -23,10 +23,11 @@ class ExamViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(class_room_id=class_room)
             return qs
         enrolled_classes = user.enrollments.filter(is_active=True).values_list('class_room_id', flat=True)
-        return Exam.objects.filter(
-            class_room__in=enrolled_classes,
-            is_active=True
-        ).select_related('test', 'class_room')
+        # A passive exam is hidden — except from students already inside it, so they can finish
+        from django.db.models import Q
+        return Exam.objects.filter(class_room__in=enrolled_classes).filter(
+            Q(is_active=True) | Q(results__student=user, results__status=ExamResult.STATUS_IN_PROGRESS)
+        ).distinct().select_related('test', 'class_room')
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -52,15 +53,6 @@ class ExamViewSet(viewsets.ModelViewSet):
             return exam
         except Subscription.DoesNotExist:
             return serializer.save()
-
-    def update(self, request, *args, **kwargs):
-        exam = self.get_object()
-        if not exam.is_upcoming:
-            return Response(
-                {'detail': 'Yalnız başlamamış imtahanlar redaktə edilə bilər.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         if self.get_object().results.filter(status=ExamResult.STATUS_SUBMITTED).exists():

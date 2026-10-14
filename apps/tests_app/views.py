@@ -72,13 +72,22 @@ class TestViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_teacher:
-            return Test.objects.filter(teacher=user).prefetch_related('class_rooms')
+            from django.db.models import Count, Exists, OuterRef, Q
+            from django.utils import timezone
+            from apps.exams.models import ExamResult
+            return Test.objects.filter(teacher=user).prefetch_related('class_rooms').annotate(
+                has_results=Exists(ExamResult.objects.filter(exam__test=OuterRef('pk'))),
+                open_exam_count=Count('exams', filter=Q(exams__is_active=True, exams__end_time__gte=timezone.now()),
+                                      distinct=True),
+            )
         # Students reach a test only through an exam scheduled for one of their classes;
         # the questions themselves are served only while that exam is in progress.
         enrolled_classes = user.enrollments.filter(is_active=True).values_list('class_room_id', flat=True)
-        return Test.objects.filter(
-            exams__class_room__in=enrolled_classes,
-            exams__is_active=True,
+        from django.db.models import Q
+        from apps.exams.models import ExamResult
+        return Test.objects.filter(exams__class_room__in=enrolled_classes).filter(
+            Q(exams__is_active=True)
+            | Q(exams__results__student=user, exams__results__status=ExamResult.STATUS_IN_PROGRESS)
         ).distinct().prefetch_related('class_rooms')
 
     def get_permissions(self):
@@ -99,6 +108,10 @@ class TestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         is_publishing = not test.is_published and request.data.get('is_published') in (True, 'true', 'True', '1', 1)
+        if test.is_published and request.data.get('is_published') in (False, 'false', 'False', '0', 0):
+            error = self._unpublish_error(test)
+            if error:
+                return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
         if is_publishing and not request.user.is_email_verified:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Testi tamamlamaq üçün əvvəlcə email ünvanınızı təsdiqləyin.')
@@ -112,6 +125,17 @@ class TestViewSet(viewsets.ModelViewSet):
             from django.utils import timezone
             Test.objects.filter(pk=test.pk).update(published_at=timezone.now())
         return response
+
+    @staticmethod
+    def _unpublish_error(test):
+        """A test goes back to draft only while no student has used it and no exam is waiting on it."""
+        from django.utils import timezone
+        if test.is_locked:
+            return 'Şagirdlər bu testlə imtahan veriblər. Dəyişmək üçün testin surətini çıxarın.'
+        open_exams = test.exams.filter(is_active=True, end_time__gte=timezone.now()).count()
+        if open_exams:
+            return f'Bu testə {open_exams} aktiv imtahan təyin olunub. Əvvəlcə onları passiv edin.'
+        return None
 
     def destroy(self, request, *args, **kwargs):
         test = self.get_object()
@@ -197,7 +221,8 @@ class TestViewSet(viewsets.ModelViewSet):
             from apps.exams.models import ExamResult
             now = timezone.now()
             result = ExamResult.objects.select_related('exam').filter(
-                student=user, exam__test=test, exam__is_active=True,
+                # no is_active check: a student already inside may finish after the exam is made passive
+                student=user, exam__test=test,
                 exam__start_time__lte=now, exam__end_time__gte=now,
                 status=ExamResult.STATUS_IN_PROGRESS,
             ).first()

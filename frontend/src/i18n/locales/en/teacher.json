@@ -598,5 +598,22 @@
   "student_restored": "Student restored",
   "unenroll_hint": "The student is removed from this class only; the account stays under “Students”.",
   "yes_remove": "Yes, remove",
-  "bank_already_added": "Added"
+  "bank_already_added": "Added",
+  "to_draft": "Back to draft",
+  "to_draft_used": "Students have taken an exam with this test, so it can’t go back to draft. Make a copy to change it.",
+  "to_draft_open_exams": "{{count}} active exam(s) use this test. Make them passive on the Exams page first.",
+  "to_draft_confirm": "Move “{{title}}” back to draft?",
+  "to_draft_text": "You’ll be able to edit the test again. When it’s ready, press “Finish test” again.",
+  "to_draft_yes": "Yes, move it",
+  "to_draft_done": "Test moved back to draft",
+  "edit_exam": "Edit exam",
+  "exam_started_locked": "Students have already started: the class and start time can’t change. You can change the title, end time and duration.",
+  "exam_passive": "Passive",
+  "exam_make_passive": "Make passive",
+  "exam_make_active": "Make active",
+  "exam_passive_confirm": "Make “{{title}}” passive?",
+  "exam_passive_text": "The exam disappears from students’ pages and can’t be started. You can turn it back on at any time.",
+  "exam_passive_in_progress": "{{count}} student(s) are taking it right now — they can still finish and submit. New students can’t start.",
+  "exam_now_passive": "Exam is now passive",
+  "exam_now_active": "Exam is now active"
 }

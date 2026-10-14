@@ -53,32 +53,36 @@ class TeacherDashboardView(APIView):
         })
 
 
+def _scope(request, class_id):
+    """(classes, label) for one of the teacher's classes, or all of them when class_id is None."""
+    classes = Class.objects.filter(teacher=request.user)
+    if class_id is None:
+        return classes, None
+    classes = classes.filter(id=class_id)
+    cls = classes.first()
+    return (classes, cls.name) if cls else (None, None)
+
+
+def _filter_results(results, params):
+    month, year = params.get('month'), params.get('year')
+    if month and year:
+        results = results.filter(submitted_at__month=int(month), submitted_at__year=int(year))
+    if params.get('exam'):
+        results = results.filter(exam_id=params['exam'])
+    return results
+
+
 class ClassAnalyticsView(APIView):
+    """Stats for one class, or for all the teacher's classes (class/all/)."""
     permission_classes = [IsTeacher]
 
-    def get(self, request, class_id):
-        try:
-            class_obj = Class.objects.get(id=class_id, teacher=request.user)
-        except Class.DoesNotExist:
+    def get(self, request, class_id=None):
+        classes, name = _scope(request, class_id)
+        if classes is None:
             return Response({'detail': 'Class not found.'}, status=404)
 
-        results = ExamResult.objects.filter(
-            exam__class_room=class_obj,
-            status='submitted'
-        )
-
-        month = request.query_params.get('month')
-        year = request.query_params.get('year')
-        if month and year:
-            results = results.filter(
-                submitted_at__month=int(month),
-                submitted_at__year=int(year)
-            )
-
-        exam_id = request.query_params.get('exam')
-        if exam_id:
-            results = results.filter(exam_id=exam_id)
-
+        results = _filter_results(
+            ExamResult.objects.filter(exam__class_room__in=classes, status='submitted'), request.query_params)
 
         stats = results.aggregate(
             avg_score=Avg('percentage'),
@@ -98,7 +102,7 @@ class ClassAnalyticsView(APIView):
         ).order_by('-avg_percentage')
 
         return Response({
-            'class_name': class_obj.name,
+            'class_name': name,
             'overview': stats,
             'pass_count': pass_count,
             'fail_count': fail_count,
@@ -107,34 +111,33 @@ class ClassAnalyticsView(APIView):
 
 
 class ClassDetailedExportView(APIView):
-    """Returns per-exam, per-student, per-question answer data for Excel export."""
+    """Per-exam, per-student, per-question answers for the Excel export (same filters as the page)."""
     permission_classes = [IsTeacher]
 
-    def get(self, request, class_id):
-        try:
-            class_obj = Class.objects.get(id=class_id, teacher=request.user)
-        except Class.DoesNotExist:
+    def get(self, request, class_id=None):
+        classes, name = _scope(request, class_id)
+        if classes is None:
             return Response({'detail': 'Class not found.'}, status=404)
 
-        from apps.exams.models import Exam, StudentAnswer
+        from apps.exams.models import Exam
         from apps.tests_app.models import Question
 
-        exams = Exam.objects.filter(class_room=class_obj).order_by('start_time')
+        exams = Exam.objects.filter(class_room__in=classes).select_related('class_room').order_by('start_time')
+        if request.query_params.get('exam'):
+            exams = exams.filter(id=request.query_params['exam'])
         export_exams = []
 
         for exam in exams:
-            questions = list(
-                Question.objects.filter(test=exam.test).order_by('order')
-            )
+            questions = list(Question.objects.filter(test=exam.test).order_by('order').prefetch_related('answers'))
+            # Letters follow the teacher's own order of the choices
+            letters = {a.id: 'ABCDEF'[i] for q in questions for i, a in enumerate(q.answers.all()) if i < 6}
             results = list(
-                ExamResult.objects.filter(exam=exam, status='submitted')
+                _filter_results(ExamResult.objects.filter(exam=exam, status='submitted'), request.query_params)
                 .select_related('student')
-                .prefetch_related('answers__question', 'answers__selected_answer')
+                .prefetch_related('answers__selected_answer')
             )
             if not results:
                 continue
-
-            q_ids = [q.id for q in questions]
 
             rows = []
             for result in results:
@@ -144,18 +147,8 @@ class ClassDetailedExportView(APIView):
                     a = answer_map.get(q.id)
                     if a is None:
                         answers.append({'text': '', 'is_correct': None})
-                    elif a.selected_answer:
-                        # MCQ: show letter label
-                        try:
-                            idx = q_ids.index(q.id)
-                            all_q_answers = list(q.answers.order_by('id'))
-                            letter_idx = next(
-                                (i for i, qa in enumerate(all_q_answers) if qa.id == a.selected_answer_id),
-                                None
-                            )
-                            label = 'ABCDEF'[letter_idx] if letter_idx is not None else a.selected_answer.text[:20]
-                        except Exception:
-                            label = a.selected_answer.text[:20] if a.selected_answer else ''
+                    elif a.selected_answer_id:
+                        label = letters.get(a.selected_answer_id) or a.selected_answer.text[:20]
                         answers.append({'text': label, 'is_correct': a.is_correct})
                     else:
                         answers.append({'text': (a.answer_text or '')[:30], 'is_correct': a.is_correct})
@@ -167,13 +160,13 @@ class ClassDetailedExportView(APIView):
                 })
 
             export_exams.append({
-                'title': exam.title,
+                'title': exam.title if class_id else f'{exam.class_room.name} — {exam.title}',
                 'questions': [q.text[:40] if q.text else f'S{q.order}' for q in questions],
                 'rows': rows,
             })
 
         return Response({
-            'class_name': class_obj.name,
+            'class_name': name,
             'exams': export_exams,
         })
 

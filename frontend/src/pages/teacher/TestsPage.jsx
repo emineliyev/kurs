@@ -8,6 +8,7 @@ import { useAuthStore } from '@/store/authStore'
 import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
 import ScheduleExamModal from '@/components/teacher/ScheduleExamModal'
+import { toastApiError } from '@/api/errors'
 
 export default function TestsPage() {
   const { t } = useTranslation(['common', 'teacher'])
@@ -60,6 +61,49 @@ export default function TestsPage() {
       toast.success(t('test_duplicated', { ns: 'teacher' }))
       load()
     } catch { toast.error(t('error')) } finally { setDuplicatingId(null) }
+  }
+
+  // Why a ready test can't go back to draft (null = it can)
+  const draftBlocker = (test) =>
+    test.has_results ? t('to_draft_used', { ns: 'teacher' })
+      : test.open_exam_count > 0 ? t('to_draft_open_exams', { ns: 'teacher', count: test.open_exam_count })
+      : null
+
+  const onToDraft = async (test) => {
+    const blocker = draftBlocker(test)
+    if (blocker) {
+      Swal.fire({ title: t('to_draft', { ns: 'teacher' }), text: blocker, icon: 'info', confirmButtonText: t('close') })
+      return
+    }
+    const r = await Swal.fire({
+      title: t('to_draft_confirm', { ns: 'teacher', title: test.title }),
+      text: t('to_draft_text', { ns: 'teacher' }),
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: t('to_draft_yes', { ns: 'teacher' }),
+      cancelButtonText: t('cancel'),
+    })
+    if (!r.isConfirmed) return
+    try {
+      await testsApi.update(test.id, { is_published: false })
+      toast.success(t('to_draft_done', { ns: 'teacher' }))
+      navigate(`/teacher/tests/${test.id}/edit`)
+    } catch (err) {
+      toastApiError(err)
+    }
+  }
+
+  const toDraftButton = (test, size) => {
+    const blocked = !!draftBlocker(test)
+    return (
+      <button onClick={() => onToDraft(test)}
+        title={draftBlocker(test) || t('to_draft', { ns: 'teacher' })}
+        className={`${size} rounded-lg flex items-center justify-center transition-colors ${blocked
+          ? 'bg-slate-50 text-slate-300 cursor-help'
+          : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}>
+        <i className="bi bi-arrow-counterclockwise text-sm"></i>
+      </button>
+    )
   }
 
   const visibleTests = tests.filter((t) =>
@@ -140,6 +184,7 @@ export default function TestsPage() {
                             <i className="bi bi-calendar-plus"></i> {t('schedule_exam', { ns: 'teacher' })}
                           </button>
                         )}
+                        {test.is_published && toDraftButton(test, 'w-7 h-7')}
                         {!test.is_published && (
                           <Link to={`/teacher/tests/${test.id}/edit`} title={t('edit')}
                             className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
@@ -194,6 +239,7 @@ export default function TestsPage() {
                         <i className="bi bi-calendar-plus"></i> {t('schedule_exam', { ns: 'teacher' })}
                       </button>
                     )}
+                    {test.is_published && toDraftButton(test, 'w-8 h-8')}
                     {!test.is_published && (
                       <Link to={`/teacher/tests/${test.id}/edit`} title={t('edit')}
                         className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">

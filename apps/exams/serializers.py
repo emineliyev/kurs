@@ -21,7 +21,11 @@ class ExamSerializer(serializers.ModelSerializer):
     passed_count = serializers.SerializerMethodField()
     failed_count = serializers.SerializerMethodField()
     has_results = serializers.SerializerMethodField()
+    in_progress_count = serializers.SerializerMethodField()
     needs_grading_count = serializers.SerializerMethodField()
+
+    # Once a student has started, these stay as they were (results belong to that class/time/order)
+    LOCKED_AFTER_START = ('class_room', 'start_time', 'randomize_questions', 'randomize_answers')
 
     class Meta:
         model = Exam
@@ -32,7 +36,7 @@ class ExamSerializer(serializers.ModelSerializer):
             'randomize_questions', 'randomize_answers', 'is_active',
             'is_ongoing', 'is_upcoming', 'is_finished', 'my_status',
             'participants_count', 'passed_count', 'failed_count', 'has_results',
-            'needs_grading_count', 'created_at',
+            'in_progress_count', 'needs_grading_count', 'created_at',
         ]
         read_only_fields = ['id', 'created_at']
 
@@ -69,6 +73,9 @@ class ExamSerializer(serializers.ModelSerializer):
     def get_has_results(self, obj):
         return obj.results.exists()
 
+    def get_in_progress_count(self, obj):
+        return obj.results.filter(status=ExamResult.STATUS_IN_PROGRESS).count()
+
     def get_needs_grading_count(self, obj):
         return ExamResult.objects.filter(
             exam=obj,
@@ -77,10 +84,21 @@ class ExamSerializer(serializers.ModelSerializer):
         ).distinct().count()
 
     def validate(self, attrs):
-        start = attrs.get('start_time')
-        end = attrs.get('end_time')
+        exam = self.instance
+        start = attrs.get('start_time', exam.start_time if exam else None)
+        end = attrs.get('end_time', exam.end_time if exam else None)
         if start and end and start >= end:
-            raise serializers.ValidationError({'end_time': 'End time must be after start time.'})
+            raise serializers.ValidationError({'end_time': 'Bitmə vaxtı başlama vaxtından sonra olmalıdır.'})
+        if exam is not None:
+            if 'test' in attrs and attrs['test'] != exam.test:
+                raise serializers.ValidationError({'test': 'İmtahanın testi dəyişdirilə bilməz. Yeni imtahan təyin edin.'})
+            if exam.results.exists():
+                changed = [f for f in self.LOCKED_AFTER_START if f in attrs and attrs[f] != getattr(exam, f)]
+                if changed:
+                    raise serializers.ValidationError({changed[0]: (
+                        'Şagirdlər artıq başlayıb: yalnız ad, bitmə vaxtı, müddət və aktivlik dəyişdirilə bilər.')})
+            if attrs.get('is_active') and not exam.is_active and not exam.test.is_published:
+                raise serializers.ValidationError({'is_active': 'Test qaralamadadır. Əvvəlcə testi tamamlayın.'})
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             test = attrs.get('test')

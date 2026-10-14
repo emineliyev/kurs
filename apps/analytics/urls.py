@@ -3,6 +3,8 @@ from .views import TeacherDashboardView, ClassAnalyticsView, ClassDetailedExport
 
 urlpatterns = [
     path('dashboard/', TeacherDashboardView.as_view(), name='teacher-dashboard'),
+    path('class/all/', ClassAnalyticsView.as_view(), name='all-classes-analytics'),
+    path('class/all/detail/', ClassDetailedExportView.as_view(), name='all-classes-analytics-detail'),
     path('class/<int:class_id>/', ClassAnalyticsView.as_view(), name='class-analytics'),
     path('class/<int:class_id>/detail/', ClassDetailedExportView.as_view(), name='class-analytics-detail'),
     path('student/<int:student_id>/results/', StudentResultsForTeacherView.as_view(), name='student-results-teacher'),
