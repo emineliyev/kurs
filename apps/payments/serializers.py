@@ -21,7 +21,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'plan_name', 'amount', 'currency', 'order_type', 'type_display',
             'status', 'status_display', 'rejection_reason',
-            'screenshot', 'user_note', 'created_at',
+            'user_note', 'created_at',
         ]
 
 

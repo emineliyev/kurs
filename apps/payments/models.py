@@ -1,5 +1,14 @@
+import os
+import uuid
+
 from django.db import models
 from apps.accounts.models import User
+
+
+def screenshot_path(instance, filename):
+    """Random file name: receipts are private, so their URL must not be guessable."""
+    ext = os.path.splitext(filename)[1].lower()[:5] or '.jpg'
+    return f'payment_screenshots/{uuid.uuid4().hex}{ext}'
 from apps.subscriptions.models import Plan
 
 
@@ -76,7 +85,7 @@ class PaymentRequest(models.Model):
     status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, verbose_name='Status')
 
     # User submitted data
-    screenshot       = models.ImageField(upload_to='payment_screenshots/', verbose_name='Ödəniş çeki (screenshot)')
+    screenshot       = models.ImageField(upload_to=screenshot_path, verbose_name='Ödəniş çeki (screenshot)')
     user_note        = models.TextField(blank=True, verbose_name='İstifadəçi qeydi')
 
     # Admin review

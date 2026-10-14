@@ -40,19 +40,20 @@ class ExamViewSet(viewsets.ModelViewSet):
         from rest_framework.exceptions import PermissionDenied
         if not user.is_email_verified:
             raise PermissionDenied('İmtahan yaratmaq üçün əvvəlcə email ünvanınızı təsdiqləyin.')
-        try:
-            subscription = Subscription.objects.select_related('plan').get(teacher=user)
-            subscription.reset_monthly_count_if_needed()
-            if not subscription.can_create_exam():
-                raise PermissionDenied(
-                    f'Aylıq imtahan limitinə çatmısınız ({subscription.plan.max_exams_per_month}). Abunəliyinizi yeniləyin.'
-                )
-            exam = serializer.save()
-            subscription.exams_used_this_month += 1
-            subscription.save(update_fields=['exams_used_this_month'])
-            return exam
-        except Subscription.DoesNotExist:
-            return serializer.save()
+        subscription = Subscription.objects.select_related('plan').filter(teacher=user).first()
+        if subscription is None:
+            raise PermissionDenied(Subscription.MISSING_MESSAGE)
+        if not subscription.is_active:
+            raise PermissionDenied(Subscription.EXPIRED_MESSAGE)
+        subscription.reset_monthly_count_if_needed()
+        if not subscription.can_create_exam():
+            raise PermissionDenied(
+                f'Aylıq imtahan limitinə çatmısınız ({subscription.plan.max_exams_per_month}). Abunəliyinizi yeniləyin.'
+            )
+        exam = serializer.save()
+        subscription.exams_used_this_month += 1
+        subscription.save(update_fields=['exams_used_this_month'])
+        return exam
 
     def destroy(self, request, *args, **kwargs):
         if self.get_object().results.filter(status=ExamResult.STATUS_SUBMITTED).exists():

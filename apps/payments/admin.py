@@ -194,25 +194,47 @@ class PaymentRequestAdmin(admin.ModelAdmin):
             color, label
         )
 
+    # Receipts are private (/media/payment_screenshots/ is closed in nginx): the admin gets them
+    # through this view, which only staff can open
+    def get_urls(self):
+        from django.urls import path
+        return [
+            path('<int:pk>/screenshot/', self.admin_site.admin_view(self.screenshot_view),
+                 name='payments_paymentrequest_screenshot'),
+        ] + super().get_urls()
+
+    def screenshot_view(self, request, pk):
+        from django.http import FileResponse, Http404
+        obj = self.get_object(request, pk)
+        if obj is None or not obj.screenshot or not self.has_view_permission(request, obj):
+            raise Http404
+        return FileResponse(obj.screenshot.open('rb'))
+
+    def _screenshot_url(self, obj):
+        from django.urls import reverse
+        return reverse('admin:payments_paymentrequest_screenshot', args=[obj.pk])
+
     @admin.display(description='Çek')
     def screenshot_thumb(self, obj):
         if obj.screenshot:
+            url = self._screenshot_url(obj)
             return format_html(
                 '<a href="{}" target="_blank">'
                 '<img src="{}" style="height:40px;width:56px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0"/>'
                 '</a>',
-                obj.screenshot.url, obj.screenshot.url
+                url, url
             )
         return '—'
 
     @admin.display(description='Çek (böyük)')
     def screenshot_preview(self, obj):
         if obj.screenshot:
+            url = self._screenshot_url(obj)
             return format_html(
                 '<a href="{}" target="_blank">'
                 '<img src="{}" style="max-height:400px;max-width:600px;border-radius:8px;border:1px solid #e2e8f0"/>'
                 '</a><br/><a href="{}" target="_blank">Tam ölçüdə aç →</a>',
-                obj.screenshot.url, obj.screenshot.url, obj.screenshot.url
+                url, url, url
             )
         return 'Yüklənməyib'
 

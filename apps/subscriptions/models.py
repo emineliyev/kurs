@@ -41,6 +41,7 @@ class Plan(models.Model):
 
 class Subscription(models.Model):
     EXPIRED_MESSAGE = 'Abunəliyinizin müddəti bitib. Davam etmək üçün abunəliyinizi yeniləyin.'
+    MISSING_MESSAGE = 'Aktiv abunəliyiniz yoxdur. "Abunəlik" səhifəsindən plan seçin.'
 
     STATUS_ACTIVE    = 'active'
     STATUS_EXPIRED   = 'expired'

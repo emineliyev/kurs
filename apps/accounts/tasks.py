@@ -58,7 +58,8 @@ def send_password_reset_email_task(user_id):
     except User.DoesNotExist:
         return
 
-    token = signing.dumps({'user_id': user.pk}, salt='password-reset')
+    from .tokens import make_reset_token
+    token = make_reset_token(user)
     reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
     subject = "🔐 Şifrənizi sıfırlayın — Kurs"
 

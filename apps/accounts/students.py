@@ -21,7 +21,7 @@ def student_limit_error(teacher):
     from apps.subscriptions.models import Subscription
     sub = Subscription.objects.select_related('plan').filter(teacher=teacher).first()
     if sub is None:
-        return None
+        return Subscription.MISSING_MESSAGE
     if not sub.is_active:
         return Subscription.EXPIRED_MESSAGE
     limit = sub.plan.max_students

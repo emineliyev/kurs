@@ -35,18 +35,17 @@ class ClassViewSet(viewsets.ModelViewSet):
         user = self.request.user
         from apps.subscriptions.models import Subscription
         from rest_framework.exceptions import PermissionDenied
-        try:
-            sub = Subscription.objects.select_related('plan').get(teacher=user)
-            if not sub.is_active:
-                raise PermissionDenied(Subscription.EXPIRED_MESSAGE)
-            if sub.plan.max_classes != -1:
-                current = user.classes.filter(is_active=True).count()
-                if current >= sub.plan.max_classes:
-                    raise PermissionDenied(
-                        f'Sinif limitinə çatmısınız ({sub.plan.max_classes}). Abunəliyinizi yeniləyin.'
-                    )
-        except Subscription.DoesNotExist:
-            pass
+        sub = Subscription.objects.select_related('plan').filter(teacher=user).first()
+        if sub is None:
+            raise PermissionDenied(Subscription.MISSING_MESSAGE)
+        if not sub.is_active:
+            raise PermissionDenied(Subscription.EXPIRED_MESSAGE)
+        if sub.plan.max_classes != -1:
+            current = user.classes.filter(is_active=True).count()
+            if current >= sub.plan.max_classes:
+                raise PermissionDenied(
+                    f'Sinif limitinə çatmısınız ({sub.plan.max_classes}). Abunəliyinizi yeniləyin.'
+                )
         serializer.save(teacher=user)
 
     def destroy(self, request, *args, **kwargs):
@@ -76,8 +75,9 @@ class ClassViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
         from apps.subscriptions.models import Subscription
         sub = Subscription.objects.filter(teacher=request.user).first()
-        if sub is not None and not sub.is_active:
-            return Response({'detail': Subscription.EXPIRED_MESSAGE}, status=status.HTTP_403_FORBIDDEN)
+        if sub is None or not sub.is_active:
+            message = Subscription.MISSING_MESSAGE if sub is None else Subscription.EXPIRED_MESSAGE
+            return Response({'detail': message}, status=status.HTTP_403_FORBIDDEN)
         serializer = EnrollStudentSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         enrollment, created = ClassEnrollment.objects.get_or_create(

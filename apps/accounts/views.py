@@ -5,7 +5,7 @@ from django.core.mail import send_mail
 from django.utils.translation import gettext_lazy as _
 from apps.email_utils import email_shell, cta_button, greeting, paragraph, note
 from apps.accounts.tasks import send_verification_email_task, send_password_reset_email_task
-from rest_framework import status, generics
+from rest_framework import generics, serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.response import Response
@@ -64,7 +64,8 @@ def _send_verification_email(user):
 
 
 def _send_password_reset_email(user):
-    token = signing.dumps({'user_id': user.pk}, salt='password-reset')
+    from .tokens import make_reset_token
+    token = make_reset_token(user)
     reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
     subject = "🔐 Şifrənizi sıfırlayın — Kurs"
 
@@ -98,7 +99,8 @@ def _send_password_reset_email(user):
 from .serializers import (
     TeacherRegisterSerializer, LoginSerializer,
     UserSerializer, PasswordChangeSerializer, StudentCreateSerializer,
-    TeacherProfileSerializer, StudentUpdateSerializer, FeedbackSerializer, StudentSerializer
+    TeacherProfileSerializer, StudentUpdateSerializer, FeedbackSerializer, StudentSerializer,
+    validate_strong_password,
 )
 from .students import students_of, student_limit_error
 
@@ -186,9 +188,15 @@ class ProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
+    # Only these are self-editable. Email, username, role and active/verified flags are not: a student's
+    # login is managed by their teacher, and an email change would keep the old "verified" status.
+    SELF_EDITABLE = {'teacher': ('first_name', 'last_name'), 'student': ()}
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        allowed = self.SELF_EDITABLE.get(instance.role, ())
+        data = {k: request.data[k] for k in allowed if k in request.data}
+        serializer = self.get_serializer(instance, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
@@ -296,6 +304,17 @@ class StudentRestoreView(APIView):
         return Response(StudentSerializer(student).data)
 
 
+def _free_username(base):
+    """A username not taken yet: 'ali', then 'ali1', 'ali2', …"""
+    import re
+    base = re.sub(r'[^a-z0-9._]', '', base.lower())[:40] or 'user'
+    candidate, n = base, 0
+    while User.objects.filter(username__iexact=candidate).exists():
+        n += 1
+        candidate = f'{base}{n}'
+    return candidate
+
+
 class GoogleAuthView(APIView):
     permission_classes = [AllowAny]
 
@@ -340,16 +359,23 @@ class GoogleAuthView(APIView):
             if not email:
                 return Response({'detail': _('Could not get email from Google.')}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Verify audience matches our client ID
+            # The token must be issued for *our* app (otherwise any site's Google token would log in)
+            # and Google must have verified the address
             client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '')
-            if client_id and google_data.get('aud') != client_id:
+            if not client_id or google_data.get('aud') != client_id:
                 return Response({'detail': _('Invalid Google token.')}, status=status.HTTP_400_BAD_REQUEST)
+            if str(google_data.get('email_verified')).lower() != 'true':
+                return Response({'detail': _('Invalid Google token.')}, status=status.HTTP_400_BAD_REQUEST)
+
+            existing = User.objects.filter(email__iexact=email).first()
+            if existing is not None and not existing.is_active:
+                return Response({'detail': _('Account is disabled.')}, status=status.HTTP_400_BAD_REQUEST)
 
             # Get or create user
             user, created = User.objects.get_or_create(
-                email=email,
+                email=existing.email if existing else email,
                 defaults={
-                    'username': email.split('@')[0],
+                    'username': _free_username(email.split('@')[0]),
                     'first_name': first_name,
                     'last_name': last_name,
                     'role': User.ROLE_TEACHER,
@@ -441,13 +467,20 @@ class PasswordResetConfirmView(APIView):
         new_password = request.data.get('new_password', '')
         if not token or not new_password:
             return Response({'detail': 'Token və yeni şifrə tələb olunur.'}, status=status.HTTP_400_BAD_REQUEST)
+        from .tokens import user_from_reset_token
         try:
-            data = signing.loads(token, salt='password-reset', max_age=3600)
-            user = User.objects.get(pk=data['user_id'])
-            user.set_password(new_password)
-            user.save(update_fields=['password'])
-            return Response({'detail': 'Şifrə uğurla sıfırlandı. İndi daxil ola bilərsiniz.'})
+            user = user_from_reset_token(token)
         except signing.SignatureExpired:
             return Response({'detail': 'Linkin müddəti bitib. Yeni sıfırlama tələb edin.'}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception:
-            return Response({'detail': 'Keçərsiz və ya köhnəlmiş link.'}, status=status.HTTP_400_BAD_REQUEST)
+        if user is None:
+            return Response({'detail': 'Keçərsiz və ya artıq istifadə olunmuş link.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Same rules as registration
+        if len(new_password) < 8:
+            return Response({'detail': 'Şifrə ən azı 8 simvol olmalıdır.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            validate_strong_password(new_password)
+        except serializers.ValidationError as e:
+            return Response({'detail': str(e.detail[0])}, status=status.HTTP_400_BAD_REQUEST)
+        user.set_password(new_password)
+        user.save(update_fields=['password'])  # changes the fingerprint, so this link can't be used again
+        return Response({'detail': 'Şifrə uğurla sıfırlandı. İndi daxil ola bilərsiniz.'})
