@@ -17,6 +17,7 @@ import { renderMath, MathText } from '@/utils/math'
 import QuestionTextEditor, { LatexPreview, AnswerMiniEditor } from '@/components/teacher/QuestionTextEditor'
 import { toastApiError } from '@/api/errors'
 import { fmtPoints } from '@/utils/score'
+import Select from '@/components/common/Select'
 import BankFolderTree, { inSelection } from '@/components/teacher/BankFolderTree'
 
 let _dndIdCounter = 0
@@ -588,7 +589,7 @@ export default function TestCreatePage() {
   const [randomCount, setRandomCount]     = useState('')
   const [addingMany, setAddingMany]       = useState(false)
   const { register, handleSubmit, reset, watch } = useForm({
-    defaultValues: { max_score: 100, equal_points: true, passing_score: 50, negative_marking: false, wrong_per_correct: 4 }
+    defaultValues: { max_score: 100, equal_points: true, passing_score: 50, negative_marking: false, wrong_per_correct: '4' }
   })
   const formEqual = watch('equal_points')
   const formMax = watch('max_score')
@@ -615,7 +616,7 @@ export default function TestCreatePage() {
         equal_points: test.equal_points,
         passing_score: test.passing_score,
         negative_marking: test.negative_marking,
-        wrong_per_correct: test.wrong_per_correct,
+        wrong_per_correct: String(test.wrong_per_correct ?? 4),
       })
       setCreatedTest(test)
       const loadedQs = (qRes.data || []).map(q => ({
@@ -995,10 +996,11 @@ export default function TestCreatePage() {
                 <span className="flex-1">
                   <span className="flex items-center gap-2 flex-wrap text-sm font-semibold text-slate-700">
                     {t('net_score', { ns: 'teacher' })}:
-                    <select {...register('wrong_per_correct', { valueAsNumber: true })}
-                      className="border border-slate-200 rounded-lg px-2 py-0.5 text-sm font-semibold">
-                      {[3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
+                    <span className="w-20 font-normal">
+                      <Select {...register('wrong_per_correct')} className="input-field py-1 text-sm font-semibold">
+                        {[3, 4, 5].map(n => <option key={n} value={String(n)}>{n}</option>)}
+                      </Select>
+                    </span>
                     {t('net_score_rule', { ns: 'teacher' })}
                   </span>
                   <span className="block text-xs text-slate-400">{t('net_score_hint', { ns: 'teacher' })}</span>
