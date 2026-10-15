@@ -662,5 +662,6 @@
   "paper_saved": "Сохранено: {{score}} балл.",
   "paper_list": "Введённые бумажные результаты ({{count}})",
   "paper_delete_confirm": "Удалить бумажный результат: {{name}}?",
-  "paper_badge": "Бумага · вариант {{variant}}"
+  "paper_badge": "Бумага · вариант {{variant}}",
+  "print_watermark": "Водяной знак"
 }

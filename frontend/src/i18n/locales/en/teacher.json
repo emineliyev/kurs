@@ -662,5 +662,6 @@
   "paper_saved": "Saved: {{score}} points",
   "paper_list": "Entered paper results ({{count}})",
   "paper_delete_confirm": "Delete the paper result of {{name}}?",
-  "paper_badge": "Paper · variant {{variant}}"
+  "paper_badge": "Paper · variant {{variant}}",
+  "print_watermark": "Watermark"
 }

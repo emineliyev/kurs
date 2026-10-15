@@ -190,6 +190,11 @@
   font-family: 'Times New Roman', Times, serif;
   line-height: 1.4;
 }
+.print-sheet { position: relative; }
+.print-watermark {
+  position: absolute; inset: 0; z-index: 5; pointer-events: none; background-repeat: repeat;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
 .print-head { border-bottom: 1.5px solid #0f172a; padding-bottom: 3mm; margin-bottom: 5mm; }
 .print-school { font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; }
 .print-title { font-size: 1.5em; font-weight: 700; line-height: 1.2; }

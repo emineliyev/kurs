@@ -670,5 +670,6 @@
   "paper_saved": "Yadda saxlanıldı: {{score}} bal",
   "paper_list": "Daxil edilmiş kağız nəticələri ({{count}})",
   "paper_delete_confirm": "{{name}} — kağız nəticəsi silinsin?",
-  "paper_badge": "Kağız · {{variant}} variantı"
+  "paper_badge": "Kağız · {{variant}} variantı",
+  "print_watermark": "Su nişanı"
 }

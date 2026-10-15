@@ -23,6 +23,7 @@ import { examsApi } from '@/api/exams'
 import { testsApi } from '@/api/tests'
 import { renderMath } from '@/utils/math'
 import { LABELS, MCQ_TYPES } from '@/utils/examConstants'
+import { WATERMARK_ON_KEY, WATERMARK_TEXT_KEY, watermarkTile } from '@/components/common/Watermark'
 
 function PassageBlock({ q }) {
   return (
@@ -130,9 +131,18 @@ export default function ExamPrintPage() {
     : (exam?.class_name ? `${t('print_class')}: ${exam.class_name}` : '')
 
   let qCounter = 0
+  // Same setting as the test print page; a fixed layer repeats on every printed page
+  const watermarkText = localStorage.getItem(WATERMARK_ON_KEY) === '0'
+    ? '' : (localStorage.getItem(WATERMARK_TEXT_KEY) || exam?.teacher_name || '')
 
   return (
     <>
+      {watermarkText.trim() && (
+        <div aria-hidden="true" style={{
+          position: 'fixed', inset: 0, zIndex: 5, pointerEvents: 'none', backgroundRepeat: 'repeat',
+          backgroundImage: watermarkTile(watermarkText), WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+        }} />
+      )}
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

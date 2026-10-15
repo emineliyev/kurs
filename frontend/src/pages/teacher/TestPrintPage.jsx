@@ -5,6 +5,8 @@ import { testsApi } from '@/api/tests'
 import { renderMath } from '@/utils/math'
 import { buildVariants, CHOICE_LETTERS } from '@/utils/printVariants'
 import PageSpinner from '@/components/common/PageSpinner'
+import Watermark, { WATERMARK_ON_KEY, WATERMARK_TEXT_KEY } from '@/components/common/Watermark'
+import { useAuthStore } from '@/store/authStore'
 
 const FONT_SIZES = { sm: '10pt', md: '11.5pt', lg: '13pt' }
 const SCHOOL_KEY = 'print-school-name'
@@ -82,6 +84,12 @@ export default function TestPrintPage() {
   const [withHeader, setWithHeader] = useState(true)
   const [withKey, setWithKey] = useState(true)
   const [school, setSchool] = useState(() => localStorage.getItem(SCHOOL_KEY) || '')
+  const { user } = useAuthStore()
+  const teacherName = [user?.first_name, user?.last_name].filter(Boolean).join(' ')
+  const [watermarkOn, setWatermarkOn] = useState(() => localStorage.getItem(WATERMARK_ON_KEY) !== '0')
+  const [watermark, setWatermark] = useState(() => localStorage.getItem(WATERMARK_TEXT_KEY) || teacherName)
+  useEffect(() => { localStorage.setItem(WATERMARK_ON_KEY, watermarkOn ? '1' : '0') }, [watermarkOn])
+  useEffect(() => { localStorage.setItem(WATERMARK_TEXT_KEY, watermark) }, [watermark])
 
   useEffect(() => {
     testsApi.get(id).then((r) => setTest(r.data)).catch(() => setError(true))
@@ -133,6 +141,16 @@ export default function TestPrintPage() {
           </label>
           <input value={school} onChange={(e) => setSchool(e.target.value)} maxLength={120}
             placeholder={t('print_school_ph', { ns: 'teacher' })} className="input-field py-1.5 text-xs w-56" />
+          <div className="flex items-center gap-1.5">
+            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={watermarkOn} onChange={(e) => setWatermarkOn(e.target.checked)} className="accent-primary-600" />
+              {t('print_watermark', { ns: 'teacher' })}
+            </label>
+            {watermarkOn && (
+              <input value={watermark} onChange={(e) => setWatermark(e.target.value)} maxLength={80}
+                placeholder={teacherName} className="input-field py-1.5 text-xs w-44" />
+            )}
+          </div>
           <button onClick={() => window.print()} className="btn-primary ml-auto">
             <i className="bi bi-printer"></i> {t('print_btn', { ns: 'teacher' })}
           </button>
@@ -146,6 +164,7 @@ export default function TestPrintPage() {
       <div className="py-8 print:py-0 space-y-8 print:space-y-0">
         {built.map((v) => (
           <section key={v.letter} className="print-sheet" style={sheetStyle}>
+            {watermarkOn && <Watermark text={watermark || teacherName} />}
             <header className="print-head">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
