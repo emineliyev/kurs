@@ -72,6 +72,7 @@ def build_card(result):
         'student_username': student.username,
         'score': result.score,
         'total_points': result.total_points,
+        'penalty': result.penalty,
         'percentage': result.percentage,
         'passed': result.passed,
         'submitted_at': result.submitted_at,

@@ -102,6 +102,9 @@ class TestSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'max_score': 'Ümumi bal 0-dan böyük olmalıdır.'})
         if passing is not None and passing < 0:
             raise serializers.ValidationError({'passing_score': 'Keçid balı mənfi ola bilməz.'})
+        per = attrs.get('wrong_per_correct', getattr(self.instance, 'wrong_per_correct', 4))
+        if per is not None and not 2 <= per <= 10:
+            raise serializers.ValidationError({'wrong_per_correct': '2 ilə 10 arasında olmalıdır.'})
         equal = attrs.get('equal_points', getattr(self.instance, 'equal_points', True))
         if equal and passing is not None and max_score and passing > max_score:
             raise serializers.ValidationError({'passing_score': f'Keçid balı ümumi baldan ({max_score:g}) çox ola bilməz.'})
@@ -118,7 +121,8 @@ class TestSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'topic', 'class_rooms', 'class_names',
             'is_published', 'randomize_questions', 'randomize_answers',
-            'passing_score', 'max_score', 'equal_points', 'question_count', 'total_points',
+            'passing_score', 'max_score', 'equal_points', 'negative_marking', 'wrong_per_correct',
+            'question_count', 'total_points',
             'teacher_name', 'created_at', 'updated_at', 'has_results', 'open_exam_count',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

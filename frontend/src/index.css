@@ -239,7 +239,7 @@
 .rc-info { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5mm 8mm; margin-bottom: 3mm; }
 .rc-info div, .rc-summary div { display: flex; flex-direction: column; }
 .rc-info span, .rc-summary span { font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; }
-.rc-summary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border: 1px solid #cbd5e1;
+.rc-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); border: 1px solid #cbd5e1;
   border-radius: 2mm; margin-bottom: 3.5mm; }
 .rc-summary div { padding: 1.8mm 2.5mm; border-left: 1px solid #e2e8f0; }
 .rc-summary div:first-child { border-left: 0; }

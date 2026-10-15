@@ -588,7 +588,7 @@ export default function TestCreatePage() {
   const [randomCount, setRandomCount]     = useState('')
   const [addingMany, setAddingMany]       = useState(false)
   const { register, handleSubmit, reset, watch } = useForm({
-    defaultValues: { max_score: 100, equal_points: true, passing_score: 50 }
+    defaultValues: { max_score: 100, equal_points: true, passing_score: 50, negative_marking: false, wrong_per_correct: 4 }
   })
   const formEqual = watch('equal_points')
   const formMax = watch('max_score')
@@ -614,6 +614,8 @@ export default function TestCreatePage() {
         max_score: test.max_score,
         equal_points: test.equal_points,
         passing_score: test.passing_score,
+        negative_marking: test.negative_marking,
+        wrong_per_correct: test.wrong_per_correct,
       })
       setCreatedTest(test)
       const loadedQs = (qRes.data || []).map(q => ({
@@ -988,6 +990,20 @@ export default function TestCreatePage() {
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-primary-500 text-sm" />
                 </div>
               </div>
+              <label className="flex items-start gap-2.5 cursor-pointer pt-1 border-t border-slate-100">
+                <input type="checkbox" {...register('negative_marking')} className="mt-1 w-4 h-4 accent-primary-600" />
+                <span className="flex-1">
+                  <span className="flex items-center gap-2 flex-wrap text-sm font-semibold text-slate-700">
+                    {t('net_score', { ns: 'teacher' })}:
+                    <select {...register('wrong_per_correct', { valueAsNumber: true })}
+                      className="border border-slate-200 rounded-lg px-2 py-0.5 text-sm font-semibold">
+                      {[3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                    {t('net_score_rule', { ns: 'teacher' })}
+                  </span>
+                  <span className="block text-xs text-slate-400">{t('net_score_hint', { ns: 'teacher' })}</span>
+                </span>
+              </label>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5">
               <i className="bi bi-lightbulb"></i>{t('test_library_hint', { ns: 'teacher' })}

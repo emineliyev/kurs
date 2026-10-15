@@ -75,5 +75,6 @@
   "rule_not_same_as_old": "Hazırkı şifrədən fərqli",
   "special_chars_allowed": "Qəbul olunan xüsusi işarələr:",
   "answers_hidden_note": "Hansı suala düz, hansına səhv cavab verdiyinizi görürsünüz. Düzgün variantlar imtahan bitəndən sonra ({{time}}) görünəcək.",
-  "review_never": "Müəllim bu imtahanda yalnız balı göstərməyi seçib."
+  "review_never": "Müəllim bu imtahanda yalnız balı göstərməyi seçib.",
+  "net_score_note": "Xalis bal: səhv cavablara görə {{points}} bal çıxılıb."
 }

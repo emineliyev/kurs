@@ -57,6 +57,9 @@ function ReportCard({ exam, card, perRow, school, t }) {
       <div className="rc-summary">
         <div><span>{t('rc_score', { ns: 'teacher' })}</span><b>{scoreText(card.score, card.total_points)}</b></div>
         <div><span>{t('passing_score', { ns: 'teacher' })}</span><b>{fmtPoints(exam.passing_score)}</b></div>
+        {exam.negative_marking && (
+          <div><span>{t('rc_penalty', { ns: 'teacher', n: exam.wrong_per_correct })}</span><b className="rc-part">−{fmtPoints(card.penalty)}</b></div>
+        )}
         <div className={pending ? 'rc-wait' : card.passed ? 'rc-ok' : 'rc-bad'}>
           <span>{t('rc_result', { ns: 'teacher' })}</span>
           <b>{pending ? t('rc_pending', { ns: 'teacher' }) : card.passed ? t('passed', { ns: 'teacher' }) : t('failed', { ns: 'teacher' })}</b>

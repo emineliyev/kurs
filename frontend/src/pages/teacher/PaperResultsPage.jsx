@@ -127,14 +127,17 @@ export default function PaperResultsPage() {
   // Live score of what is typed so far
   const preview = useMemo(() => {
     if (!current) return { score: 0, total: 0 }
-    let score = 0, total = 0
+    let score = 0, total = 0, wrong = 0
     for (const item of current.items) {
       const q = item.question
       if (!item.number) continue
       total += q.points || 0
       const v = entry[q.id]
       if (v === undefined || v === '') continue
-      if (MCQ.includes(q.question_type)) score += item.answers[v]?.is_correct ? q.points : 0
+      if (MCQ.includes(q.question_type)) {
+        if (item.answers[v]?.is_correct) score += q.points
+        else wrong += q.points
+      }
       else if (TEXT.includes(q.question_type)) {
         const ok = q.question_type === 'numeric'
           ? Math.abs(parseFloat(v) - parseFloat(q.correct_answer)) <= (q.tolerance || 0)
@@ -142,8 +145,9 @@ export default function PaperResultsPage() {
         score += ok ? q.points : 0
       } else score += Math.min(Math.max(parseFloat(v) || 0, 0), q.points)
     }
+    if (test?.negative_marking && test.wrong_per_correct) score = Math.max(0, score - wrong / test.wrong_per_correct)
     return { score, total }
-  }, [entry, current])
+  }, [entry, current, test])
 
   const save = async () => {
     if (!studentId) { toast.error(t('paper_pick_student', { ns: 'teacher' })); return }

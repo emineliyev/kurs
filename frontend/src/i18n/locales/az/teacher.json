@@ -694,5 +694,9 @@
   "show_answers_marks_then_answers": "Dərhal ✓/✗, düzgün cavablar imtahan bitəndə",
   "show_answers_after_end": "İmtahan bitəndən sonra",
   "show_answers_never": "Heç vaxt — yalnız bal",
-  "show_answers_hint": "Sinifdə hamı eyni anda yazırsa, \"✓/✗ dərhal\" cavabların ötürülməsinin qarşısını alır. Sonradan dəyişmək olar."
+  "show_answers_hint": "Sinifdə hamı eyni anda yazırsa, \"✓/✗ dərhal\" cavabların ötürülməsinin qarşısını alır. Sonradan dəyişmək olar.",
+  "net_score": "Xalis bal",
+  "net_score_rule": "səhv 1 düzü aparır",
+  "net_score_hint": "DİM qaydası: hər səhv variant cavab sualın balının bir hissəsini aparır (məs. 4 səhv = −1 sual). Boş buraxılan və yazılı suallar cəzalandırılmır.",
+  "rc_penalty": "Səhvlərə görə ({{n}}:1)"
 }

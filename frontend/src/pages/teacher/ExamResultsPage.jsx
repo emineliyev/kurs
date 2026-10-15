@@ -170,6 +170,11 @@ export default function ExamResultsPage() {
                     <td className="px-5 py-3">
                       <p className="font-semibold text-slate-900">
                         {r.score != null ? `${fmtPoints(r.score)} / ${fmtPoints(r.total_points)}` : '—'}
+                        {r.penalty > 0 && (
+                          <span className="ml-1.5 text-xs font-medium text-amber-600" title={t('net_score', { ns: 'teacher' })}>
+                            (−{fmtPoints(r.penalty)})
+                          </span>
+                        )}
                       </p>
                       <div className="w-20 h-1.5 mt-1 bg-slate-100 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${r.passed ? 'bg-green-500' : 'bg-red-400'}`}

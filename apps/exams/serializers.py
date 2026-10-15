@@ -178,7 +178,7 @@ class ExamResultSerializer(serializers.ModelSerializer):
         model = ExamResult
         fields = [
             'id', 'exam', 'student', 'student_name', 'student_username',
-            'status', 'score', 'total_points', 'percentage', 'passed',
+            'status', 'score', 'total_points', 'penalty', 'percentage', 'passed',
             'tab_switch_count', 'started_at', 'submitted_at', 'pdf_report_url',
             'needs_grading', 'deadline', 'auto_submitted', 'is_offline', 'offline_variant',
         ]

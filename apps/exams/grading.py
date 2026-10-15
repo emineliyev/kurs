@@ -13,9 +13,22 @@ def gradable_total(exam):
     return sum(q.points for q in exam.test.questions.exclude(question_type='passage'))
 
 
+def wrong_choice_penalty(result, test):
+    """Net scoring: each wrong choice answer takes away 1/N of its question's points (blanks don't)."""
+    if not test.negative_marking or not test.wrong_per_correct:
+        return 0
+    from apps.tests_app.models import Question
+    wrong = result.answers.filter(
+        question__question_type__in=Question.MCQ_TYPES, selected_answer__isnull=False, is_correct=False,
+    ).values_list('question__points', flat=True)
+    return sum(wrong) / test.wrong_per_correct
+
+
 def _set_totals(result, exam, earned, total):
     # Points, rounded to 2 decimals so 30 × 3.3333 shows as 100; the pass mark is in points too
-    earned, total = round(earned, 2), round(total, 2)
+    penalty = wrong_choice_penalty(result, exam.test)
+    earned, total = round(max(earned - penalty, 0), 2), round(total, 2)
+    result.penalty = round(penalty, 2)
     result.score = earned
     result.total_points = total
     result.percentage = round(earned / total * 100, 2) if total > 0 else 0
@@ -27,7 +40,7 @@ def recalc_totals(result):
     exam = result.exam
     earned = sum(a.points_earned for a in result.answers.all())
     _set_totals(result, exam, earned, gradable_total(exam))
-    result.save(update_fields=['score', 'total_points', 'percentage', 'passed'])
+    result.save(update_fields=['score', 'total_points', 'percentage', 'passed', 'penalty'])
 
 
 def grade(exam, result, answers_data, submitted_at=None, auto=False):

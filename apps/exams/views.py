@@ -271,6 +271,7 @@ class ExamViewSet(viewsets.ModelViewSet):
                 'class_name': cls.name, 'class_grade': cls.grade, 'class_group': cls.group,
                 'subject': cls.subject, 'teacher_name': request.user.get_full_name(),
                 'start_time': exam.start_time, 'passing_score': exam.test.passing_score,
+                'negative_marking': exam.test.negative_marking, 'wrong_per_correct': exam.test.wrong_per_correct,
             },
             'cards': [build_card(r) for r in results],
         })

@@ -75,6 +75,7 @@ class ExamResult(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_IN_PROGRESS, verbose_name='Status')
     score = models.FloatField(null=True, blank=True, verbose_name='Bal')
     total_points = models.FloatField(default=0, verbose_name='Ümumi bal')
+    penalty = models.FloatField(default=0, verbose_name='Səhvlərə görə çıxılan bal')
     percentage = models.FloatField(null=True, blank=True, verbose_name='Faiz')
     passed = models.BooleanField(null=True, blank=True, verbose_name='Keçdi')
     tab_switch_count = models.PositiveSmallIntegerField(default=0, verbose_name='Tab dəyişmə sayı')

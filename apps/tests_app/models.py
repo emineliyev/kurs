@@ -17,6 +17,10 @@ class Test(models.Model):
     equal_points = models.BooleanField(default=True, verbose_name='Hər suala bərabər bal',
                                        help_text='Ümumi bal suallar arasında bərabər bölünür')
     passing_score = models.FloatField(default=50, verbose_name='Keçid balı')
+    # Net score (DİM style): every `wrong_per_correct` wrong choices cancel one right one.
+    # Only choice questions; blanks and written answers are never penalised.
+    negative_marking = models.BooleanField(default=False, verbose_name='Xalis bal')
+    wrong_per_correct = models.PositiveSmallIntegerField(default=4, verbose_name='Neçə səhv bir düzü aparır')
     # Set on the first publish; republishing does not use the monthly quota again.
     published_at = models.DateTimeField(null=True, blank=True, verbose_name='İlk dəfə hazır olub')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Yaradılıb')

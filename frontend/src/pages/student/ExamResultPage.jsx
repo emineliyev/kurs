@@ -64,6 +64,13 @@ export default function ExamResultPage() {
         <p className="text-slate-500 mt-1 font-semibold">{scoreText(result.score, result.total_points)} {t('score_word', { ns: 'student' })}</p>
       </div>
 
+      {result.penalty > 0 && (
+        <p className="text-sm text-slate-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-2">
+          <i className="bi bi-dash-circle mt-0.5 text-amber-600"></i>
+          {t('net_score_note', { ns: 'student', points: fmtPoints(result.penalty) })}
+        </p>
+      )}
+
       {result.auto_submitted && (
         <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex gap-2">
           <i className="bi bi-alarm mt-0.5"></i>{t('auto_submitted_note', { ns: 'student' })}
