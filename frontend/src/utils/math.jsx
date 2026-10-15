@@ -1,5 +1,14 @@
 import katex from 'katex'
+import DOMPurify from 'dompurify'
 import 'katex/dist/katex.min.css'
+
+// Question text is HTML from the editor (bold, colour, lists, tables) plus KaTeX output.
+// It is sanitized before it reaches the page, so a <script> or an onerror= in a question
+// can never run in a student's (or anyone's) browser.
+const sanitize = (html) => DOMPurify.sanitize(html, {
+  USE_PROFILES: { html: true, mathMl: true, svg: true },
+  FORBID_TAGS: ['style', 'form', 'input', 'button', 'textarea', 'select', 'iframe', 'object', 'embed'],
+})
 
 /**
  * Mətndəki LaTeX ifadələrini ($...$ və $$...$$) KaTeX HTML-inə çevirir.
@@ -27,7 +36,7 @@ export function renderMath(text) {
     catch { return math }
   })
 
-  return result
+  return sanitize(result)
 }
 
 /**

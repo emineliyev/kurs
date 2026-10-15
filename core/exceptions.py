@@ -11,6 +11,11 @@ def custom_exception_handler(exc, context):
     """
     response = exception_handler(exc, context)
 
+    from rest_framework.exceptions import Throttled
+    if isinstance(exc, Throttled) and response is not None:
+        minutes = max(1, round((exc.wait or 60) / 60))
+        response.data = {'detail': f'Çox sayda sorğu. {minutes} dəqiqə sonra yenidən yoxlayın.'}
+
     if response is not None:
         # Normalize all errors into { "errors": [...] } format
         errors = []

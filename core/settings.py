@@ -54,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.AdminLoginGuardMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -155,6 +156,16 @@ REST_FRAMEWORK = {
     # No pagination: every list is one teacher's own data and the pages read the whole list
     # (with 20 per page, anything past the 20th test/exam/class/bank question never showed up)
     'DEFAULT_PAGINATION_CLASS': None,
+    # Per-IP request limits on endpoints that send e-mail or create accounts (login has its own
+    # failure-based guard, see apps/accounts/login_guard.py). Behind nginx: 1 proxy in X-Forwarded-For.
+    'NUM_PROXIES': 1,
+    'DEFAULT_THROTTLE_RATES': {
+        'register': '10/hour',
+        'google_auth': '30/min',
+        'resend_verification': '5/hour',
+        'password_reset': '5/hour',
+        'password_reset_confirm': '20/hour',
+    },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
 }
@@ -192,6 +203,10 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+    # Browsers must always use HTTPS for this site (nginx sends the same header for the app pages)
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
 USE_REDIS = config('USE_REDIS', default=False, cast=bool)

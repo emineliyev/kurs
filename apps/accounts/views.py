@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from apps.email_utils import email_shell, cta_button, greeting, paragraph, note
 from apps.accounts.tasks import send_verification_email_task, send_password_reset_email_task
 from rest_framework import generics, serializers, status
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.response import Response
@@ -111,6 +112,8 @@ class IsTeacher(BasePermission):
 
 
 class TeacherRegisterView(APIView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'register'
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -155,8 +158,13 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        from . import login_guard
+        ident = request.data.get('username') or request.data.get('email')
+        if login_guard.is_blocked(request, ident):
+            return Response({'detail': login_guard.MESSAGE}, status=status.HTTP_429_TOO_MANY_REQUESTS)
         serializer = LoginSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
+            login_guard.record_success(request, ident)
             user = serializer.validated_data['user']
             refresh = RefreshToken.for_user(user)
             return Response({
@@ -164,6 +172,7 @@ class LoginView(APIView):
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
             })
+        login_guard.record_failure(request, ident)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -316,6 +325,8 @@ def _free_username(base):
 
 
 class GoogleAuthView(APIView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'google_auth'
     permission_classes = [AllowAny]
 
     def _create_free_subscription(self, user):
@@ -424,6 +435,8 @@ class VerifyEmailView(APIView):
 
 
 class ResendVerificationView(APIView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'resend_verification'
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -446,6 +459,8 @@ class FeedbackCreateView(APIView):
 
 
 class PasswordResetRequestView(APIView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -460,6 +475,8 @@ class PasswordResetRequestView(APIView):
 
 
 class PasswordResetConfirmView(APIView):
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset_confirm'
     permission_classes = [AllowAny]
 
     def post(self, request):

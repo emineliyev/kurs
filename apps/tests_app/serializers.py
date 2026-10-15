@@ -1,8 +1,13 @@
 from rest_framework import serializers
+
+from .sanitize import clean_html
 from .models import Test, Question, Answer, TestVersion, BankQuestion, BankAnswer
 
 
 class AnswerSerializer(serializers.ModelSerializer):
+    def validate_text(self, value):
+        return clean_html(value)  # editor HTML: formatting kept, scripts/handlers removed
+
     class Meta:
         model = Answer
         fields = ['id', 'text', 'is_correct', 'order']
@@ -17,6 +22,9 @@ class AnswerPublicSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
+    def validate_text(self, value):
+        return clean_html(value)  # editor HTML: formatting kept, scripts/handlers removed
+
     answers = AnswerSerializer(many=True, required=False)
 
     class Meta:
@@ -130,6 +138,9 @@ class TestVersionSerializer(serializers.ModelSerializer):
 
 
 class BankAnswerSerializer(serializers.ModelSerializer):
+    def validate_text(self, value):
+        return clean_html(value)  # editor HTML: formatting kept, scripts/handlers removed
+
     class Meta:
         model = BankAnswer
         fields = ['id', 'text', 'is_correct', 'order']
@@ -170,6 +181,9 @@ class BankFolderSerializer(serializers.ModelSerializer):
 
 
 class BankQuestionSerializer(serializers.ModelSerializer):
+    def validate_text(self, value):
+        return clean_html(value)  # editor HTML: formatting kept, scripts/handlers removed
+
     answers = BankAnswerSerializer(many=True, required=False)
 
     def to_internal_value(self, data):
