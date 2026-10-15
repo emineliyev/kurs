@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSiteSettings } from '@/api/site'
+import Logo from '@/components/common/Logo'
 
 export function pageTitle(page, lang) {
   const code = (lang || 'az').slice(0, 2)
@@ -22,11 +23,8 @@ export default function SiteFooter() {
       <div className="max-w-6xl mx-auto px-4">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary-700 rounded-lg flex items-center justify-center">
-                <i className="bi bi-book-half text-white text-sm"></i>
-              </div>
-              <span className="font-bold text-white text-lg">{t('app_name')}</span>
+            <Link to="/" aria-label={t('app_name')} className="inline-block">
+              <Logo withText tone="white" className="h-10" />
             </Link>
             <p className="text-sm mt-3 leading-relaxed">{t('landing_footer_tagline')}</p>
           </div>

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher'
+import Logo from '@/components/common/Logo'
 
 export default function StudentTopBar() {
   const { t } = useTranslation()
@@ -18,8 +19,7 @@ export default function StudentTopBar() {
   return (
     <header className="md:hidden h-14 bg-primary-700 text-white flex items-center justify-between px-4 shrink-0">
       <div className="flex items-center gap-2">
-        <i className="bi bi-book-half text-xl"></i>
-        <span className="font-bold">{t('app_name')}</span>
+        <Logo withText tone="white" className="h-8" />
       </div>
       <div className="flex items-center gap-3">
         <LanguageSwitcher />

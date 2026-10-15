@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSiteSettings } from '@/api/site'
+import Logo, { Wordmark } from '@/components/common/Logo'
 
 const NAV_ITEMS = [
   { to: '/teacher', icon: 'bi-grid-1x2', labelKey: 'dashboard', end: true },
@@ -34,13 +35,11 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
       {/* Logo + mobile close */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 bg-gradient-to-br from-primary-700 to-blue-500 rounded-xl flex items-center justify-center shrink-0 shadow-md">
-            <i className="bi bi-book-half text-white text-base"></i>
-          </div>
+          <Logo className="h-9" />
           {expanded && (
             <div className="min-w-0">
-              <span className="font-extrabold text-primary-700 text-lg leading-none">{t('app_name')}</span>
-              <p className="text-xs text-slate-400 leading-none mt-0.5">{t('teacher_platform')}</p>
+              <Wordmark className="h-[15px]" />
+              <p className="text-xs text-slate-400 leading-none mt-1">{t('teacher_platform')}</p>
             </div>
           )}
         </div>

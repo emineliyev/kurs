@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher'
 import SiteFooter from '@/components/common/SiteFooter'
 import { useSiteSettings } from '@/api/site'
+import Logo from '@/components/common/Logo'
 
 const ANIM_STYLE = `
 @keyframes fadeInUp {
@@ -122,12 +123,9 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-primary-700 rounded-lg flex items-center justify-center">
-              <i className="bi bi-book-half text-white text-lg"></i>
-            </div>
-            <span className="font-bold text-primary-700 text-xl">{t('app_name')}</span>
-          </div>
+          <Link to="/" aria-label={t('app_name')}>
+            <Logo withText className="h-10" />
+          </Link>
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">

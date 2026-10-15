@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/authStore'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher'
+import Logo from '@/components/common/Logo'
 
 const NAV_ITEMS = [
   { to: '/student', icon: 'bi-house-fill', iconInactive: 'bi-house', labelKey: 'dashboard', end: true },
@@ -22,10 +23,7 @@ export default function StudentSidebar() {
     <aside className="hidden md:flex flex-col w-60 bg-white border-r border-slate-200 fixed inset-y-0 left-0 z-40">
       {/* Logo */}
       <div className="h-16 flex items-center gap-2.5 px-5 border-b border-slate-100 shrink-0">
-        <div className="w-8 h-8 bg-primary-700 rounded-lg flex items-center justify-center shrink-0">
-          <i className="bi bi-book-half text-white text-sm"></i>
-        </div>
-        <span className="font-bold text-primary-700 text-lg">{t('app_name')}</span>
+        <Logo withText className="h-10" />
       </div>
 
       {/* Nav items */}

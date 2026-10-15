@@ -5,6 +5,7 @@ import { fetchLegalPage } from '@/api/site'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher'
 import PageSpinner from '@/components/common/PageSpinner'
 import SiteFooter from '@/components/common/SiteFooter'
+import Logo from '@/components/common/Logo'
 
 /**
  * Plain text from the admin → blocks. A blank line starts a new block,
@@ -64,11 +65,8 @@ export default function LegalPage({ slug: fixedSlug }) {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <nav className="bg-white border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-primary-700 rounded-lg flex items-center justify-center">
-              <i className="bi bi-book-half text-white text-lg"></i>
-            </div>
-            <span className="font-bold text-primary-700 text-xl">{t('app_name')}</span>
+          <Link to="/" aria-label={t('app_name')}>
+            <Logo withText className="h-10" />
           </Link>
           <LanguageSwitcher />
         </div>
