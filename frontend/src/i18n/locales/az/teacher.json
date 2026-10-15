@@ -671,5 +671,22 @@
   "paper_list": "Daxil edilmiş kağız nəticələri ({{count}})",
   "paper_delete_confirm": "{{name}} — kağız nəticəsi silinsin?",
   "paper_badge": "Kağız · {{variant}} variantı",
-  "print_watermark": "Su nişanı"
+  "print_watermark": "Su nişanı",
+  "folders": "Qovluqlar",
+  "folder_all": "Bütün suallar",
+  "folder_none": "Qovluqsuz",
+  "folder_new": "Yeni qovluq",
+  "folder_new_sub": "Alt qovluq",
+  "folder_rename": "Adını dəyiş",
+  "folder_name_required": "Qovluğun adını yazın",
+  "folder_delete_confirm": "\"{{name}}\" qovluğu silinsin?",
+  "folder_delete_text": "Suallar silinmir: qovluğun içindəki suallar və alt qovluqlar bir üst qovluğa köçürüləcək.",
+  "folder_label": "Qovluq",
+  "folder_picked": "{{count}} sual seçildi",
+  "folder_move_to": "Qovluğa köçür…",
+  "folder_moved": "{{count}} sual köçürüldü",
+  "bank_add_all": "Hamısını əlavə et ({{count}})",
+  "bank_add_random": "təsadüfi sual əlavə et",
+  "bank_added_many": "{{count}} sual testə əlavə edildi",
+  "folder_empty": "Bu qovluqda (və ya axtarışa uyğun) sual yoxdur"
 }

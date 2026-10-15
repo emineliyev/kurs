@@ -136,6 +136,39 @@ class BankAnswerSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class BankFolderSerializer(serializers.ModelSerializer):
+    question_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        from .models import BankFolder
+        model = BankFolder
+        fields = ['id', 'name', 'parent', 'question_count', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def validate_name(self, value):
+        value = (value or '').strip()
+        if not value:
+            raise serializers.ValidationError('Qovluğun adı boş ola bilməz.')
+        return value
+
+    def validate(self, attrs):
+        from .models import BankFolder
+        teacher = self.context['request'].user
+        parent = attrs.get('parent', getattr(self.instance, 'parent', None))
+        name = attrs.get('name', getattr(self.instance, 'name', ''))
+        if parent is not None:
+            if parent.teacher_id != teacher.id:
+                raise serializers.ValidationError({'parent': 'Qovluq tapılmadı.'})
+            if self.instance is not None and parent.pk in self.instance.subtree_ids():
+                raise serializers.ValidationError({'parent': 'Qovluğu öz içinə köçürmək olmaz.'})
+        siblings = BankFolder.objects.filter(teacher=teacher, parent=parent, name__iexact=name)
+        if self.instance is not None:
+            siblings = siblings.exclude(pk=self.instance.pk)
+        if siblings.exists():
+            raise serializers.ValidationError({'name': 'Bu adda qovluq artıq var.'})
+        return attrs
+
+
 class BankQuestionSerializer(serializers.ModelSerializer):
     answers = BankAnswerSerializer(many=True, required=False)
 
@@ -156,11 +189,16 @@ class BankQuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = BankQuestion
         fields = [
-            'id', 'question_type', 'text', 'image', 'math_formula',
+            'id', 'folder', 'question_type', 'text', 'image', 'math_formula',
             'model_answer', 'correct_answer', 'tolerance',
             'points', 'answers', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_folder(self, folder):
+        if folder is not None and folder.teacher_id != self.context['request'].user.id:
+            raise serializers.ValidationError('Qovluq tapılmadı.')
+        return folder
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

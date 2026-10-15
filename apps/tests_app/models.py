@@ -150,10 +150,37 @@ class Answer(models.Model):
         return f'{self.text[:50]} ({"correct" if self.is_correct else "wrong"})'
 
 
+class BankFolder(models.Model):
+    """A teacher's folder in the question bank; folders nest (Riyaziyyat → 5-ci sinif → Natural ədədlər)."""
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bank_folders', verbose_name='Müəllim')
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE,
+                               related_name='children', verbose_name='Üst qovluq')
+    name = models.CharField(max_length=120, verbose_name='Ad')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Yaradılıb')
+
+    class Meta:
+        verbose_name = 'Bank qovluğu'
+        verbose_name_plural = 'Bank qovluqları'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def subtree_ids(self):
+        """This folder and every folder below it."""
+        ids, frontier = [self.pk], [self.pk]
+        while frontier:
+            frontier = list(BankFolder.objects.filter(parent_id__in=frontier).values_list('pk', flat=True))
+            ids += frontier
+        return ids
+
+
 class BankQuestion(models.Model):
     TYPE_CHOICES = Question.TYPE_CHOICES
 
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bank_questions', verbose_name='Müəllim')
+    folder = models.ForeignKey(BankFolder, null=True, blank=True, on_delete=models.SET_NULL,
+                               related_name='questions', verbose_name='Qovluq')
     question_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='multiple_choice', verbose_name='Sual tipi')
     text = models.TextField(blank=True, verbose_name='Mətn')
     image = models.ImageField(upload_to='bank_questions/images/', blank=True, null=True, verbose_name='Şəkil')

@@ -17,6 +17,7 @@ import { renderMath, MathText } from '@/utils/math'
 import QuestionTextEditor, { LatexPreview, AnswerMiniEditor } from '@/components/teacher/QuestionTextEditor'
 import { toastApiError } from '@/api/errors'
 import { fmtPoints } from '@/utils/score'
+import BankFolderTree, { inSelection } from '@/components/teacher/BankFolderTree'
 
 let _dndIdCounter = 0
 const newDndId = () => ++_dndIdCounter
@@ -582,6 +583,10 @@ export default function TestCreatePage() {
   const [bankQuestions, setBankQuestions] = useState([])
   const [bankLoading, setBankLoading]     = useState(false)
   const [addingBankId, setAddingBankId]   = useState(null)
+  const [bankFolders, setBankFolders]     = useState([])
+  const [bankSel, setBankSel]             = useState('all')
+  const [randomCount, setRandomCount]     = useState('')
+  const [addingMany, setAddingMany]       = useState(false)
   const { register, handleSubmit, reset, watch } = useForm({
     defaultValues: { max_score: 100, equal_points: true, passing_score: 50 }
   })
@@ -759,12 +764,49 @@ export default function TestCreatePage() {
     setShowBankModal(true)
     setBankLoading(true)
     try {
-      const res = await bankApi.list()
+      const [res, folderRes] = await Promise.all([bankApi.list(), bankApi.folders()])
       setBankQuestions(res.data.results || res.data)
+      setBankFolders(folderRes.data)
     } catch {
       toast.error(t('error_occurred'))
     } finally {
       setBankLoading(false)
+    }
+  }
+
+  // The whole open folder (with subfolders), or `count` random questions from it; ones already in the test are skipped
+  const addFromFolder = async (count) => {
+    if (!createdTest?.id) return
+    setAddingMany(true)
+    try {
+      const folder = bankSel === 'all' ? undefined : bankSel
+      const res = await bankApi.addToTest(createdTest.id, { folder, count: count || undefined })
+      setQuestions(prev => [...prev, ...res.data.questions.map(q => ({
+        question_type: q.question_type,
+        text: q.text || '',
+        points: q.points || 1,
+        math_formula: q.math_formula || '',
+        model_answer: q.model_answer || '',
+        correct_answer: q.correct_answer || '',
+        tolerance: q.tolerance ?? '',
+        answers: q.answers || [],
+        image: q.image || null,
+        _imagePreview: q.image || null,
+        _imageFile: null,
+        _saved: true,
+        _id: q.id,
+        _choiceCount: q.question_type === 'image_mcq' ? (q.answers?.length || 4) : undefined,
+        _correctIndex: q.answers?.findIndex(a => a.is_correct) ?? -1,
+        _hideChoices: false,
+        _bankId: q.source_bank_question,
+        _dndId: newDndId(),
+      }))])
+      toast.success(t('bank_added_many', { ns: 'teacher', count: res.data.added }))
+      if (res.data.added) setShowBankModal(false)
+    } catch (err) {
+      toastApiError(err)
+    } finally {
+      setAddingMany(false)
     }
   }
 
@@ -1047,7 +1089,7 @@ export default function TestCreatePage() {
           {/* Bank picker modal */}
           {showBankModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                   <h3 className="font-bold text-slate-900 flex items-center gap-2">
                     <i className="bi bi-bank text-amber-500"></i>
@@ -1058,6 +1100,29 @@ export default function TestCreatePage() {
                     <i className="bi bi-x-lg"></i>
                   </button>
                 </div>
+                <div className="flex-1 min-h-0 grid md:grid-cols-[14rem_minmax(0,1fr)]">
+                <aside className="border-r border-slate-100 p-3 overflow-y-auto hidden md:block">
+                  <BankFolderTree folders={bankFolders} questions={bankQuestions} selected={bankSel} onSelect={setBankSel} />
+                </aside>
+                <div className="flex flex-col min-h-0">
+                {!bankLoading && bankQuestions.length > 0 && (() => {
+                  const left = bankQuestions.filter(q => inSelection(q, bankSel, bankFolders) && !addedBankIds.has(q.id)).length
+                  return (
+                    <div className="flex items-center gap-2 flex-wrap px-4 py-3 border-b border-slate-100 bg-slate-50/60">
+                      <button onClick={() => addFromFolder()} disabled={!left || addingMany} className="btn-primary text-xs py-1.5 disabled:opacity-50">
+                        <i className="bi bi-folder-check"></i> {t('bank_add_all', { ns: 'teacher', count: left })}
+                      </button>
+                      <span className="text-xs text-slate-400">{t('or')}</span>
+                      <input type="number" min={1} max={left} value={randomCount} onChange={e => setRandomCount(e.target.value)}
+                        placeholder="10" className="input-field py-1.5 text-xs w-16" />
+                      <button onClick={() => addFromFolder(Number(randomCount))} disabled={!left || !Number(randomCount) || addingMany}
+                        className="btn-secondary text-xs py-1.5 disabled:opacity-50">
+                        <i className="bi bi-shuffle"></i> {t('bank_add_random', { ns: 'teacher' })}
+                      </button>
+                      {addingMany && <i className="bi bi-arrow-repeat animate-spin text-primary-600"></i>}
+                    </div>
+                  )
+                })()}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {bankLoading ? (
                     <div className="text-center py-12 text-slate-400">
@@ -1068,7 +1133,7 @@ export default function TestCreatePage() {
                       <i className="bi bi-bank text-4xl text-slate-300 mb-3 block"></i>
                       <p className="text-slate-500 font-medium">{t('bank_empty_modal', { ns: 'teacher' })}</p>
                     </div>
-                  ) : bankQuestions.map((q, idx) => {
+                  ) : bankQuestions.filter(q => inSelection(q, bankSel, bankFolders)).map((q, idx) => {
                     const cfg = TYPE_CONFIG[q.question_type]
                     const typeLabel = t(TYPE_LABEL_KEYS[q.question_type] || '', { ns: 'teacher' })
                     const added = addedBankIds.has(q.id)
@@ -1114,6 +1179,8 @@ export default function TestCreatePage() {
                       </div>
                     )
                   })}
+                </div>
+                </div>
                 </div>
               </div>
             </div>

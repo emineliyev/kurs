@@ -5,8 +5,9 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from apps.accounts.permissions import IsTeacher
-from .models import Test, Question, Answer, TestVersion, BankQuestion, BankAnswer
+from .models import Test, Question, Answer, TestVersion, BankQuestion, BankAnswer, BankFolder
 from .serializers import (
+    BankFolderSerializer,
     TestSerializer, TestDetailSerializer, TestVersionSerializer,
     QuestionSerializer, QuestionPublicSerializer, AnswerSerializer,
     BankQuestionSerializer,
@@ -313,38 +314,114 @@ class BankQuestionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def copy_to_test(self, request, pk=None):
         bank_q = self.get_object()
-        test_id = request.data.get('test_id')
-        try:
-            test = Test.objects.get(id=test_id, teacher=request.user)
-        except Test.DoesNotExist:
-            return Response({'detail': 'Test tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
-        if test.is_locked:
-            return Response({'detail': Test.LOCKED_MESSAGE}, status=status.HTTP_403_FORBIDDEN)
+        test, error = _editable_test(request)
+        if error:
+            return error
         if test.questions.filter(source_bank_question=bank_q).exists():
             return Response({'detail': 'Bu sual artıq bu testə əlavə edilib.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        new_order = test.questions.count()
-        new_q = Question.objects.create(
-            test=test,
-            question_type=bank_q.question_type,
-            text=bank_q.text,
-            math_formula=bank_q.math_formula,
-            model_answer=bank_q.model_answer,
-            correct_answer=bank_q.correct_answer,
-            tolerance=bank_q.tolerance,
-            points=bank_q.points,
-            order=new_order,
-            source_bank_question=bank_q,
-        )
-        if bank_q.image:
-            copy_image(bank_q.image, new_q)
-        for ans in bank_q.answers.all():
-            Answer.objects.create(
-                question=new_q,
-                text=ans.text,
-                is_correct=ans.is_correct,
-                order=ans.order,
-            )
+        new_q = _copy_bank_question(bank_q, test)
         test.rebalance_points()
         new_q.refresh_from_db(fields=['points'])
         return Response(QuestionSerializer(new_q, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'])
+    def add_to_test(self, request):
+        """
+        Add many bank questions to a test: a folder (with its subfolders unless recursive=false),
+        optionally only `count` random ones. Questions already in the test are skipped.
+        """
+        import random
+        test, error = _editable_test(request)
+        if error:
+            return error
+        qs = self.get_queryset()
+        folder_id = request.data.get('folder')
+        if folder_id in ('none', None, ''):
+            qs = qs.filter(folder__isnull=True) if folder_id == 'none' else qs
+        else:
+            folder = BankFolder.objects.filter(pk=folder_id, teacher=request.user).first()
+            if folder is None:
+                return Response({'detail': 'Qovluq tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+            recursive = request.data.get('recursive', True) not in (False, 'false', '0', 0)
+            qs = qs.filter(folder_id__in=folder.subtree_ids() if recursive else [folder.pk])
+        pool = list(qs.exclude(pk__in=test.questions.exclude(source_bank_question=None)
+                               .values_list('source_bank_question_id', flat=True)).order_by('created_at'))
+        count = request.data.get('count')
+        if count not in (None, ''):
+            try:
+                count = max(0, int(count))
+            except (TypeError, ValueError):
+                return Response({'detail': 'count must be a number.'}, status=status.HTTP_400_BAD_REQUEST)
+            pool = random.sample(pool, min(count, len(pool)))
+        created = [_copy_bank_question(bq, test) for bq in pool]
+        test.rebalance_points()
+        fresh = Question.objects.filter(pk__in=[q.pk for q in created]).prefetch_related('answers').order_by('order')
+        return Response({'added': len(created),
+                         'questions': QuestionSerializer(fresh, many=True, context={'request': request}).data},
+                        status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'])
+    def move(self, request):
+        """Move bank questions (ids) into a folder (null = no folder)."""
+        ids = request.data.get('ids') or []
+        folder_id = request.data.get('folder')
+        folder = None
+        if folder_id not in (None, '', 'none'):
+            folder = BankFolder.objects.filter(pk=folder_id, teacher=request.user).first()
+            if folder is None:
+                return Response({'detail': 'Qovluq tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+        moved = self.get_queryset().filter(pk__in=ids).update(folder=folder)
+        return Response({'moved': moved})
+
+
+def _editable_test(request):
+    """(test, None) for the teacher's own unlocked test given as test_id, else (None, error response)."""
+    test = Test.objects.filter(id=request.data.get('test_id'), teacher=request.user).first()
+    if test is None:
+        return None, Response({'detail': 'Test tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+    if test.is_locked:
+        return None, Response({'detail': Test.LOCKED_MESSAGE}, status=status.HTTP_403_FORBIDDEN)
+    return test, None
+
+
+def _copy_bank_question(bank_q, test):
+    """A real copy (own image file, own answers) at the end of the test, remembering its source."""
+    new_q = Question.objects.create(
+        test=test,
+        question_type=bank_q.question_type,
+        text=bank_q.text,
+        math_formula=bank_q.math_formula,
+        model_answer=bank_q.model_answer,
+        correct_answer=bank_q.correct_answer,
+        tolerance=bank_q.tolerance,
+        points=bank_q.points,
+        order=test.questions.count(),
+        source_bank_question=bank_q,
+    )
+    if bank_q.image:
+        copy_image(bank_q.image, new_q)
+    Answer.objects.bulk_create([
+        Answer(question=new_q, text=a.text, is_correct=a.is_correct, order=a.order) for a in bank_q.answers.all()
+    ])
+    return new_q
+
+
+class BankFolderViewSet(viewsets.ModelViewSet):
+    serializer_class = BankFolderSerializer
+    permission_classes = [IsTeacher]
+    pagination_class = None
+
+    def get_queryset(self):
+        from django.db.models import Count
+        return BankFolder.objects.filter(teacher=self.request.user).annotate(question_count=Count('questions'))
+
+    def perform_create(self, serializer):
+        serializer.save(teacher=self.request.user)
+
+    def perform_destroy(self, folder):
+        # Nothing is lost: subfolders and questions move one level up (or out of any folder)
+        from django.db import transaction
+        with transaction.atomic():
+            BankFolder.objects.filter(parent=folder).update(parent=folder.parent)
+            BankQuestion.objects.filter(folder=folder).update(folder=folder.parent)
+            folder.delete()

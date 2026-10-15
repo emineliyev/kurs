@@ -663,5 +663,22 @@
   "paper_list": "Entered paper results ({{count}})",
   "paper_delete_confirm": "Delete the paper result of {{name}}?",
   "paper_badge": "Paper · variant {{variant}}",
-  "print_watermark": "Watermark"
+  "print_watermark": "Watermark",
+  "folders": "Folders",
+  "folder_all": "All questions",
+  "folder_none": "No folder",
+  "folder_new": "New folder",
+  "folder_new_sub": "Subfolder",
+  "folder_rename": "Rename",
+  "folder_name_required": "Enter a folder name",
+  "folder_delete_confirm": "Delete the folder \"{{name}}\"?",
+  "folder_delete_text": "No questions are deleted: its questions and subfolders move one level up.",
+  "folder_label": "Folder",
+  "folder_picked": "{{count}} selected",
+  "folder_move_to": "Move to folder…",
+  "folder_moved": "{{count}} question(s) moved",
+  "bank_add_all": "Add all ({{count}})",
+  "bank_add_random": "random questions",
+  "bank_added_many": "{{count}} question(s) added to the test",
+  "folder_empty": "No questions here (or none match the search)"
 }

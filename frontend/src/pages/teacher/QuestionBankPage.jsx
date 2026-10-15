@@ -10,6 +10,7 @@ import QuestionTextEditor, { LatexPreview, AnswerMiniEditor } from '@/components
 import Select from '@/components/common/Select'
 import { toastApiError } from '@/api/errors'
 import BulkCropWorkspace from '@/components/teacher/BulkCropWorkspace'
+import BankFolderTree, { flattenFolders, inSelection } from '@/components/teacher/BankFolderTree'
 
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -81,14 +82,20 @@ export default function QuestionBankPage() {
   const [showMedia, setShowMedia]   = useState(false)
   const [search, setSearch]         = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [folders, setFolders]       = useState([])
+  const [folderSel, setFolderSel]   = useState('all')     // 'all' | 'none' | folder id
+  const [picked, setPicked]         = useState(() => new Set())
+  const currentFolder = typeof folderSel === 'number' ? folderSel : null
   const editorRef = useRef(null)
 
   useEffect(() => { loadQuestions() }, [])
 
+  const loadFolders = () => bankApi.folders().then((res) => setFolders(res.data)).catch(() => {})
+
   const loadQuestions = async () => {
     try {
       setLoading(true)
-      const res = await bankApi.list()
+      const [res] = await Promise.all([bankApi.list(), loadFolders()])
       setQuestions(res.data.results || res.data)
     } catch {
       toast.error(t('error_occurred'))
@@ -112,7 +119,8 @@ export default function QuestionBankPage() {
     })
   }
 
-  const startCreate = () => { setForm(emptyForm()); setEditingId('new') }
+  // a new question goes into the folder that is open
+  const startCreate = () => { setForm({ ...emptyForm(), folder: currentFolder }); setEditingId('new') }
 
   const startEdit = (q) => {
     setForm({
@@ -123,6 +131,7 @@ export default function QuestionBankPage() {
       correct_answer: q.correct_answer || '',
       tolerance: q.tolerance ?? '',
       points: q.points || 1,
+      folder: q.folder ?? null,
       answers: q.answers?.length
         ? q.answers.map(a => ({ ...a }))
         : (q.question_type === 'multiple_choice' ? defaultAnswers() : []),
@@ -201,6 +210,7 @@ export default function QuestionBankPage() {
         payload.append('points', qType === 'passage' ? 0 : (form.points || 1))
         payload.append('answers', JSON.stringify(answersPayload))
         payload.append('image', form._imageFile)
+        if (form.folder != null) payload.append('folder', form.folder)
       } else {
         payload = {
           question_type: qType,
@@ -212,6 +222,7 @@ export default function QuestionBankPage() {
             ? parseFloat(form.tolerance) : null,
           points: qType === 'passage' ? 0 : (form.points || 1),
           answers: answersPayload,
+          folder: form.folder ?? null,
         }
       }
 
@@ -250,6 +261,7 @@ export default function QuestionBankPage() {
           ['A', 'B', 'C', 'D', 'E'].slice(0, it.choiceCount)
             .map((label, j) => ({ text: label, is_correct: j === it.answer, order: j }))))
         fd.append('image', it.file)
+        if (currentFolder != null) fd.append('folder', currentFolder)
         const res = await bankApi.create(fd)
         setQuestions((prev) => [res.data, ...prev])
         done++
@@ -302,13 +314,28 @@ export default function QuestionBankPage() {
   const filtered = questions.filter(q => {
     const matchType = typeFilter === 'all' || q.question_type === typeFilter
     const matchSearch = !search || q.text?.toLowerCase().includes(search.toLowerCase())
-    return matchType && matchSearch
+    return matchType && matchSearch && inSelection(q, folderSel, folders)
   })
+
+  const togglePick = (id) => setPicked((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
+
+  const moveTo = async (target) => {
+    const folder = target === 'none' ? null : Number(target)
+    try {
+      await bankApi.move([...picked], folder)
+      setQuestions((qs) => qs.map((q) => (picked.has(q.id) ? { ...q, folder } : q)))
+      toast.success(t('folder_moved', { ns: 'teacher', count: picked.size }))
+      setPicked(new Set())
+      loadFolders()
+    } catch (err) { toastApiError(err) }
+  }
+
+  const folderOptions = flattenFolders(folders)
 
   const qType = form.question_type
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       {showFormula && (
         <FormulaLibrary onInsert={insertFormula} onClose={() => setShowFormula(false)} />
       )}
@@ -336,6 +363,14 @@ export default function QuestionBankPage() {
       <BulkCropWorkspace key={bulkKey} open={showBulk} busy={bulkBusy}
         onClose={() => setShowBulk(false)} onDone={onBulkDone} />
 
+      <div className="grid md:grid-cols-[15rem_minmax(0,1fr)] gap-6 items-start">
+      <aside className="card p-3 md:sticky md:top-20">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 px-2 mb-2">{t('folders', { ns: 'teacher' })}</p>
+        <BankFolderTree folders={folders} questions={questions} selected={folderSel}
+          onSelect={(v) => { setFolderSel(v); setPicked(new Set()) }} editable onChanged={() => loadFolders()} />
+      </aside>
+      <div className="space-y-6 min-w-0">
+
       {/* Create / Edit Form */}
       {editingId !== null && (
         <div className="bg-white rounded-2xl border-2 border-primary-200 shadow-sm overflow-hidden">
@@ -353,6 +388,18 @@ export default function QuestionBankPage() {
           </div>
 
           <div className="p-5 space-y-5">
+            <div className="flex items-center gap-2 text-sm">
+              <i className="bi bi-folder text-amber-500"></i>
+              <span className="text-slate-500">{t('folder_label', { ns: 'teacher' })}:</span>
+              <Select value={form.folder == null ? 'none' : String(form.folder)}
+                onChange={(e) => upForm({ folder: e.target.value === 'none' ? null : Number(e.target.value) })}
+                className="input-field py-1.5 text-sm w-64">
+                <option value="none">{t('folder_none', { ns: 'teacher' })}</option>
+                {folderOptions.map((f) => (
+                  <option key={f.id} value={String(f.id)}>{'\u00A0\u00A0'.repeat(f.depth)}{f.name}</option>
+                ))}
+              </Select>
+            </div>
             {/* Type selector */}
             <div className="flex flex-wrap gap-2">
               {Object.entries(TYPE_CONFIG).map(([type, cfg]) => (
@@ -605,22 +652,44 @@ export default function QuestionBankPage() {
         ) : filtered.length === 0 ? (
           <div className="card p-12 text-center">
             <i className="bi bi-bank text-4xl text-slate-300 mb-3 block"></i>
-            <p className="font-semibold text-slate-500">{t('bank_empty', { ns: 'teacher' })}</p>
-            <p className="text-sm text-slate-400 mt-1">{t('bank_empty_hint', { ns: 'teacher' })}</p>
+            {questions.length > 0 ? (
+              <p className="font-semibold text-slate-500">{t('folder_empty', { ns: 'teacher' })}</p>
+            ) : (
+              <>
+                <p className="font-semibold text-slate-500">{t('bank_empty', { ns: 'teacher' })}</p>
+                <p className="text-sm text-slate-400 mt-1">{t('bank_empty_hint', { ns: 'teacher' })}</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-xs text-slate-400 font-medium">
-              {t('bank_question_count', { ns: 'teacher', count: filtered.length })}
-            </p>
+            <div className="flex items-center justify-between gap-3 flex-wrap min-h-[2.25rem]">
+              <p className="text-xs text-slate-400 font-medium">
+                {t('bank_question_count', { ns: 'teacher', count: filtered.length })}
+              </p>
+              {picked.size > 0 && (
+                <div className="flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-xl px-3 py-1.5">
+                  <span className="text-sm font-medium text-primary-800">{t('folder_picked', { ns: 'teacher', count: picked.size })}</span>
+                  <Select value="" onChange={(e) => e.target.value && moveTo(e.target.value)} className="input-field py-1 text-sm w-52">
+                    <option value="">{t('folder_move_to', { ns: 'teacher' })}</option>
+                    <option value="none">{t('folder_none', { ns: 'teacher' })}</option>
+                    {folderOptions.map((f) => (
+                      <option key={f.id} value={String(f.id)}>{'\u00A0\u00A0'.repeat(f.depth)}{f.name}</option>
+                    ))}
+                  </Select>
+                  <button onClick={() => setPicked(new Set())} className="text-slate-400 hover:text-slate-600"><i className="bi bi-x-lg"></i></button>
+                </div>
+              )}
+            </div>
             {filtered.map((q, idx) => {
               const cfg = TYPE_CONFIG[q.question_type]
               const typeLabel = t(TYPE_LABEL_KEYS[q.question_type] || '', { ns: 'teacher' })
               return (
-                <div key={q.id} className="card p-4 flex items-start gap-4">
-                  <span className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 shrink-0 mt-0.5">
-                    {idx + 1}
-                  </span>
+                <div key={q.id} className={`card p-4 flex items-start gap-4 ${picked.has(q.id) ? 'ring-2 ring-primary-300' : ''}`}>
+                  <label className="flex flex-col items-center gap-1 shrink-0 mt-0.5 cursor-pointer">
+                    <input type="checkbox" checked={picked.has(q.id)} onChange={() => togglePick(q.id)} className="w-4 h-4 accent-primary-600" />
+                    <span className="text-[11px] font-bold text-slate-400">{idx + 1}</span>
+                  </label>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium bg-${cfg?.color || 'slate'}-50 text-${cfg?.color || 'slate'}-700`}>
@@ -675,6 +744,8 @@ export default function QuestionBankPage() {
           </div>
         )
       )}
+      </div>
+      </div>
     </div>
   )
 }

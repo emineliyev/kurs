@@ -663,5 +663,22 @@
   "paper_list": "Введённые бумажные результаты ({{count}})",
   "paper_delete_confirm": "Удалить бумажный результат: {{name}}?",
   "paper_badge": "Бумага · вариант {{variant}}",
-  "print_watermark": "Водяной знак"
+  "print_watermark": "Водяной знак",
+  "folders": "Папки",
+  "folder_all": "Все вопросы",
+  "folder_none": "Без папки",
+  "folder_new": "Новая папка",
+  "folder_new_sub": "Подпапка",
+  "folder_rename": "Переименовать",
+  "folder_name_required": "Введите название папки",
+  "folder_delete_confirm": "Удалить папку «{{name}}»?",
+  "folder_delete_text": "Вопросы не удаляются: вопросы и подпапки переместятся на уровень выше.",
+  "folder_label": "Папка",
+  "folder_picked": "Выбрано вопросов: {{count}}",
+  "folder_move_to": "Переместить в…",
+  "folder_moved": "Перемещено вопросов: {{count}}",
+  "bank_add_all": "Добавить все ({{count}})",
+  "bank_add_random": "случайных вопросов добавить",
+  "bank_added_many": "Добавлено в тест: {{count}}",
+  "folder_empty": "В этой папке (или по поиску) вопросов нет"
 }
