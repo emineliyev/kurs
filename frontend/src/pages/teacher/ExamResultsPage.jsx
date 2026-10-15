@@ -99,6 +99,11 @@ export default function ExamResultsPage() {
           >
             <i className="bi bi-hand-index"></i> {t('grade_btn', { ns: 'teacher' })}
           </Link>
+          {submitted.length > 0 && (
+            <Link to={`/teacher/exams/${id}/report-cards`} className="btn-secondary text-sm">
+              <i className="bi bi-person-vcard"></i> {t('rc_print_all', { ns: 'teacher' })}
+            </Link>
+          )}
           {results.length > 0 && (
             <button
               onClick={() => exportToExcel(exam, results, excelLabels)}
@@ -147,8 +152,18 @@ export default function ExamResultsPage() {
                 {results.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-50">
                     <td className="px-5 py-3">
-                      <p className="font-medium text-slate-900">{r.student_name || r.student_username}</p>
-                      <p className="text-xs text-slate-400">{r.student_username}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-900">{r.student_name || r.student_username}</p>
+                          <p className="text-xs text-slate-400">{r.student_username}</p>
+                        </div>
+                        {r.status === 'submitted' && (
+                          <Link to={`/teacher/exams/${id}/report-cards?student=${r.student}`} title={t('rc_title', { ns: 'teacher' })}
+                            className="ml-auto shrink-0 w-7 h-7 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors">
+                            <i className="bi bi-person-vcard text-xs"></i>
+                          </Link>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3 font-semibold text-slate-900">
                       {r.score ?? '—'} / {r.total_points ?? '—'}

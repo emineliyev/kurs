@@ -13,6 +13,7 @@ export const examsApi = {
   saveDraft: (id, answers) => client.patch(`/exams/${id}/save_draft/`, { answers }),
   results: (id) => client.get(`/exams/${id}/results/`),
   absent: (id) => client.get(`/exams/${id}/absent/`),
+  reportCards: (id, studentId) => client.get(`/exams/${id}/report_cards/`, { params: studentId ? { student_id: studentId } : {} }),
   resultDetail: (id, studentId) => client.get(`/exams/${id}/result_detail/?student_id=${studentId}`),
   gradeAnswer: (id, data) => client.post(`/exams/${id}/grade_answer/`, data),
   needsGradingCount: () => client.get('/exams/needs_grading_count/'),

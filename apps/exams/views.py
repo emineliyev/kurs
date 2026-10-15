@@ -238,6 +238,31 @@ class ExamViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=['get'], permission_classes=[IsTeacher])
+    def report_cards(self, request, pk=None):
+        """Printable report cards of every submitted result (?student_id= for one student)."""
+        from .report_cards import build_card
+        exam = self.get_object()
+        if exam.class_room.teacher != request.user:
+            return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        finalize_overdue(exam.results.all())
+        results = (exam.results.filter(status=ExamResult.STATUS_SUBMITTED)
+                   .select_related('student', 'exam__test')
+                   .prefetch_related('answers')
+                   .order_by('student__first_name', 'student__last_name'))
+        if request.query_params.get('student_id'):
+            results = results.filter(student_id=request.query_params['student_id'])
+        cls = exam.class_room
+        return Response({
+            'exam': {
+                'id': exam.id, 'title': exam.title, 'test_title': exam.test.title, 'topic': exam.test.topic,
+                'class_name': cls.name, 'class_grade': cls.grade, 'class_group': cls.group,
+                'subject': cls.subject, 'teacher_name': request.user.get_full_name(),
+                'start_time': exam.start_time, 'passing_score': exam.test.passing_score,
+            },
+            'cards': [build_card(r) for r in results],
+        })
+
+    @action(detail=True, methods=['get'], permission_classes=[IsTeacher])
     def absent(self, request, pk=None):
         """Students of the exam's class who haven't started it."""
         exam = self.get_object()

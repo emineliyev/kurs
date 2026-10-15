@@ -31,6 +31,7 @@ const TestsPage = lazy(() => import('@/pages/teacher/TestsPage'))
 const TestCreatePage = lazy(() => import('@/pages/teacher/TestCreatePage'))
 const TestDetailPage = lazy(() => import('@/pages/teacher/TestDetailPage'))
 const TestPrintPage = lazy(() => import('@/pages/teacher/TestPrintPage'))
+const ReportCardsPage = lazy(() => import('@/pages/teacher/ReportCardsPage'))
 const ClassesPage = lazy(() => import('@/pages/teacher/ClassesPage'))
 const ClassDetailPage = lazy(() => import('@/pages/teacher/ClassDetailPage'))
 const StudentsPage = lazy(() => import('@/pages/teacher/StudentsPage'))
@@ -76,6 +77,10 @@ export default function App() {
       <Route
         path="/teacher/tests/:id/print"
         element={<ProtectedRoute role="teacher"><TestPrintPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/teacher/exams/:id/report-cards"
+        element={<ProtectedRoute role="teacher"><ReportCardsPage /></ProtectedRoute>}
       />
 
       {/* Teacher routes */}
