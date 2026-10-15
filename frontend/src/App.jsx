@@ -22,6 +22,9 @@ const VerifyEmailPage = lazyPage(() => import('@/pages/auth/VerifyEmailPage'))
 const ForgotPasswordPage = lazyPage(() => import('@/pages/auth/ForgotPasswordPage'))
 const ResetPasswordPage = lazyPage(() => import('@/pages/auth/ResetPasswordPage'))
 
+// Public legal pages (texts edited in the admin)
+const LegalPage = lazyPage(() => import('@/pages/LegalPage'))
+
 // Error pages
 const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'))
 const ErrorPage = lazyPage(() => import('@/pages/ErrorPage'))
@@ -137,6 +140,9 @@ export default function App() {
 
       {/* Landing page */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/legal/:slug" element={<LegalPage />} />
+      <Route path="/privacy" element={<LegalPage slug="privacy" />} />
+      <Route path="/terms" element={<LegalPage slug="terms" />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
     </Suspense>

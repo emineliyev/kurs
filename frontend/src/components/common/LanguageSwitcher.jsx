@@ -48,7 +48,7 @@ export default function LanguageSwitcher() {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
-  const current = LANGUAGES.find(l => l.code === i18n.language) ?? LANGUAGES[0]
+  const current = LANGUAGES.find(l => l.code === (i18n.resolvedLanguage || i18n.language || '').slice(0, 2)) ?? LANGUAGES[0]
 
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }

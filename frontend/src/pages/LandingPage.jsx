@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/authStore'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher'
+import SiteFooter from '@/components/common/SiteFooter'
+import { useSiteSettings } from '@/api/site'
 
 const ANIM_STYLE = `
 @keyframes fadeInUp {
@@ -32,14 +34,28 @@ export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const observerRef = useRef(null)
 
+  const { whatsapp_number: whatsapp, youtube_url: youtubeUrl } = useSiteSettings()
+
   const FEATURES = [
-    { id: 'test', icon: 'bi-file-text', title: t('landing_feat_test_title'), desc: t('landing_feat_test_desc') },
-    { id: 'exam', icon: 'bi-clock-history', title: t('landing_feat_exam_title'), desc: t('landing_feat_exam_desc') },
-    { id: 'anticheat', icon: 'bi-shield-check', title: t('landing_feat_anticheat_title'), desc: t('landing_feat_anticheat_desc') },
-    { id: 'analytics', icon: 'bi-bar-chart-line', title: t('analytics'), desc: t('landing_feat_analytics_desc') },
-    { id: 'classes', icon: 'bi-people', title: t('landing_feat_classes_title'), desc: t('landing_feat_classes_desc') },
-    { id: 'multilang', icon: 'bi-translate', title: t('landing_feat_multilang_title'), desc: t('landing_feat_multilang_desc') },
-  ]
+    { id: 'types', icon: 'bi-ui-checks' },
+    { id: 'pdf', icon: 'bi-file-earmark-pdf' },
+    { id: 'bank', icon: 'bi-folder2-open' },
+    { id: 'online', icon: 'bi-clock-history' },
+    { id: 'fair', icon: 'bi-shield-check' },
+    { id: 'paper', icon: 'bi-printer' },
+    { id: 'grading', icon: 'bi-check2-circle' },
+    { id: 'analytics', icon: 'bi-bar-chart-line' },
+    { id: 'classes', icon: 'bi-people' },
+  ].map((f) => ({ ...f, title: t(`landing_feat_${f.id}_title`), desc: t(`landing_feat_${f.id}_desc`) }))
+
+  // "30 days" reads better as "1 month"
+  const period = (days) => (days % 30 === 0
+    ? t('landing_period_months', { count: days / 30 })
+    : t('landing_period_days', { count: days }))
+  const trialPlan = plans.find((p) => Number(p.price) === 0)
+  const trialNote = trialPlan?.duration_days
+    ? `${t('landing_no_card')} · ${t('landing_trial', { period: period(trialPlan.duration_days) })}`
+    : t('landing_no_card')
 
   const HOW_IT_WORKS = [
     { id: 'register', step: '01', icon: 'bi-person-plus', title: t('landing_how_register_title'), desc: t('landing_how_register_desc') },
@@ -175,19 +191,21 @@ export default function LandingPage() {
               <i className="bi bi-rocket-takeoff mr-2"></i>
               {t('landing_start_free')}
             </Link>
-            <a
-              href="https://www.youtube.com/@kursumapp"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border-2 border-white/50 text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 transition-colors text-lg"
-            >
-              <i className="bi bi-play-circle mr-2"></i>
-              {t('landing_learn_more')}
-            </a>
+            {youtubeUrl && (
+              <a
+                href={youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border-2 border-white/50 text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 transition-colors text-lg"
+              >
+                <i className="bi bi-play-circle mr-2"></i>
+                {t('landing_learn_more')}
+              </a>
+            )}
           </div>
           <p className="anim-item text-blue-200 text-sm mt-6" data-delay="400">
             <i className="bi bi-check-lg mr-1"></i>
-            {t('landing_no_card')}
+            {trialNote}
           </p>
         </div>
 
@@ -200,12 +218,12 @@ export default function LandingPage() {
               <div className="w-3 h-3 bg-green-400 rounded-full"></div>
               <div className="flex-1 bg-white/20 rounded-full h-5 ml-2"></div>
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: t('students'), value: '128', icon: 'bi-people-fill', color: 'bg-blue-500' },
                 { label: t('tests'), value: '34', icon: 'bi-file-text', color: 'bg-purple-500' },
                 { label: t('exams'), value: '12', icon: 'bi-journal-check', color: 'bg-green-500' },
-                { label: t('landing_avg_score'), value: '78%', icon: 'bi-graph-up', color: 'bg-amber-500' },
+                { label: t('landing_avg_score'), value: '78/100', icon: 'bi-graph-up', color: 'bg-amber-500' },
               ].map((item) => (
                 <div key={item.label} className="bg-white/15 rounded-xl p-3 text-white">
                   <div className={`w-8 h-8 ${item.color} rounded-lg flex items-center justify-center mb-2`}>
@@ -326,10 +344,10 @@ export default function LandingPage() {
                         <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
                         {plan.max_students === -1 ? t('landing_unlimited_students') : t('landing_n_students', { count: plan.max_students })}
                       </li>
-                      {Number(plan.price) === 0 && (
+                      {Number(plan.price) === 0 && plan.duration_days > 0 && (
                         <li className="flex items-start gap-2 text-slate-600">
                           <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
-                          {t('landing_full_access_1mo')}
+                          {t('landing_full_access', { period: period(plan.duration_days) })}
                         </li>
                       )}
                     </ul>
@@ -341,7 +359,7 @@ export default function LandingPage() {
                           : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                       }`}
                     >
-                      {plan.price === 0 ? t('landing_start_free') : t('landing_select_plan')}
+                      {Number(plan.price) === 0 ? t('landing_start_free') : t('landing_select_plan')}
                     </button>
                   </div>
                 )
@@ -368,7 +386,7 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-4 text-center">
           <h2 className="anim-item text-3xl md:text-4xl font-bold mb-4">{t('landing_cta_title')}</h2>
           <p className="anim-item text-blue-100 text-lg mb-8" data-delay="100">
-            {t('landing_cta_desc')}
+            {trialNote}
           </p>
           <div className="anim-item" data-delay="200">
             <Link
@@ -382,35 +400,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-10">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary-700 rounded-lg flex items-center justify-center">
-                <i className="bi bi-book-half text-white text-sm"></i>
-              </div>
-              <span className="font-bold text-white text-lg">{t('app_name')}</span>
-            </div>
-            <p className="text-sm">{t('landing_footer_copy')}</p>
-            <div className="flex gap-4 text-sm">
-              <Link to="/login" className="hover:text-white transition-colors">{t('landing_login')}</Link>
-              <Link to="/register" className="hover:text-white transition-colors">{t('landing_register')}</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* WhatsApp fixed button */}
-      <a
-        href="https://wa.me/994703678873"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors"
-        title="WhatsApp"
-      >
-        <i className="bi bi-whatsapp text-2xl"></i>
-      </a>
+      {whatsapp && (
+        <a
+          href={`https://wa.me/${whatsapp}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors"
+          title="WhatsApp"
+          aria-label="WhatsApp"
+        >
+          <i className="bi bi-whatsapp text-2xl"></i>
+        </a>
+      )}
     </div>
   )
 }

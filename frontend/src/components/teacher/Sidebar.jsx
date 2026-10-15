@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useSiteSettings } from '@/api/site'
 
 const NAV_ITEMS = [
   { to: '/teacher', icon: 'bi-grid-1x2', labelKey: 'dashboard', end: true },
@@ -19,6 +20,7 @@ const BOTTOM_ITEMS = [
 
 export default function Sidebar({ isOpen, onClose, isMobile }) {
   const { t } = useTranslation()
+  const { youtube_url: youtubeUrl } = useSiteSettings()
   const expanded = isMobile ? true : isOpen
 
   const handleNavClick = () => { if (isMobile && onClose) onClose() }
@@ -80,16 +82,18 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
 
       {/* Bottom nav */}
       <div className={`p-3 pt-3 border-t border-slate-100 space-y-1 ${expanded ? 'mx-3 px-0' : ''}`}>
-        <a
-          href="https://www.youtube.com/@kursumapp"
-          target="_blank"
-          rel="noopener noreferrer"
-          title={!expanded ? t('watch_tutorials', { ns: 'teacher' }) : undefined}
-          className={`sidebar-link text-red-500 hover:bg-red-50 hover:text-red-600 ${!expanded ? 'justify-center px-0' : ''}`}
-        >
-          <i className="bi bi-youtube text-[18px] shrink-0"></i>
-          {expanded && <span>{t('watch_tutorials', { ns: 'teacher' })}</span>}
-        </a>
+        {youtubeUrl && (
+          <a
+            href={youtubeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={!expanded ? t('watch_tutorials', { ns: 'teacher' }) : undefined}
+            className={`sidebar-link text-red-500 hover:bg-red-50 hover:text-red-600 ${!expanded ? 'justify-center px-0' : ''}`}
+          >
+            <i className="bi bi-youtube text-[18px] shrink-0"></i>
+            {expanded && <span>{t('watch_tutorials', { ns: 'teacher' })}</span>}
+          </a>
+        )}
         {BOTTOM_ITEMS.map((item) => (
           <NavLink
             key={item.to}

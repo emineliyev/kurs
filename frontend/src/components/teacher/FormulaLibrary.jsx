@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import katex from 'katex'
+import 'katex/dist/katex.min.css'
 
 function buildCategories(t) {
   return {

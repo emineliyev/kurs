@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import ReCAPTCHA from 'react-google-recaptcha'
 import toast from 'react-hot-toast'
@@ -186,6 +186,16 @@ export default function RegisterPage() {
         >
           {loading ? <><i className="bi bi-arrow-repeat animate-spin"></i> {t('loading', { ns: 'common' })}</> : t('register')}
         </button>
+        <p className="text-xs text-center text-slate-400 leading-relaxed">
+          <Trans
+            t={t}
+            i18nKey="register_agree"
+            components={{
+              terms: <Link to="/terms" target="_blank" className="text-primary-700 hover:underline" />,
+              privacy: <Link to="/privacy" target="_blank" className="text-primary-700 hover:underline" />,
+            }}
+          />
+        </p>
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500">
