@@ -12,7 +12,11 @@ class Test(models.Model):
     randomize_questions = models.BooleanField(default=False, verbose_name='Sualları qarışdır')
     randomize_answers = models.BooleanField(default=False, verbose_name='Cavabları qarışdır')
     topic = models.CharField(max_length=300, blank=True, verbose_name='Mövzu')
-    passing_score = models.PositiveIntegerField(default=50, verbose_name='Keçid balı (%)')
+    # Scoring is in points: the test is worth max_score (100 by default) and passing_score is points too
+    max_score = models.FloatField(default=100, verbose_name='Ümumi bal')
+    equal_points = models.BooleanField(default=True, verbose_name='Hər suala bərabər bal',
+                                       help_text='Ümumi bal suallar arasında bərabər bölünür')
+    passing_score = models.FloatField(default=50, verbose_name='Keçid balı')
     # Set on the first publish; republishing does not use the monthly quota again.
     published_at = models.DateTimeField(null=True, blank=True, verbose_name='İlk dəfə hazır olub')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Yaradılıb')
@@ -32,7 +36,17 @@ class Test(models.Model):
 
     @property
     def total_points(self):
-        return sum(q.points for q in self.questions.all())
+        return round(sum(q.points for q in self.questions.all()), 2)
+
+    def rebalance_points(self):
+        """With equal_points on, every graded question is worth max_score / count (e.g. 100/30 = 3.3333)."""
+        if not self.equal_points:
+            return
+        graded = list(self.questions.exclude(question_type=Question.TYPE_PASSAGE))
+        if not graded:
+            return
+        each = round(self.max_score / len(graded), 4)
+        Question.objects.filter(pk__in=[q.pk for q in graded]).update(points=each)
 
     LOCKED_MESSAGE = 'Şagirdlər bu testə aid imtahana başladığı üçün suallar dəyişdirilə bilməz.'
 
@@ -105,7 +119,7 @@ class Question(models.Model):
     model_answer = models.TextField(blank=True, help_text='Açıq və uzun cavab sualları üçün müəllimin nümunə cavabı', verbose_name='Nümunə cavab')
     correct_answer = models.TextField(blank=True, help_text='Qısa cavab və rəqəm suallarının avtomatik yoxlanması üçün', verbose_name='Düzgün cavab')
     tolerance = models.FloatField(null=True, blank=True, help_text='Rəqəm sualları üçün icazə verilən fərq', verbose_name='Tolerans')
-    points = models.PositiveSmallIntegerField(default=1, verbose_name='Bal')
+    points = models.FloatField(default=1, verbose_name='Bal')
     order = models.PositiveSmallIntegerField(default=0, verbose_name='Sıra')
     hide_choices = models.BooleanField(default=False, help_text='Şəkilli suallarda A–E artıq şəklin içindədirsə', verbose_name='Çapda variantları gizlət')
     # Bank question this was copied from — the same bank question can be added to a test only once

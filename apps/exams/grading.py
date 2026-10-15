@@ -14,11 +14,12 @@ def gradable_total(exam):
 
 
 def _set_totals(result, exam, earned, total):
-    percentage = (earned / total * 100) if total > 0 else 0
+    # Points, rounded to 2 decimals so 30 × 3.3333 shows as 100; the pass mark is in points too
+    earned, total = round(earned, 2), round(total, 2)
     result.score = earned
     result.total_points = total
-    result.percentage = round(percentage, 2)
-    result.passed = percentage >= exam.test.passing_score
+    result.percentage = round(earned / total * 100, 2) if total > 0 else 0
+    result.passed = earned >= exam.test.passing_score
 
 
 def recalc_totals(result):

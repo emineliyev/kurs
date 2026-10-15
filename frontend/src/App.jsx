@@ -39,6 +39,7 @@ const ExamsPage = lazy(() => import('@/pages/teacher/ExamsPage'))
 const ExamCreatePage = lazy(() => import('@/pages/teacher/ExamCreatePage'))
 const ExamEditPage = lazy(() => import('@/pages/teacher/ExamEditPage'))
 const ExamResultsPage = lazy(() => import('@/pages/teacher/ExamResultsPage'))
+const PaperResultsPage = lazy(() => import('@/pages/teacher/PaperResultsPage'))
 const GradingPage = lazy(() => import('@/pages/teacher/GradingPage'))
 const AnalyticsPage = lazy(() => import('@/pages/teacher/AnalyticsPage'))
 const QuestionBankPage = lazy(() => import('@/pages/teacher/QuestionBankPage'))
@@ -104,6 +105,7 @@ export default function App() {
         <Route path="exams/create" element={<ExamCreatePage />} />
         <Route path="exams/:id/edit" element={<ExamEditPage />} />
         <Route path="exams/:id/results" element={<ExamResultsPage />} />
+        <Route path="exams/:id/paper" element={<PaperResultsPage />} />
         <Route path="exams/:id/grade" element={<GradingPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="question-bank" element={<QuestionBankPage />} />

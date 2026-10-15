@@ -135,7 +135,7 @@ class StudentAnswerReviewSerializer(serializers.ModelSerializer):
     question_type = serializers.CharField(source='question.question_type', read_only=True)
     question_image = serializers.SerializerMethodField()
     question_order = serializers.IntegerField(source='question.order', read_only=True)
-    question_points = serializers.IntegerField(source='question.points', read_only=True)
+    question_points = serializers.FloatField(source='question.points', read_only=True)
     all_answers = serializers.SerializerMethodField()
     selected_answer_id = serializers.SerializerMethodField()
 
@@ -180,7 +180,7 @@ class ExamResultSerializer(serializers.ModelSerializer):
             'id', 'exam', 'student', 'student_name', 'student_username',
             'status', 'score', 'total_points', 'percentage', 'passed',
             'tab_switch_count', 'started_at', 'submitted_at', 'pdf_report_url',
-            'needs_grading', 'deadline', 'auto_submitted',
+            'needs_grading', 'deadline', 'auto_submitted', 'is_offline', 'offline_variant',
         ]
         read_only_fields = [
             'id', 'student', 'started_at', 'submitted_at',
@@ -207,6 +207,11 @@ class ExamResultDetailSerializer(ExamResultSerializer):
         """Questions and choices in the same order this student saw them (A/B/C must match the exam)."""
         from apps.tests_app.views import shuffled_for_student
         data = super().to_representation(instance)
+        if instance.is_offline:
+            # paper results: the teacher's own order (the printed variant's letters are mapped on entry)
+            order = {q: i for i, q in enumerate(instance.exam.test.questions.values_list('pk', flat=True))}
+            data['answers_review'] = sorted(data['answers_review'], key=lambda a: order.get(a['question'], 0))
+            return data
         exam = instance.exam
         questions, answer_order = shuffled_for_student(
             exam.test.questions.prefetch_related('answers'), exam, instance.student)

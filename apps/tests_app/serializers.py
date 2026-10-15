@@ -76,7 +76,7 @@ class QuestionPublicSerializer(serializers.ModelSerializer):
 
 class TestSerializer(serializers.ModelSerializer):
     question_count = serializers.IntegerField(read_only=True)
-    total_points = serializers.IntegerField(read_only=True)
+    total_points = serializers.FloatField(read_only=True)
     teacher_name = serializers.CharField(source='teacher.get_full_name', read_only=True)
     class_names = serializers.SerializerMethodField()
 
@@ -86,6 +86,18 @@ class TestSerializer(serializers.ModelSerializer):
 
     def get_class_names(self, obj):
         return [{'id': c.id, 'name': c.name} for c in obj.class_rooms.all()]
+
+    def validate(self, attrs):
+        max_score = attrs.get('max_score', getattr(self.instance, 'max_score', 100))
+        passing = attrs.get('passing_score', getattr(self.instance, 'passing_score', 50))
+        if max_score is not None and max_score <= 0:
+            raise serializers.ValidationError({'max_score': 'Ümumi bal 0-dan böyük olmalıdır.'})
+        if passing is not None and passing < 0:
+            raise serializers.ValidationError({'passing_score': 'Keçid balı mənfi ola bilməz.'})
+        equal = attrs.get('equal_points', getattr(self.instance, 'equal_points', True))
+        if equal and passing is not None and max_score and passing > max_score:
+            raise serializers.ValidationError({'passing_score': f'Keçid balı ümumi baldan ({max_score:g}) çox ola bilməz.'})
+        return attrs
 
     def validate_class_rooms(self, value):
         request = self.context.get('request')
@@ -98,7 +110,7 @@ class TestSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'topic', 'class_rooms', 'class_names',
             'is_published', 'randomize_questions', 'randomize_answers',
-            'passing_score', 'question_count', 'total_points',
+            'passing_score', 'max_score', 'equal_points', 'question_count', 'total_points',
             'teacher_name', 'created_at', 'updated_at', 'has_results', 'open_exam_count',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

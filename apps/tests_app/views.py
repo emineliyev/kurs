@@ -157,7 +157,8 @@ class TestViewSet(viewsets.ModelViewSet):
             snapshot=snapshot,
             created_by=self.request.user
         )
-        serializer.save()
+        test = serializer.save()
+        test.rebalance_points()  # total or the equal-points switch may have changed
 
     @action(detail=True, methods=['post'], permission_classes=[IsTeacher])
     def duplicate(self, request, pk=None):
@@ -261,15 +262,21 @@ class QuestionViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Test not found or permission denied.')
         self._ensure_editable(test)
-        serializer.save(test=test)
+        question = serializer.save(test=test)
+        test.rebalance_points()
+        question.refresh_from_db(fields=['points'])
 
     def perform_update(self, serializer):
         self._ensure_editable(serializer.instance.test)
-        serializer.save()
+        question = serializer.save()
+        question.test.rebalance_points()  # a passage ↔ question type change alters the count
+        question.refresh_from_db(fields=['points'])
 
     def perform_destroy(self, instance):
-        self._ensure_editable(instance.test)
+        test = instance.test
+        self._ensure_editable(test)
         instance.delete()
+        test.rebalance_points()
 
     @action(detail=False, methods=['post'])
     def reorder(self, request):
@@ -338,4 +345,6 @@ class BankQuestionViewSet(viewsets.ModelViewSet):
                 is_correct=ans.is_correct,
                 order=ans.order,
             )
+        test.rebalance_points()
+        new_q.refresh_from_db(fields=['points'])
         return Response(QuestionSerializer(new_q, context={'request': request}).data, status=status.HTTP_201_CREATED)

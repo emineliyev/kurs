@@ -60,7 +60,7 @@ class ExamResult(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exam_results', verbose_name='Şagird')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_IN_PROGRESS, verbose_name='Status')
     score = models.FloatField(null=True, blank=True, verbose_name='Bal')
-    total_points = models.PositiveSmallIntegerField(default=0, verbose_name='Ümumi bal')
+    total_points = models.FloatField(default=0, verbose_name='Ümumi bal')
     percentage = models.FloatField(null=True, blank=True, verbose_name='Faiz')
     passed = models.BooleanField(null=True, blank=True, verbose_name='Keçdi')
     tab_switch_count = models.PositiveSmallIntegerField(default=0, verbose_name='Tab dəyişmə sayı')
@@ -71,6 +71,9 @@ class ExamResult(models.Model):
     # survive a reload/another device, and are graded if the time runs out before "Submit"
     draft_answers = models.JSONField(default=dict, blank=True, verbose_name='Yadda saxlanmış cavablar')
     auto_submitted = models.BooleanField(default=False, verbose_name='Vaxt bitəndə avtomatik təhvil')
+    # Taken on paper; the teacher typed the answers in. Order/letters follow the printed variant.
+    is_offline = models.BooleanField(default=False, verbose_name='Kağız üzərində')
+    offline_variant = models.CharField(max_length=1, blank=True, verbose_name='Çap variantı')
 
     # Slack for a slow network between the timer hitting zero and the submit arriving
     GRACE = timedelta(minutes=2)

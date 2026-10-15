@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { scoreText } from '@/utils/score'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
@@ -9,14 +10,14 @@ import PageSpinner from '@/components/common/PageSpinner'
 const MANUAL_TYPES = ['long_answer', 'open']
 const TEXT_TYPES = ['short_answer', 'numeric']
 
-function ScoreBadge({ passed, percentage }) {
+function ScoreBadge({ passed, score, total }) {
   const { t } = useTranslation('teacher')
   if (passed === null || passed === undefined) {
     return <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-full text-xs">{t('not_graded')}</span>
   }
   return passed
-    ? <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">{t('passed')} · {percentage}%</span>
-    : <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">{t('failed')} · {percentage}%</span>
+    ? <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">{t('passed')} · {scoreText(score, total)}</span>
+    : <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">{t('failed')} · {scoreText(score, total)}</span>
 }
 
 function AnswerCard({ answer, examId, studentId, onGraded }) {
@@ -233,7 +234,7 @@ export default function GradingPage() {
                     <p className="text-xs text-slate-400">{r.student_username}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    <ScoreBadge passed={r.passed} percentage={r.percentage} />
+                    <ScoreBadge passed={r.passed} score={r.score} total={r.total_points} />
                     {r.needs_grading && (
                       <span className="text-xs text-violet-600 flex items-center gap-1 font-medium">
                         <i className="bi bi-hand-index"></i> {t('waiting', { ns: 'teacher' })}
@@ -268,7 +269,7 @@ export default function GradingPage() {
                     <span className="text-slate-500">
                       {detail.score ?? 0} / {detail.total_points ?? 0} {t('q_word_points', { ns: 'teacher' })}
                     </span>
-                    <ScoreBadge passed={detail.passed} percentage={detail.percentage} />
+                    <ScoreBadge passed={detail.passed} score={detail.score} total={detail.total_points} />
                   </div>
                 </div>
 

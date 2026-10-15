@@ -11,6 +11,7 @@ import PageSpinner from '@/components/common/PageSpinner'
 import Select from '@/components/common/Select'
 import StudentFormModal, { showCredentials } from '@/components/teacher/StudentFormModal'
 import { toastApiError } from '@/api/errors'
+import { scoreText } from '@/utils/score'
 
 const classNames = (s) => s.classes.map((c) => c.name).join(', ')
 
@@ -60,7 +61,7 @@ function StudentHistoryModal({ student, onClose }) {
                     {r.passed ? t('passed', { ns: 'teacher' }) : t('failed', { ns: 'teacher' })}
                   </span>
                 )}
-                <span className="text-sm font-bold text-slate-700">{r.percentage}%</span>
+                <span className="text-sm font-bold text-slate-700">{scoreText(r.score, r.total_points)}</span>
                 <Link to={`/teacher/exams/${r.exam_id}/results`} onClick={onClose} className="text-slate-300 hover:text-primary-700 transition-colors" title={t('results', { ns: 'teacher' })}>
                   <i className="bi bi-box-arrow-up-right text-xs"></i>
                 </Link>

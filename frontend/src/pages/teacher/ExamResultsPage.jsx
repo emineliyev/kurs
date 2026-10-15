@@ -5,18 +5,18 @@ import { examsApi } from '@/api/exams'
 import { format } from 'date-fns'
 import { exportXlsx } from '@/utils/excel'
 import PageSpinner from '@/components/common/PageSpinner'
+import { fmtPoints } from '@/utils/score'
 
 function exportToExcel(exam, results, labels) {
   const headers = [
     labels.fullName, labels.username, labels.score, labels.totalPoints,
-    labels.percentage, labels.tabSwitches, labels.status, labels.submittedAt,
+    labels.tabSwitches, labels.status, labels.submittedAt,
   ]
   const rows = results.map((r) => [
     r.student_name || '',
     r.student_username || '',
     r.score ?? '',
     r.total_points ?? '',
-    r.percentage ?? '',
     r.tab_switch_count ?? 0,
     r.status === 'submitted' ? (r.passed ? labels.passed : labels.failed) : r.status,
     r.submitted_at ? format(new Date(r.submitted_at), 'dd.MM.yyyy HH:mm') : '',
@@ -56,15 +56,15 @@ export default function ExamResultsPage() {
   // Only finished work counts: a student still writing isn't a 0%
   const submitted = results.filter(r => r.status === 'submitted')
   const avg = submitted.length
-    ? Math.round(submitted.reduce((s, r) => s + (r.percentage || 0), 0) / submitted.length)
+    ? submitted.reduce((s, r) => s + (r.score || 0), 0) / submitted.length
     : 0
+  const examTotal = submitted[0]?.total_points
 
   const excelLabels = {
     fullName: t('full_name'),
     username: t('username_field', { ns: 'teacher' }),
     score: t('score', { ns: 'teacher' }),
     totalPoints: t('max_score', { ns: 'teacher' }),
-    percentage: `${t('percentage', { ns: 'teacher' })} (%)`,
     tabSwitches: t('tab_switches', { ns: 'teacher' }),
     status: t('status'),
     submittedAt: t('submitted_at', { ns: 'teacher' }),
@@ -78,7 +78,7 @@ export default function ExamResultsPage() {
     { label: t('participants', { ns: 'teacher' }), value: results.length, icon: 'bi-people', color: 'text-primary-700' },
     { label: t('passed', { ns: 'teacher' }), value: submitted.filter(r => r.passed).length, icon: 'bi-check-circle', color: 'text-green-600' },
     { label: t('failed', { ns: 'teacher' }), value: submitted.filter(r => !r.passed).length, icon: 'bi-x-circle', color: 'text-red-500' },
-    { label: t('average_score', { ns: 'teacher' }), value: `${avg}%`, icon: 'bi-graph-up', color: 'text-amber-500' },
+    { label: t('average_score', { ns: 'teacher' }), value: examTotal ? `${fmtPoints(avg)} / ${fmtPoints(examTotal)}` : '—', icon: 'bi-graph-up', color: 'text-amber-500' },
     { label: t('absent_count', { ns: 'teacher' }), value: absent.length, icon: 'bi-person-x', color: 'text-slate-400' },
   ]
 
@@ -98,6 +98,9 @@ export default function ExamResultsPage() {
             className="btn-secondary text-sm flex items-center gap-1"
           >
             <i className="bi bi-hand-index"></i> {t('grade_btn', { ns: 'teacher' })}
+          </Link>
+          <Link to={`/teacher/exams/${id}/paper`} className="btn-secondary text-sm">
+            <i className="bi bi-file-earmark-text"></i> {t('paper_btn', { ns: 'teacher' })}
           </Link>
           {submitted.length > 0 && (
             <Link to={`/teacher/exams/${id}/report-cards`} className="btn-secondary text-sm">
@@ -142,7 +145,6 @@ export default function ExamResultsPage() {
                 <tr>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('student_col', { ns: 'teacher' })}</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('score', { ns: 'teacher' })}</th>
-                  <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('percentage', { ns: 'teacher' })}</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('tab_switches', { ns: 'teacher' })}</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('submitted_at', { ns: 'teacher' })}</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('status')}</th>
@@ -165,18 +167,13 @@ export default function ExamResultsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-3 font-semibold text-slate-900">
-                      {r.score ?? '—'} / {r.total_points ?? '—'}
-                    </td>
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${r.passed ? 'bg-green-500' : 'bg-red-400'}`}
-                            style={{ width: `${r.percentage || 0}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs font-medium">{r.percentage ?? 0}%</span>
+                      <p className="font-semibold text-slate-900">
+                        {r.score != null ? `${fmtPoints(r.score)} / ${fmtPoints(r.total_points)}` : '—'}
+                      </p>
+                      <div className="w-20 h-1.5 mt-1 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${r.passed ? 'bg-green-500' : 'bg-red-400'}`}
+                          style={{ width: `${r.percentage || 0}%` }}></div>
                       </div>
                     </td>
                     <td className="px-5 py-3 text-slate-500">
@@ -191,6 +188,11 @@ export default function ExamResultsPage() {
                     <td className="px-5 py-3">
                       <div className="flex flex-col gap-1">
                         {statusBadge(r)}
+                        {r.is_offline && (
+                          <span className="text-xs text-slate-500 flex items-center gap-1">
+                            <i className="bi bi-file-earmark-text"></i> {t('paper_badge', { ns: 'teacher', variant: r.offline_variant || 'A' })}
+                          </span>
+                        )}
                         {r.auto_submitted && (
                           <span className="text-xs text-slate-400 flex items-center gap-1">
                             <i className="bi bi-alarm"></i> {t('auto_submitted_short', { ns: 'teacher' })}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { scoreText } from '@/utils/score'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { analyticsApi } from '@/api/analytics'
@@ -123,7 +124,7 @@ export default function DashboardPage() {
                 <th className="text-left px-4 py-3 text-slate-500 font-medium w-10">#</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('full_name')}</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('grade', { ns: 'teacher' })}</th>
-                <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('percentage', { ns: 'teacher' })}</th>
+                <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('score', { ns: 'teacher' })}</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('status')}</th>
                 <th className="text-left px-4 py-3 text-slate-500 font-medium">{t('date')}</th>
               </tr>
@@ -146,7 +147,7 @@ export default function DashboardPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="font-semibold">{r.percentage?.toFixed(1)}%</span>
+                    <span className="font-semibold">{scoreText(r.score, r.total_points)}</span>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${r.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

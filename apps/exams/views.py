@@ -262,6 +262,65 @@ class ExamViewSet(viewsets.ModelViewSet):
             'cards': [build_card(r) for r in results],
         })
 
+    @action(detail=True, methods=['post', 'delete'], permission_classes=[IsTeacher])
+    def offline_result(self, request, pk=None):
+        """
+        Paper exam: the teacher types in a student's answers (answer ids already mapped from the
+        printed variant's letters) and the system grades them like an online submit.
+        Written answers can carry the teacher's points. POST again to correct, DELETE to remove.
+        """
+        from apps.tests_app.models import Question
+        exam = self.get_object()
+        if exam.class_room.teacher != request.user:
+            return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        data = request.data if request.method == 'POST' else request.query_params
+        student_id = data.get('student_id')
+        if not ClassEnrollment.objects.filter(class_room=exam.class_room, student_id=student_id,
+                                              is_active=True, student__is_active=True).exists():
+            return Response({'detail': 'Şagird bu sinifdə deyil.'}, status=status.HTTP_400_BAD_REQUEST)
+        existing = ExamResult.objects.filter(exam=exam, student_id=student_id).first()
+        if existing is not None and not existing.is_offline:
+            return Response({'detail': 'Bu şagird imtahanı onlayn verib.'}, status=status.HTTP_400_BAD_REQUEST)
+        if request.method == 'DELETE':
+            if existing is not None:
+                existing.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        raw = data.get('answers') or []
+        if not isinstance(raw, list):
+            return Response({'detail': 'answers must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        manual_points = {}
+        for a in raw:
+            if isinstance(a, dict) and a.get('points') not in (None, ''):
+                try:
+                    manual_points[int(a['question'])] = float(a['points'])
+                except (TypeError, ValueError, KeyError):
+                    return Response({'detail': 'points must be a number.'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = SubmitExamSerializer(data={'answers': [
+            {k: v for k, v in a.items() if k != 'points'} for a in raw if isinstance(a, dict)]})
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            created = existing is None
+            result = existing or ExamResult.objects.create(exam=exam, student_id=student_id)
+            result.answers.all().delete()
+            result.is_offline = True
+            result.offline_variant = str(data.get('variant') or '')[:1].upper()
+            grade(exam, result, serializer.validated_data['answers'])
+            if manual_points:
+                written = (result.answers.select_related('question')
+                           .filter(question_id__in=manual_points, question__question_type__in=Question.MANUAL_GRADE_TYPES))
+                for sa in written:
+                    pts = min(max(manual_points[sa.question_id], 0), sa.question.points)
+                    sa.points_earned = pts
+                    sa.is_correct = pts >= sa.question.points
+                    if not (sa.answer_text or sa.open_text):
+                        sa.answer_text = 'kağızda'
+                    sa.save(update_fields=['points_earned', 'is_correct', 'answer_text'])
+                recalc_totals(result)
+        return Response(ExamResultSerializer(result).data,
+                        status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
     @action(detail=True, methods=['get'], permission_classes=[IsTeacher])
     def absent(self, request, pk=None):
         """Students of the exam's class who haven't started it."""

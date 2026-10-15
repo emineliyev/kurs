@@ -44,8 +44,11 @@ def _item(number, question, choices, answer):
 def build_card(result):
     from apps.tests_app.views import shuffled_for_student
     exam = result.exam
-    questions, answer_order = shuffled_for_student(
-        exam.test.questions.prefetch_related('answers'), exam, result.student)
+    if result.is_offline:  # paper: the test's own order
+        questions, answer_order = list(exam.test.questions.prefetch_related('answers')), {}
+    else:
+        questions, answer_order = shuffled_for_student(
+            exam.test.questions.prefetch_related('answers'), exam, result.student)
     answers = {a.question_id: a for a in result.answers.all()}
 
     items, number = [], 0
@@ -73,6 +76,7 @@ def build_card(result):
         'passed': result.passed,
         'submitted_at': result.submitted_at,
         'auto_submitted': result.auto_submitted,
+        'is_offline': result.is_offline,
         'counts': counts,
         'items': items,
     }

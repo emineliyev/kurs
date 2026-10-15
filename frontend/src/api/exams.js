@@ -13,6 +13,8 @@ export const examsApi = {
   saveDraft: (id, answers) => client.patch(`/exams/${id}/save_draft/`, { answers }),
   results: (id) => client.get(`/exams/${id}/results/`),
   absent: (id) => client.get(`/exams/${id}/absent/`),
+  saveOffline: (id, data) => client.post(`/exams/${id}/offline_result/`, data),
+  deleteOffline: (id, studentId) => client.delete(`/exams/${id}/offline_result/`, { params: { student_id: studentId } }),
   reportCards: (id, studentId) => client.get(`/exams/${id}/report_cards/`, { params: studentId ? { student_id: studentId } : {} }),
   resultDetail: (id, studentId) => client.get(`/exams/${id}/result_detail/?student_id=${studentId}`),
   gradeAnswer: (id, data) => client.post(`/exams/${id}/grade_answer/`, data),

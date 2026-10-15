@@ -16,6 +16,7 @@ import MediaPickerModal from '@/components/common/MediaPickerModal'
 import { renderMath, MathText } from '@/utils/math'
 import QuestionTextEditor, { LatexPreview, AnswerMiniEditor } from '@/components/teacher/QuestionTextEditor'
 import { toastApiError } from '@/api/errors'
+import { fmtPoints } from '@/utils/score'
 
 let _dndIdCounter = 0
 const newDndId = () => ++_dndIdCounter
@@ -102,7 +103,8 @@ function ImageBlock({ preview, onRemove, onRecrop }) {
 }
 
 // ── QuestionCard ──────────────────────────────────────────────────────────────
-function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk }) {
+
+function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk, equalPoints }) {
   const { t } = useTranslation(['common', 'teacher'])
   const [saving, setSaving]           = useState(false)
   const [saved, setSaved]             = useState(false)
@@ -207,7 +209,7 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk 
         test: testId,
         text: question.text || '',
         question_type: qType,
-        points: qType === 'passage' ? 0 : (question.points || 1),
+        points: qType === 'passage' ? 0 : (question.points ?? 1),
         order: index,
         math_formula: question.math_formula || '',
         model_answer: question.model_answer || '',
@@ -500,14 +502,19 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk 
             {saved && <span className="text-xs text-green-600 font-medium flex items-center gap-1"><i className="bi bi-check-circle-fill"></i> {t('q_saved_badge', { ns: 'teacher' })}</span>}
           </div>
           <div className="flex items-center gap-2">
-            {qType !== 'passage' && (
+            {qType !== 'passage' && (equalPoints != null ? (
+              // equal-points tests: the share is computed from the total, not typed per question
+              <span className="text-xs text-slate-500 bg-slate-100 rounded-lg px-2 py-1" title={t('equal_points_hint', { ns: 'teacher' })}>
+                {fmtPoints(equalPoints)} {t('q_points_label', { ns: 'teacher' })}
+              </span>
+            ) : (
               <>
                 <span className="text-xs text-slate-400">{t('score', { ns: 'teacher' })}:</span>
-                <input type="number" value={question.points || 1} min={1} max={20}
-                  onChange={e => up('points', parseInt(e.target.value) || 1)}
-                  className="w-14 text-xs border border-slate-200 rounded-lg px-2 py-1 text-center focus:outline-none" />
+                <input type="number" value={question.points ?? 1} min={0} step={0.5}
+                  onChange={e => up('points', Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-16 text-xs border border-slate-200 rounded-lg px-2 py-1 text-center focus:outline-none" />
               </>
-            )}
+            ))}
             <button onClick={() => onRemove(index)} className="text-slate-300 hover:text-red-500 transition-colors">
               <i className="bi bi-trash text-base"></i>
             </button>
@@ -575,9 +582,11 @@ export default function TestCreatePage() {
   const [bankQuestions, setBankQuestions] = useState([])
   const [bankLoading, setBankLoading]     = useState(false)
   const [addingBankId, setAddingBankId]   = useState(null)
-  const { register, handleSubmit, reset } = useForm({
-    defaultValues: { passing_score: 50 }
+  const { register, handleSubmit, reset, watch } = useForm({
+    defaultValues: { max_score: 100, equal_points: true, passing_score: 50 }
   })
+  const formEqual = watch('equal_points')
+  const formMax = watch('max_score')
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -597,6 +606,8 @@ export default function TestCreatePage() {
         title: test.title,
         description: test.description || '',
         topic: test.topic || '',
+        max_score: test.max_score,
+        equal_points: test.equal_points,
         passing_score: test.passing_score,
       })
       setCreatedTest(test)
@@ -830,7 +841,11 @@ export default function TestCreatePage() {
 
   const savedCount  = questions.filter(q => q._saved).length
   const totalCount  = questions.length
-  const totalPoints = questions.reduce((s, q) => s + (q.points || 1), 0)
+  const gradableCount = questions.filter(q => q.question_type !== 'passage').length
+  const equalShare = createdTest?.equal_points && gradableCount ? createdTest.max_score / gradableCount : null
+  const totalPoints = fmtPoints(createdTest?.equal_points
+    ? (gradableCount ? createdTest.max_score : 0)
+    : questions.reduce((s, q) => s + (q.question_type === 'passage' ? 0 : (q.points ?? 1)), 0))
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -906,10 +921,31 @@ export default function TestCreatePage() {
               <input {...register('topic')} placeholder={t('test_topic_ph', { ns: 'teacher' })}
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-primary-500 text-sm" />
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">{t('passing_score', { ns: 'teacher' })}</label>
-              <input {...register('passing_score')} type="number" min={0}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-primary-500 text-sm" />
+            <div className="rounded-xl border border-slate-200 p-4 space-y-4">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input type="checkbox" {...register('equal_points')} className="mt-0.5 w-4 h-4 accent-primary-600" />
+                <span>
+                  <span className="block text-sm font-semibold text-slate-700">{t('equal_points', { ns: 'teacher' })}</span>
+                  <span className="block text-xs text-slate-400">{t('equal_points_hint', { ns: 'teacher' })}</span>
+                </span>
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                {formEqual ? (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">{t('total_score_label', { ns: 'teacher' })}</label>
+                    <input {...register('max_score', { required: true, min: 1 })} type="number" min={1} step="any"
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-primary-500 text-sm" />
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 self-center">{t('manual_points_hint', { ns: 'teacher' })}</p>
+                )}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">{t('passing_score', { ns: 'teacher' })}</label>
+                  <input {...register('passing_score', { required: true, min: 0 })} type="number" min={0} step="any"
+                    max={formEqual ? formMax : undefined}
+                    className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-primary-500 text-sm" />
+                </div>
+              </div>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5">
               <i className="bi bi-lightbulb"></i>{t('test_library_hint', { ns: 'teacher' })}
@@ -963,6 +999,7 @@ export default function TestCreatePage() {
                     onRemove={removeQuestion}
                     testId={createdTest?.id}
                     onOpenBulk={() => setShowBulk(true)}
+                    equalPoints={equalShare}
                   />
                 ))}
               </div>

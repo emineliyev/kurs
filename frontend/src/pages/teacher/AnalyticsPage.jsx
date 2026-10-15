@@ -198,8 +198,8 @@ export default function AnalyticsPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: t('average_score', { ns: 'teacher' }), value: `${stats.overview?.avg_score?.toFixed(1) || 0}%`, icon: 'bi-graph-up', color: 'bg-primary-700' },
-              { label: t('max_score', { ns: 'teacher' }), value: `${stats.overview?.max_score?.toFixed(1) || 0}%`, icon: 'bi-trophy', color: 'bg-green-500' },
+              { label: t('average_score', { ns: 'teacher' }), value: `${+(stats.overview?.avg_score || 0).toFixed(1)}/100`, icon: 'bi-graph-up', color: 'bg-primary-700' },
+              { label: t('max_score', { ns: 'teacher' }), value: `${+(stats.overview?.max_score || 0).toFixed(1)}/100`, icon: 'bi-trophy', color: 'bg-green-500' },
               { label: t('passed', { ns: 'teacher' }), value: stats.pass_count, icon: 'bi-check-circle', color: 'bg-green-500' },
               { label: t('failed', { ns: 'teacher' }), value: stats.fail_count, icon: 'bi-x-circle', color: 'bg-red-500' },
             ].map((item, i) => (
@@ -223,7 +223,7 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v) => [`${v}%`, t('average_score', { ns: 'teacher' })]} />
+                  <Tooltip formatter={(v) => [`${v}/100`, t('average_score', { ns: 'teacher' })]} />
                   <Bar dataKey="avg" fill="#143587" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

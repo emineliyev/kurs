@@ -59,7 +59,7 @@ export default function StudentHome() {
           {[
             { value: stats?.total_exams ?? 0, label: t('stat_exams', { ns: 'student' }), icon: 'bi-journal-check' },
             { value: stats?.passed_exams ?? 0, label: t('stat_passed', { ns: 'student' }), icon: 'bi-check-circle' },
-            { value: `${Math.round(stats?.average_score ?? 0)}%`, label: t('stat_avg', { ns: 'student' }), icon: 'bi-graph-up' },
+            { value: `${Math.round(stats?.average_score ?? 0)}/100`, label: t('stat_avg', { ns: 'student' }), icon: 'bi-graph-up' },
           ].map((s) => (
             <div key={s.label} className="bg-white/15 backdrop-blur rounded-xl p-3 text-center">
               <i className={`bi ${s.icon} text-white/70 text-base block mb-1`}></i>

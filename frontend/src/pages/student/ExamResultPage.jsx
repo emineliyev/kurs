@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
+import { fmtPoints, scoreText } from '@/utils/score'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { examsApi } from '@/api/exams'
@@ -53,14 +54,14 @@ export default function ExamResultPage() {
       {/* Score card */}
       <div className="card p-6 text-center">
         <div className={`w-24 h-24 rounded-full mx-auto flex items-center justify-center text-3xl font-bold text-white ${circleColor}`}>
-          {needsGrading ? <i className="bi bi-hourglass-split text-2xl"></i> : `${Math.round(percentage)}%`}
+          {needsGrading ? <i className="bi bi-hourglass-split text-2xl"></i> : fmtPoints(result.score)}
         </div>
         <h2 className="text-xl font-bold mt-4 text-slate-900">
           {needsGrading ? t('grading_in_progress_title', { ns: 'student' }) : (passed ? t('you_passed', { ns: 'student' }) : t('you_failed', { ns: 'student' }))}
         </h2>
         {needsGrading && <p className="text-amber-600 text-sm mt-1">{t('manual_grading_note', { ns: 'student' })}</p>}
         {exam && <p className="text-slate-500 text-sm mt-1">{exam.title}</p>}
-        <p className="text-slate-500 mt-1 font-semibold">{result.score} / {result.total_points} {t('score_word', { ns: 'student' })}</p>
+        <p className="text-slate-500 mt-1 font-semibold">{scoreText(result.score, result.total_points)} {t('score_word', { ns: 'student' })}</p>
       </div>
 
       {result.auto_submitted && (

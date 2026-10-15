@@ -37,6 +37,8 @@ class TeacherDashboardView(APIView):
                 'class_grade': r.exam.class_room.grade,
                 'class_group': r.exam.class_room.group,
                 'percentage': r.percentage,
+                'score': r.score,
+                'total_points': r.total_points,
                 'passed': r.passed,
                 'submitted_at': r.submitted_at,
             }

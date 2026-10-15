@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { format } from 'date-fns'
 import { examsApi } from '@/api/exams'
 import PageSpinner from '@/components/common/PageSpinner'
+import { fmtPoints, scoreText } from '@/utils/score'
 
 const SCHOOL_KEY = 'print-school-name'
 const MARK_CLASS = { '+': 'rc-ok', '-': 'rc-bad', '½': 'rc-part', '?': 'rc-wait', '': 'rc-empty' }
@@ -54,8 +55,8 @@ function ReportCard({ exam, card, perRow, school, t }) {
       </div>
 
       <div className="rc-summary">
-        <div><span>{t('rc_score', { ns: 'teacher' })}</span><b>{card.score ?? 0} / {card.total_points}</b></div>
-        <div><span>{t('rc_percent', { ns: 'teacher' })}</span><b>{Math.round(card.percentage ?? 0)}%</b></div>
+        <div><span>{t('rc_score', { ns: 'teacher' })}</span><b>{scoreText(card.score, card.total_points)}</b></div>
+        <div><span>{t('passing_score', { ns: 'teacher' })}</span><b>{fmtPoints(exam.passing_score)}</b></div>
         <div className={pending ? 'rc-wait' : card.passed ? 'rc-ok' : 'rc-bad'}>
           <span>{t('rc_result', { ns: 'teacher' })}</span>
           <b>{pending ? t('rc_pending', { ns: 'teacher' }) : card.passed ? t('passed', { ns: 'teacher' }) : t('failed', { ns: 'teacher' })}</b>
