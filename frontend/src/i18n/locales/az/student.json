@@ -73,5 +73,7 @@
   "change_password_info": "Yeni şifrə aşağıdakı qaydaların hamısına uyğun olmalıdır. Dəyişəndən sonra müəllimin verdiyi köhnə şifrə işləməyəcək — yeni şifrəni unutsanız, müəlliminiz onu sıfırlaya bilər.",
   "old_password_wrong": "Hazırkı şifrə düz deyil.",
   "rule_not_same_as_old": "Hazırkı şifrədən fərqli",
-  "special_chars_allowed": "Qəbul olunan xüsusi işarələr:"
+  "special_chars_allowed": "Qəbul olunan xüsusi işarələr:",
+  "answers_hidden_note": "Hansı suala düz, hansına səhv cavab verdiyinizi görürsünüz. Düzgün variantlar imtahan bitəndən sonra ({{time}}) görünəcək.",
+  "review_never": "Müəllim bu imtahanda yalnız balı göstərməyi seçib."
 }

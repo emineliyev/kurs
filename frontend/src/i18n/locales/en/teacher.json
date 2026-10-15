@@ -680,5 +680,11 @@
   "bank_add_all": "Add all ({{count}})",
   "bank_add_random": "random questions",
   "bank_added_many": "{{count}} question(s) added to the test",
-  "folder_empty": "No questions here (or none match the search)"
+  "folder_empty": "No questions here (or none match the search)",
+  "show_answers_label": "When can students see the answers?",
+  "show_answers_immediately": "Right away — score, mistakes and correct answers",
+  "show_answers_marks_then_answers": "Right away ✓/✗, correct answers after the end",
+  "show_answers_after_end": "After the exam ends",
+  "show_answers_never": "Never — score only",
+  "show_answers_hint": "If the class writes at the same time, \"✓/✗ right away\" stops answers being passed on. You can change it later."
 }

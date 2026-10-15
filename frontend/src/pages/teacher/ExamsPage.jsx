@@ -8,6 +8,7 @@ import Swal from '@/utils/swal'
 import { examsApi } from '@/api/exams'
 import { classesApi } from '@/api/classes'
 import Select from '@/components/common/Select'
+import ShowAnswersSelect from '@/components/teacher/ShowAnswersSelect'
 import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
 import { toastApiError } from '@/api/errors'
@@ -32,6 +33,7 @@ function ExamEditModal({ exam, classes, onClose, onSaved }) {
     start_time: toLocalDatetimeValue(exam.start_time),
     end_time: toLocalDatetimeValue(exam.end_time),
     duration_minutes: exam.duration_minutes,
+    show_answers: exam.show_answers || 'immediately',
   }
   const { register, handleSubmit, formState: { isSubmitting } } = useForm({ defaultValues: initial })
 
@@ -45,6 +47,7 @@ function ExamEditModal({ exam, classes, onClose, onSaved }) {
     if (!started && data.start_time !== initial.start_time) payload.start_time = new Date(data.start_time).toISOString()
     if (data.end_time !== initial.end_time) payload.end_time = new Date(data.end_time).toISOString()
     if (Number(data.duration_minutes) !== Number(initial.duration_minutes)) payload.duration_minutes = Number(data.duration_minutes)
+    if (data.show_answers && data.show_answers !== initial.show_answers) payload.show_answers = data.show_answers
     if (!Object.keys(payload).length) { onClose(); return }
     try {
       await examsApi.update(exam.id, payload)
@@ -95,6 +98,7 @@ function ExamEditModal({ exam, classes, onClose, onSaved }) {
             <label className="block text-sm font-medium mb-1">{t('duration', { ns: 'teacher' })}</label>
             <input {...register('duration_minutes', { required: true, min: 1 })} type="number" min={1} className="input-field" />
           </div>
+          <ShowAnswersSelect {...register('show_answers')} />
         </div>
         <div className="flex justify-end gap-3 px-5 py-4 border-t border-slate-100">
           <button type="button" onClick={onClose} className="btn-secondary">{t('cancel')}</button>

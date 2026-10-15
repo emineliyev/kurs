@@ -8,6 +8,18 @@ from apps.tests_app.models import Test, Question, Answer
 
 
 class Exam(models.Model):
+    # When a student sees the correct answers after submitting (the teacher always sees everything)
+    SHOW_IMMEDIATELY = 'immediately'
+    SHOW_MARKS_THEN_ANSWERS = 'marks_then_answers'
+    SHOW_AFTER_END = 'after_end'
+    SHOW_NEVER = 'never'
+    SHOW_ANSWERS_CHOICES = [
+        (SHOW_IMMEDIATELY, 'Dərhal hər şey'),
+        (SHOW_MARKS_THEN_ANSWERS, 'Dərhal ✓/✗, düzgün cavablar imtahan bitəndə'),
+        (SHOW_AFTER_END, 'İmtahan bitəndən sonra'),
+        (SHOW_NEVER, 'Heç vaxt (yalnız bal)'),
+    ]
+
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='exams', verbose_name='Test')
     class_room = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='exams', verbose_name='Sinif')
     title = models.CharField(max_length=300, blank=True, verbose_name='Başlıq')
@@ -17,6 +29,8 @@ class Exam(models.Model):
     randomize_questions = models.BooleanField(default=False, verbose_name='Sualları qarışdır')
     randomize_answers = models.BooleanField(default=False, verbose_name='Cavabları qarışdır')
     is_active = models.BooleanField(default=True, verbose_name='Aktiv')
+    show_answers = models.CharField(max_length=20, choices=SHOW_ANSWERS_CHOICES, default=SHOW_IMMEDIATELY,
+                                    verbose_name='Cavabları göstər')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Yaradılıb')
 
     class Meta:

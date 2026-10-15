@@ -688,5 +688,11 @@
   "bank_add_all": "Hamısını əlavə et ({{count}})",
   "bank_add_random": "təsadüfi sual əlavə et",
   "bank_added_many": "{{count}} sual testə əlavə edildi",
-  "folder_empty": "Bu qovluqda (və ya axtarışa uyğun) sual yoxdur"
+  "folder_empty": "Bu qovluqda (və ya axtarışa uyğun) sual yoxdur",
+  "show_answers_label": "Şagird cavabları nə vaxt görsün?",
+  "show_answers_immediately": "Dərhal — bal, səhvləri və düzgün cavablar",
+  "show_answers_marks_then_answers": "Dərhal ✓/✗, düzgün cavablar imtahan bitəndə",
+  "show_answers_after_end": "İmtahan bitəndən sonra",
+  "show_answers_never": "Heç vaxt — yalnız bal",
+  "show_answers_hint": "Sinifdə hamı eyni anda yazırsa, \"✓/✗ dərhal\" cavabların ötürülməsinin qarşısını alır. Sonradan dəyişmək olar."
 }

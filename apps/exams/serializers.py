@@ -33,7 +33,7 @@ class ExamSerializer(serializers.ModelSerializer):
             'id', 'test', 'test_title', 'test_topic', 'class_room', 'class_name',
             'class_grade', 'class_group', 'teacher_name', 'subject_name',
             'title', 'start_time', 'end_time', 'duration_minutes',
-            'randomize_questions', 'randomize_answers', 'is_active',
+            'randomize_questions', 'randomize_answers', 'is_active', 'show_answers',
             'is_ongoing', 'is_upcoming', 'is_finished', 'my_status',
             'participants_count', 'passed_count', 'failed_count', 'has_results',
             'in_progress_count', 'needs_grading_count', 'created_at',

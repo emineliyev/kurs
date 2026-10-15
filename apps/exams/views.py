@@ -11,6 +11,23 @@ from .models import Exam, ExamResult, StudentAnswer
 from .serializers import ExamSerializer, ExamResultSerializer, ExamResultDetailSerializer, SubmitExamSerializer
 
 
+def _apply_answer_visibility(data, exam):
+    """Trim a student's own result review to what the exam's show_answers setting allows."""
+    mode = exam.show_answers
+    running = timezone.now() <= exam.end_time
+    data['show_answers'] = mode
+    if mode == Exam.SHOW_NEVER or (mode == Exam.SHOW_AFTER_END and running):
+        data['answers_review'] = []
+        data['review_available_at'] = exam.end_time if mode == Exam.SHOW_AFTER_END else None
+    elif mode == Exam.SHOW_MARKS_THEN_ANSWERS and running:
+        # right/wrong per question now; which choice was right stays hidden until the end
+        for review in data['answers_review']:
+            for choice in review.get('all_answers') or []:
+                choice['is_correct'] = None
+        data['answers_hidden_until'] = exam.end_time
+    return data
+
+
 class ExamViewSet(viewsets.ModelViewSet):
     serializer_class = ExamSerializer
     permission_classes = [IsAuthenticated]
@@ -210,11 +227,7 @@ class ExamViewSet(viewsets.ModelViewSet):
                 'answers__selected_answer',
             ).get(exam=exam, student=request.user)
             data = ExamResultDetailSerializer(result, context={'request': request}).data
-            if timezone.now() <= exam.end_time:
-                # Classmates may still be writing: no correct answers until the exam is over
-                data['answers_review'] = []
-                data['review_available_at'] = exam.end_time
-            return Response(data)
+            return Response(_apply_answer_visibility(data, exam))
         except ExamResult.DoesNotExist:
             return Response({'detail': 'No result found.'}, status=status.HTTP_404_NOT_FOUND)
 

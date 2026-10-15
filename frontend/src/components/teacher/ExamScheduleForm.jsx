@@ -8,6 +8,7 @@ import { testsApi } from '@/api/tests'
 import { classesApi } from '@/api/classes'
 import { apiErrorMessages } from '@/api/errors'
 import Select from '@/components/common/Select'
+import ShowAnswersSelect from '@/components/teacher/ShowAnswersSelect'
 
 // "YYYY-MM-DDTHH:mm" in local time, as <input type="datetime-local"> expects
 function toLocalInput(d) {
@@ -43,6 +44,7 @@ export default function ExamScheduleForm({ fixedTest = null, onDone, onCancel, c
       duration_minutes: 60,
       randomize_questions: true,
       randomize_answers: true,
+      show_answers: 'immediately',
       ...defaultTimes(),
     },
   })
@@ -208,6 +210,8 @@ export default function ExamScheduleForm({ fixedTest = null, onDone, onCancel, c
           <input {...register('duration_minutes')} type="number" min={5} className="input-field" />
         </div>
       </div>
+
+      <ShowAnswersSelect {...register('show_answers')} />
 
       {/* Anti-cheating */}
       <div className="p-4 bg-slate-50 rounded-xl space-y-2">

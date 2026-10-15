@@ -70,6 +70,19 @@ export default function ExamResultPage() {
         </p>
       )}
 
+      {result.answers_hidden_until && (
+        <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex gap-2">
+          <i className="bi bi-eye-slash mt-0.5"></i>
+          {t('answers_hidden_note', { ns: 'student', time: format(new Date(result.answers_hidden_until), 'dd.MM.yyyy HH:mm') })}
+        </p>
+      )}
+
+      {result.show_answers === 'never' && (
+        <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex gap-2">
+          <i className="bi bi-lock mt-0.5"></i>{t('review_never', { ns: 'student' })}
+        </p>
+      )}
+
       {reviewAt && (
         <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex gap-2">
           <i className="bi bi-lock mt-0.5"></i>
@@ -78,7 +91,7 @@ export default function ExamResultPage() {
       )}
 
       {/* Stats */}
-      {!reviewAt && <div className={`grid gap-3 ${pendingCount > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+      {!reviewAt && result.show_answers !== 'never' && <div className={`grid gap-3 ${pendingCount > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <div className="card p-4 text-center">
           <p className="text-2xl font-bold text-green-600">{correctCount}</p>
           <p className="text-xs text-slate-500 mt-1">{t('stat_correct', { ns: 'student' })}</p>
@@ -140,7 +153,8 @@ export default function ExamResultPage() {
                   <div className="space-y-1.5 pl-8">
                     {ans.all_answers.map((a, ai) => {
                       const isSelected = a.id === ans.selected_answer_id
-                      const isCorrect = a.is_correct
+                      // "✓/✗ now, answers later": which choice is right is hidden (null) — only colour the student's own pick
+                      const isCorrect = a.is_correct === null ? (isSelected && ans.is_correct === true) : a.is_correct
                       let cls = 'px-3 py-1.5 rounded-lg text-xs flex items-center gap-2 '
                       if (isCorrect) cls += 'bg-green-50 text-green-700 font-semibold border border-green-200'
                       else if (isSelected && !isCorrect) cls += 'bg-red-50 text-red-600 border border-red-200'
