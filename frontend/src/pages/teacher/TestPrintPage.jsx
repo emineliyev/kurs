@@ -132,18 +132,18 @@ export default function TestPrintPage() {
             <Seg value={fontSize} onChange={setFontSize} options={[['sm', 'A−'], ['md', 'A'], ['lg', 'A+']]} />
           </div>
           <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-            <input type="checkbox" checked={withHeader} onChange={(e) => setWithHeader(e.target.checked)} className="accent-primary-600" />
+            <input type="checkbox" checked={withHeader} onChange={(e) => setWithHeader(e.target.checked)} />
             {t('print_student_fields', { ns: 'teacher' })}
           </label>
           <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-            <input type="checkbox" checked={withKey} onChange={(e) => setWithKey(e.target.checked)} className="accent-primary-600" />
+            <input type="checkbox" checked={withKey} onChange={(e) => setWithKey(e.target.checked)} />
             {t('print_answer_key', { ns: 'teacher' })}
           </label>
           <input value={school} onChange={(e) => setSchool(e.target.value)} maxLength={120}
             placeholder={t('print_school_ph', { ns: 'teacher' })} className="input-field py-1.5 text-xs w-56" />
           <div className="flex items-center gap-1.5">
             <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={watermarkOn} onChange={(e) => setWatermarkOn(e.target.checked)} className="accent-primary-600" />
+              <input type="checkbox" checked={watermarkOn} onChange={(e) => setWatermarkOn(e.target.checked)} />
               {t('print_watermark', { ns: 'teacher' })}
             </label>
             {watermarkOn && (

@@ -351,7 +351,7 @@ export default function BulkCropWorkspace({ open, onClose, onDone, busy = false 
           ))}
         </div>
         <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none" title={t('bulk_autotrim_tip', { ns: 'teacher' })}>
-          <input type="checkbox" checked={autoTrim} onChange={(e) => setAutoTrim(e.target.checked)} className="accent-primary-600" />
+          <input type="checkbox" checked={autoTrim} onChange={(e) => setAutoTrim(e.target.checked)} />
           {t('bulk_autotrim', { ns: 'teacher' })}
         </label>
         <div className="flex items-center gap-1 ml-auto">

@@ -968,7 +968,7 @@ export default function TestCreatePage() {
             </div>
             <div className="rounded-xl border border-slate-200 p-4 space-y-4">
               <label className="flex items-start gap-2.5 cursor-pointer">
-                <input type="checkbox" {...register('equal_points')} className="mt-0.5 w-4 h-4 accent-primary-600" />
+                <input type="checkbox" {...register('equal_points')} className="mt-0.5" />
                 <span>
                   <span className="block text-sm font-semibold text-slate-700">{t('equal_points', { ns: 'teacher' })}</span>
                   <span className="block text-xs text-slate-400">{t('equal_points_hint', { ns: 'teacher' })}</span>
@@ -992,7 +992,7 @@ export default function TestCreatePage() {
                 </div>
               </div>
               <label className="flex items-start gap-2.5 cursor-pointer pt-1 border-t border-slate-100">
-                <input type="checkbox" {...register('negative_marking')} className="mt-1 w-4 h-4 accent-primary-600" />
+                <input type="checkbox" {...register('negative_marking')} className="mt-0.5" />
                 <span className="flex-1">
                   <span className="flex items-center gap-2 flex-wrap text-sm font-semibold text-slate-700">
                     {t('net_score', { ns: 'teacher' })}:

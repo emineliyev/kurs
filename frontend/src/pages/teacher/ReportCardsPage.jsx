@@ -147,7 +147,7 @@ export default function ReportCardsPage() {
           </div>
           {data.cards.length > 1 && (
             <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={onePerPage} onChange={(e) => setOnePerPage(e.target.checked)} className="accent-primary-600" />
+              <input type="checkbox" checked={onePerPage} onChange={(e) => setOnePerPage(e.target.checked)} />
               {t('rc_one_per_page', { ns: 'teacher' })}
             </label>
           )}

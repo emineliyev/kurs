@@ -930,7 +930,7 @@ function DrawCanvas({ onConfirm, onBack }) {
         </div>
         {bg !== 'white' && (
           <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
-            <input type="checkbox" checked={snap} onChange={e => setSnap(e.target.checked)} className="accent-primary-600" />
+            <input type="checkbox" checked={snap} onChange={e => setSnap(e.target.checked)} />
             {t('snap_grid')}
           </label>
         )}
@@ -1218,7 +1218,7 @@ function CropCanvas({ dataUrl, onCropConfirm, onBack }) {
           ))}
         </div>
         <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none" title={t('crop_autotrim_tip')}>
-          <input type="checkbox" checked={autoTrim} onChange={(e) => setAutoTrim(e.target.checked)} className="accent-primary-600" />
+          <input type="checkbox" checked={autoTrim} onChange={(e) => setAutoTrim(e.target.checked)} />
           {t('crop_autotrim')}
         </label>
         <div className="flex items-center gap-1 ml-auto">

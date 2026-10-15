@@ -687,7 +687,7 @@ export default function QuestionBankPage() {
               return (
                 <div key={q.id} className={`card p-4 flex items-start gap-4 ${picked.has(q.id) ? 'ring-2 ring-primary-300' : ''}`}>
                   <label className="flex flex-col items-center gap-1 shrink-0 mt-0.5 cursor-pointer">
-                    <input type="checkbox" checked={picked.has(q.id)} onChange={() => togglePick(q.id)} className="w-4 h-4 accent-primary-600" />
+                    <input type="checkbox" checked={picked.has(q.id)} onChange={() => togglePick(q.id)} />
                     <span className="text-[11px] font-bold text-slate-400">{idx + 1}</span>
                   </label>
                   <div className="flex-1 min-w-0">
