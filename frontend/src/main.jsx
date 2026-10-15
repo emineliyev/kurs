@@ -5,6 +5,12 @@ import { Toaster } from 'react-hot-toast'
 import App from './App'
 import './i18n'
 import './index.css'
+import { reloadForNewVersion } from './utils/lazyPage'
+
+// A script the current page depends on is gone (the site was updated meanwhile): reload once
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadForNewVersion()) event.preventDefault()
+})
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

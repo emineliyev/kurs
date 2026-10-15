@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
+import { lazyPage } from '@/utils/lazyPage'
 import { Routes, Route } from 'react-router-dom'
 import PageSpinner from '@/components/common/PageSpinner'
 import { useAuthStore } from '@/store/authStore'
@@ -12,48 +13,48 @@ import LandingPage from '@/pages/LandingPage'
 
 // Pages load on demand: the teacher's editor (PDF, drawing, KaTeX…) isn't downloaded by a student
 // Print pages (no layout)
-const ExamPrintPage = lazy(() => import('@/pages/print/ExamPrintPage'))
+const ExamPrintPage = lazyPage(() => import('@/pages/print/ExamPrintPage'))
 
 // Auth pages
-const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
-const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'))
-const VerifyEmailPage = lazy(() => import('@/pages/auth/VerifyEmailPage'))
-const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'))
-const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'))
+const LoginPage = lazyPage(() => import('@/pages/auth/LoginPage'))
+const RegisterPage = lazyPage(() => import('@/pages/auth/RegisterPage'))
+const VerifyEmailPage = lazyPage(() => import('@/pages/auth/VerifyEmailPage'))
+const ForgotPasswordPage = lazyPage(() => import('@/pages/auth/ForgotPasswordPage'))
+const ResetPasswordPage = lazyPage(() => import('@/pages/auth/ResetPasswordPage'))
 
 // Error pages
-const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'))
-const ErrorPage = lazy(() => import('@/pages/ErrorPage'))
+const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'))
+const ErrorPage = lazyPage(() => import('@/pages/ErrorPage'))
 
 // Teacher pages
-const TeacherDashboard = lazy(() => import('@/pages/teacher/DashboardPage'))
-const TestsPage = lazy(() => import('@/pages/teacher/TestsPage'))
-const TestCreatePage = lazy(() => import('@/pages/teacher/TestCreatePage'))
-const TestDetailPage = lazy(() => import('@/pages/teacher/TestDetailPage'))
-const TestPrintPage = lazy(() => import('@/pages/teacher/TestPrintPage'))
-const ReportCardsPage = lazy(() => import('@/pages/teacher/ReportCardsPage'))
-const ClassesPage = lazy(() => import('@/pages/teacher/ClassesPage'))
-const ClassDetailPage = lazy(() => import('@/pages/teacher/ClassDetailPage'))
-const StudentsPage = lazy(() => import('@/pages/teacher/StudentsPage'))
-const ExamsPage = lazy(() => import('@/pages/teacher/ExamsPage'))
-const ExamCreatePage = lazy(() => import('@/pages/teacher/ExamCreatePage'))
-const ExamEditPage = lazy(() => import('@/pages/teacher/ExamEditPage'))
-const ExamResultsPage = lazy(() => import('@/pages/teacher/ExamResultsPage'))
-const PaperResultsPage = lazy(() => import('@/pages/teacher/PaperResultsPage'))
-const GradingPage = lazy(() => import('@/pages/teacher/GradingPage'))
-const AnalyticsPage = lazy(() => import('@/pages/teacher/AnalyticsPage'))
-const QuestionBankPage = lazy(() => import('@/pages/teacher/QuestionBankPage'))
-const SubscriptionPage = lazy(() => import('@/pages/teacher/SubscriptionPage'))
-const FeedbackPage = lazy(() => import('@/pages/teacher/FeedbackPage'))
-const PaymentPage = lazy(() => import('@/pages/teacher/PaymentPage'))
-const TeacherProfilePage = lazy(() => import('@/pages/teacher/ProfilePage'))
+const TeacherDashboard = lazyPage(() => import('@/pages/teacher/DashboardPage'))
+const TestsPage = lazyPage(() => import('@/pages/teacher/TestsPage'))
+const TestCreatePage = lazyPage(() => import('@/pages/teacher/TestCreatePage'))
+const TestDetailPage = lazyPage(() => import('@/pages/teacher/TestDetailPage'))
+const TestPrintPage = lazyPage(() => import('@/pages/teacher/TestPrintPage'))
+const ReportCardsPage = lazyPage(() => import('@/pages/teacher/ReportCardsPage'))
+const ClassesPage = lazyPage(() => import('@/pages/teacher/ClassesPage'))
+const ClassDetailPage = lazyPage(() => import('@/pages/teacher/ClassDetailPage'))
+const StudentsPage = lazyPage(() => import('@/pages/teacher/StudentsPage'))
+const ExamsPage = lazyPage(() => import('@/pages/teacher/ExamsPage'))
+const ExamCreatePage = lazyPage(() => import('@/pages/teacher/ExamCreatePage'))
+const ExamEditPage = lazyPage(() => import('@/pages/teacher/ExamEditPage'))
+const ExamResultsPage = lazyPage(() => import('@/pages/teacher/ExamResultsPage'))
+const PaperResultsPage = lazyPage(() => import('@/pages/teacher/PaperResultsPage'))
+const GradingPage = lazyPage(() => import('@/pages/teacher/GradingPage'))
+const AnalyticsPage = lazyPage(() => import('@/pages/teacher/AnalyticsPage'))
+const QuestionBankPage = lazyPage(() => import('@/pages/teacher/QuestionBankPage'))
+const SubscriptionPage = lazyPage(() => import('@/pages/teacher/SubscriptionPage'))
+const FeedbackPage = lazyPage(() => import('@/pages/teacher/FeedbackPage'))
+const PaymentPage = lazyPage(() => import('@/pages/teacher/PaymentPage'))
+const TeacherProfilePage = lazyPage(() => import('@/pages/teacher/ProfilePage'))
 
 // Student pages
-const StudentHome = lazy(() => import('@/pages/student/HomePage'))
-const StudentExams = lazy(() => import('@/pages/student/ExamsPage'))
-const TakeExamPage = lazy(() => import('@/pages/student/TakeExamPage'))
-const ExamResultPage = lazy(() => import('@/pages/student/ExamResultPage'))
-const StudentProfile = lazy(() => import('@/pages/student/ProfilePage'))
+const StudentHome = lazyPage(() => import('@/pages/student/HomePage'))
+const StudentExams = lazyPage(() => import('@/pages/student/ExamsPage'))
+const TakeExamPage = lazyPage(() => import('@/pages/student/TakeExamPage'))
+const ExamResultPage = lazyPage(() => import('@/pages/student/ExamResultPage'))
+const StudentProfile = lazyPage(() => import('@/pages/student/ProfilePage'))
 
 export default function App() {
   useAuthStore()
