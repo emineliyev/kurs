@@ -11,6 +11,8 @@ import { buildVariants, CHOICE_LETTERS, VARIANT_LETTERS } from '@/utils/printVar
 import { fmtPoints, scoreText } from '@/utils/score'
 import Select from '@/components/common/Select'
 import PageSpinner from '@/components/common/PageSpinner'
+import DimScaleButtons from '@/components/teacher/DimScaleButtons'
+import { stepByKey, stepOf, stepPoints } from '@/utils/dimScale'
 
 const MCQ = ['multiple_choice', 'mcq', 'true_false', 'image_mcq']
 const TEXT = ['short_answer', 'numeric']
@@ -59,7 +61,7 @@ export default function PaperResultsPage() {
   const [keyVariant, setKeyVariant] = useState('A')
   const [studentId, setStudentId] = useState('')
   const [variant, setVariant] = useState('A')
-  const [entry, setEntry] = useState({})    // question id → letter index | text | points
+  const [entry, setEntry] = useState({})    // question id → letter index | text | DİM grade key ('2/3')
   const [quick, setQuick] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -104,7 +106,7 @@ export default function PaperResultsPage() {
         const type = item.question.question_type
         if (MCQ.includes(type) && a.selected_answer_id) back[a.question] = item.answers.findIndex((x) => x.id === a.selected_answer_id)
         else if (TEXT.includes(type)) back[a.question] = a.answer_text || ''
-        else if (WRITTEN.includes(type) && a.is_correct !== null) back[a.question] = String(a.points_earned)
+        else if (WRITTEN.includes(type) && a.is_correct !== null) back[a.question] = stepOf(a.points_earned, item.question.points)?.key
       }
       setEntry(back)
     } catch { /* start empty */ }
@@ -143,7 +145,7 @@ export default function PaperResultsPage() {
           ? Math.abs(parseFloat(v) - parseFloat(q.correct_answer)) <= (q.tolerance || 0)
           : String(v).trim().toLowerCase() === String(q.correct_answer || '').trim().toLowerCase()
         score += ok ? q.points : 0
-      } else score += Math.min(Math.max(parseFloat(v) || 0, 0), q.points)
+      } else score += stepPoints(stepByKey(v) || { share: 0 }, q.points)
     }
     if (test?.negative_marking && test.wrong_per_correct) score = Math.max(0, score - wrong / test.wrong_per_correct)
     return { score, total }
@@ -158,7 +160,7 @@ export default function PaperResultsPage() {
       if (!item.number || v === undefined || v === '') continue
       if (MCQ.includes(q.question_type)) answers.push({ question: q.id, selected_answer: item.answers[v].id })
       else if (TEXT.includes(q.question_type)) answers.push({ question: q.id, answer_text: String(v) })
-      else answers.push({ question: q.id, points: v })
+      else answers.push({ question: q.id, grade: v })
     }
     setSaving(true)
     try {
@@ -272,9 +274,8 @@ export default function PaperResultsPage() {
                     className="input-field py-1.5 text-sm" />
                 )}
                 {WRITTEN.includes(q.question_type) && (
-                  <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                    ✎ <input type="number" min={0} max={q.points} step="any" value={v ?? ''} onChange={(e) => set(e.target.value)}
-                      className="input-field py-1.5 w-20 text-sm" /> / {fmtPoints(q.points)}
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    ✎ <DimScaleButtons size="sm" value={v ?? null} max={q.points} onChange={(k) => (v === k ? clear() : set(k))} />
                   </div>
                 )}
               </div>

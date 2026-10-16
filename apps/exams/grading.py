@@ -8,6 +8,18 @@ from django.utils import timezone
 from .models import ExamResult, StudentAnswer
 
 
+# Hand-graded open answers use the DİM scale: a share of the question's points, nothing in between
+GRADE_SCALE = {'0': 0, '1/3': 1 / 3, '1/2': 1 / 2, '2/3': 2 / 3, '1': 1}
+GRADE_SCALE_ERROR = 'Qiymət 0, 1/3, 1/2, 2/3 və ya 1 olmalıdır.'
+
+
+def apply_manual_grade(answer, key):
+    """Set an open answer's points from a GRADE_SCALE key (KeyError for anything else); caller saves."""
+    share = GRADE_SCALE[str(key)]
+    answer.points_earned = round(answer.question.points * share, 4)
+    answer.is_correct = share == 1  # partial credit is "not fully correct", told apart by points_earned > 0
+
+
 def gradable_total(exam):
     """Points of every question that is graded (passages aren't) — answered or not."""
     return sum(q.points for q in exam.test.questions.exclude(question_type='passage'))

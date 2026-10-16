@@ -212,21 +212,23 @@ class StudentAnalyticsView(APIView):
             exam__is_active=True,  # a passive exam is hidden from the student, results included
         ).select_related('exam').order_by('submitted_at')
 
-        data = [
-            {
-                'exam_title': r.exam.title,
-                'percentage': r.percentage,
-                'passed': r.passed,
-                'submitted_at': r.submitted_at,
-            }
-            for r in results
-        ]
-
         # Results whose open answers the teacher hasn't graded yet don't count until they are
         from django.db.models import Exists, OuterRef
         from apps.exams.models import StudentAnswer
         pending = StudentAnswer.objects.filter(result=OuterRef('pk'), is_correct__isnull=True)
-        graded = results.exclude(Exists(pending))
+        results = results.annotate(pending=Exists(pending))
+        graded = results.filter(pending=False)
+
+        data = [
+            {
+                'exam_title': r.exam.title,
+                'percentage': None if r.pending else r.percentage,
+                'passed': None if r.pending else r.passed,
+                'pending': r.pending,
+                'submitted_at': r.submitted_at,
+            }
+            for r in results
+        ]
         if graded.exists():
             from django.db.models import Avg
             avg = graded.aggregate(avg=Avg('percentage'))['avg']

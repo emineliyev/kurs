@@ -6,6 +6,8 @@ import toast from 'react-hot-toast'
 import { examsApi } from '@/api/exams'
 import { MathText } from '@/utils/math'
 import PageSpinner from '@/components/common/PageSpinner'
+import DimScaleButtons from '@/components/teacher/DimScaleButtons'
+import { stepOf } from '@/utils/dimScale'
 
 const MANUAL_TYPES = ['long_answer', 'open']
 const TEXT_TYPES = ['short_answer', 'numeric']
@@ -22,27 +24,28 @@ function ScoreBadge({ passed, score, total }) {
 
 function AnswerCard({ answer, examId, studentId, onGraded }) {
   const { t } = useTranslation(['common', 'teacher'])
-  const [points, setPoints] = useState(answer.points_earned ?? 0)
-  const [saving, setSaving] = useState(false)
   const isManual = MANUAL_TYPES.includes(answer.question_type)
   const maxPts   = answer.question_points || 0
+  const graded   = answer.is_correct !== null && answer.is_correct !== undefined
+  const [grade, setGrade] = useState(graded ? stepOf(answer.points_earned, maxPts)?.key : null)
+  const [saving, setSaving] = useState(false)
 
-  const handleGrade = async () => {
-    if (points < 0 || points > maxPts) {
-      toast.error(t('score_range_error', { ns: 'teacher', max: maxPts }))
-      return
-    }
+  // One click = saved: 0 · ⅓ · ½ · ⅔ · 1 of the question's points
+  const handleGrade = async (key) => {
+    if (saving) return
+    const before = grade
+    setGrade(key)
     setSaving(true)
     try {
       const res = await examsApi.gradeAnswer(examId, {
         student_id: studentId,
         question_id: answer.question,
-        awarded_points: points,
+        grade: key,
       })
-      toast.success(t('score_given', { ns: 'teacher' }))
-      onGraded(res.data)
+      onGraded(answer.question, res.data)
       window.dispatchEvent(new CustomEvent('grading-updated'))
     } catch (err) {
+      setGrade(before)
       toast.error(err.response?.data?.detail || t('error'))
     } finally { setSaving(false) }
   }
@@ -116,27 +119,26 @@ function AnswerCard({ answer, examId, studentId, onGraded }) {
         )}
       </div>
 
-      {/* Grading section — only for manual types */}
+      {/* Grading criteria the teacher wrote for this question */}
       {isManual && (
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">{t('give_score', { ns: 'teacher' })}</label>
-          <input
-            type="number"
-            min={0}
-            max={maxPts}
-            step="0.5"
-            value={points}
-            onChange={e => setPoints(parseFloat(e.target.value) || 0)}
-            className="w-20 px-3 py-1.5 border-2 border-violet-200 rounded-lg text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-violet-400"
-          />
-          <span className="text-xs text-slate-400">/ {maxPts}</span>
-          <button
-            onClick={handleGrade}
-            disabled={saving}
-            className="ml-auto flex items-center gap-1.5 px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">
-            {saving ? <i className="bi bi-arrow-repeat animate-spin"></i> : <i className="bi bi-check2"></i>}
-            {t('save_grade', { ns: 'teacher' })}
-          </button>
+        <div className="rounded-xl p-3 border border-amber-200 bg-amber-50">
+          <p className="text-xs text-amber-700 mb-1 font-semibold"><i className="bi bi-clipboard-check mr-1"></i>{t('grading_criteria', { ns: 'teacher' })}</p>
+          {answer.criteria
+            ? <MathText text={answer.criteria} className="block text-sm text-slate-800 whitespace-pre-line" />
+            : <p className="text-xs text-slate-400 italic">{t('grading_criteria_empty', { ns: 'teacher' })}</p>}
+        </div>
+      )}
+
+      {/* Grading section — DİM scale, only for manual types */}
+      {isManual && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">{t('give_score', { ns: 'teacher' })}</span>
+          <DimScaleButtons value={grade} max={maxPts} onChange={handleGrade} disabled={saving} />
+          <span className="ml-auto text-xs font-medium">
+            {saving ? <i className="bi bi-arrow-repeat animate-spin text-slate-400"></i>
+              : grade ? <span className="text-green-600"><i className="bi bi-check2-circle mr-1"></i>{t('grade_saved', { ns: 'teacher' })}</span>
+              : <span className="text-violet-600"><i className="bi bi-hand-index mr-1"></i>{t('waiting', { ns: 'teacher' })}</span>}
+          </span>
         </div>
       )}
 
@@ -185,12 +187,19 @@ export default function GradingPage() {
     } finally { setLoadingDetail(false) }
   }
 
-  const handleGraded = (gradeRes) => {
-    setResults(prev => prev.map(r =>
-      r.student === selected?.student
-        ? { ...r, score: gradeRes.new_score, percentage: gradeRes.new_percentage }
-        : r
-    ))
+  // Keep the list badge, the summary and the answer itself in step with what was just saved
+  const handleGraded = (questionId, res) => {
+    const totals = {
+      score: res.new_score, percentage: res.new_percentage, total_points: res.total_points,
+      passed: res.passed, needs_grading: res.needs_grading,
+    }
+    setResults(prev => prev.map(r => (r.student === selected?.student ? { ...r, ...totals } : r)))
+    setDetail(prev => prev && {
+      ...prev,
+      ...totals,
+      answers_review: prev.answers_review.map(a => (a.question === questionId
+        ? { ...a, points_earned: res.points_earned, is_correct: res.is_correct } : a)),
+    })
   }
 
   const hasManual = detail?.answers_review?.some(a => MANUAL_TYPES.includes(a.question_type))

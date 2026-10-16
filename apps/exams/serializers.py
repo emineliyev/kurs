@@ -138,13 +138,14 @@ class StudentAnswerReviewSerializer(serializers.ModelSerializer):
     question_points = serializers.FloatField(source='question.points', read_only=True)
     all_answers = serializers.SerializerMethodField()
     selected_answer_id = serializers.SerializerMethodField()
+    criteria = serializers.SerializerMethodField()
 
     class Meta:
         model = StudentAnswer
         fields = [
             'question', 'question_text', 'question_type', 'question_image', 'question_order',
             'question_points', 'all_answers', 'selected_answer_id',
-            'open_text', 'answer_text', 'is_correct', 'points_earned',
+            'open_text', 'answer_text', 'is_correct', 'points_earned', 'criteria',
         ]
 
     def get_question_image(self, obj):
@@ -166,6 +167,12 @@ class StudentAnswerReviewSerializer(serializers.ModelSerializer):
 
     def get_selected_answer_id(self, obj):
         return obj.selected_answer_id
+
+    def get_criteria(self, obj):
+        # the teacher's grading criteria for a hand-graded open question (the "model answer")
+        if obj.question.question_type in ('open', 'long_answer'):
+            return obj.question.model_answer
+        return ''
 
 
 class ExamResultSerializer(serializers.ModelSerializer):

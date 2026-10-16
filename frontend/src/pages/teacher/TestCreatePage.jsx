@@ -429,14 +429,15 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
         <i className="bi bi-info-circle mt-0.5"></i>
         <span>{t('q_long_info', { ns: 'teacher' })}</span>
       </div>
-      <button type="button" onClick={() => setShowModelAnswer(!showModelAnswer)} className="text-xs text-slate-400 hover:text-violet-600 flex items-center gap-1">
-        <i className={`bi ${showModelAnswer ? 'bi-chevron-down' : 'bi-chevron-right'}`}></i> {t('q_sample_answer_toggle', { ns: 'teacher' })}
-      </button>
-      {showModelAnswer && (
+      <div>
+        <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+          <i className="bi bi-clipboard-check mr-1 text-amber-600"></i>{t('grading_criteria', { ns: 'teacher' })}
+        </label>
         <textarea value={question.model_answer || ''} onChange={e => up('model_answer', e.target.value)}
-          placeholder={t('q_sample_answer_ph', { ns: 'teacher' })} rows={3}
-          className="mt-1 w-full px-4 py-3 bg-violet-50 border border-violet-200 rounded-xl focus:outline-none text-sm resize-none" />
-      )}
+          placeholder={t('q_sample_answer_ph', { ns: 'teacher' })} rows={4}
+          className="w-full px-4 py-3 bg-amber-50/50 border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm resize-y" />
+        <p className="text-xs text-slate-400 mt-1">{t('grading_criteria_hint', { ns: 'teacher' })}</p>
+      </div>
     </div>
   )
 

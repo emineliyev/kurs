@@ -6,7 +6,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from apps.accounts.permissions import IsTeacher, IsStudent
 from apps.classes.models import ClassEnrollment
-from .grading import draft_to_answers, finalize, finalize_overdue, grade, recalc_totals
+from apps.tests_app.models import Question
+from .grading import (
+    GRADE_SCALE, GRADE_SCALE_ERROR, apply_manual_grade, draft_to_answers, finalize, finalize_overdue,
+    grade, recalc_totals,
+)
 from .models import Exam, ExamResult, StudentAnswer
 from .serializers import ExamSerializer, ExamResultSerializer, ExamResultDetailSerializer, SubmitExamSerializer
 
@@ -16,6 +20,9 @@ def _apply_answer_visibility(data, exam):
     mode = exam.show_answers
     running = timezone.now() <= exam.end_time
     data['show_answers'] = mode
+    if data.get('needs_grading'):
+        # open answers still count as 0 — a total or pass/fail now would be wrong
+        data.update(score=None, percentage=None, passed=None, penalty=None)
     if mode == Exam.SHOW_NEVER or (mode == Exam.SHOW_AFTER_END and running):
         data['answers_review'] = []
         data['review_available_at'] = exam.end_time if mode == Exam.SHOW_AFTER_END else None
@@ -24,6 +31,7 @@ def _apply_answer_visibility(data, exam):
         for review in data['answers_review']:
             for choice in review.get('all_answers') or []:
                 choice['is_correct'] = None
+            review['criteria'] = ''
         data['answers_hidden_until'] = exam.end_time
     return data
 
@@ -163,15 +171,9 @@ class ExamViewSet(viewsets.ModelViewSet):
 
         student_id = request.data.get('student_id')
         question_id = request.data.get('question_id')
-        awarded_points = request.data.get('awarded_points')
-
-        if awarded_points is None:
-            return Response({'detail': 'awarded_points is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            awarded_points = float(awarded_points)
-        except (ValueError, TypeError):
-            return Response({'detail': 'awarded_points must be a number.'}, status=status.HTTP_400_BAD_REQUEST)
+        grade_key = str(request.data.get('grade', ''))
+        if grade_key not in GRADE_SCALE:
+            return Response({'detail': GRADE_SCALE_ERROR}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             result = ExamResult.objects.get(exam=exam, student_id=student_id)
@@ -191,19 +193,21 @@ class ExamViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        max_pts = answer.question.points
-        awarded_points = min(max(awarded_points, 0), max_pts)
-        answer.points_earned = awarded_points
-        answer.is_correct = awarded_points >= max_pts
-        answer.save()
+        apply_manual_grade(answer, grade_key)
+        answer.save(update_fields=['points_earned', 'is_correct'])
 
         recalc_totals(result)
 
         return Response({
             'success': True,
             'points_earned': answer.points_earned,
+            'is_correct': answer.is_correct,
             'new_percentage': result.percentage,
             'new_score': result.score,
+            'total_points': result.total_points,
+            'passed': result.passed,
+            'needs_grading': result.answers.filter(
+                question__question_type__in=Question.MANUAL_GRADE_TYPES, is_correct__isnull=True).exists(),
         })
 
     @action(detail=True, methods=['patch'], permission_classes=[IsStudent])
@@ -283,7 +287,6 @@ class ExamViewSet(viewsets.ModelViewSet):
         printed variant's letters) and the system grades them like an online submit.
         Written answers can carry the teacher's points. POST again to correct, DELETE to remove.
         """
-        from apps.tests_app.models import Question
         exam = self.get_object()
         if exam.class_room.teacher != request.user:
             return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
@@ -303,15 +306,17 @@ class ExamViewSet(viewsets.ModelViewSet):
         raw = data.get('answers') or []
         if not isinstance(raw, list):
             return Response({'detail': 'answers must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
-        manual_points = {}
+        manual_grades = {}
         for a in raw:
-            if isinstance(a, dict) and a.get('points') not in (None, ''):
+            if isinstance(a, dict) and a.get('grade') not in (None, ''):
+                if str(a['grade']) not in GRADE_SCALE:
+                    return Response({'detail': GRADE_SCALE_ERROR}, status=status.HTTP_400_BAD_REQUEST)
                 try:
-                    manual_points[int(a['question'])] = float(a['points'])
+                    manual_grades[int(a['question'])] = str(a['grade'])
                 except (TypeError, ValueError, KeyError):
-                    return Response({'detail': 'points must be a number.'}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({'detail': 'question must be an id.'}, status=status.HTTP_400_BAD_REQUEST)
         serializer = SubmitExamSerializer(data={'answers': [
-            {k: v for k, v in a.items() if k != 'points'} for a in raw if isinstance(a, dict)]})
+            {k: v for k, v in a.items() if k != 'grade'} for a in raw if isinstance(a, dict)]})
         serializer.is_valid(raise_exception=True)
 
         with transaction.atomic():
@@ -321,13 +326,11 @@ class ExamViewSet(viewsets.ModelViewSet):
             result.is_offline = True
             result.offline_variant = str(data.get('variant') or '')[:1].upper()
             grade(exam, result, serializer.validated_data['answers'])
-            if manual_points:
+            if manual_grades:
                 written = (result.answers.select_related('question')
-                           .filter(question_id__in=manual_points, question__question_type__in=Question.MANUAL_GRADE_TYPES))
+                           .filter(question_id__in=manual_grades, question__question_type__in=Question.MANUAL_GRADE_TYPES))
                 for sa in written:
-                    pts = min(max(manual_points[sa.question_id], 0), sa.question.points)
-                    sa.points_earned = pts
-                    sa.is_correct = pts >= sa.question.points
+                    apply_manual_grade(sa, manual_grades[sa.question_id])
                     if not (sa.answer_text or sa.open_text):
                         sa.answer_text = 'kağızda'
                     sa.save(update_fields=['points_earned', 'is_correct', 'answer_text'])

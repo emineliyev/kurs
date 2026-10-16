@@ -602,9 +602,13 @@ export default function QuestionBankPage() {
                 <p className="text-xs text-violet-700">
                   <i className="bi bi-info-circle mr-1"></i>{t('q_long_info', { ns: 'teacher' })}
                 </p>
+                <label className="text-xs font-semibold text-slate-600 block mt-3 mb-1.5">
+                  <i className="bi bi-clipboard-check mr-1 text-amber-600"></i>{t('grading_criteria', { ns: 'teacher' })}
+                </label>
                 <textarea value={form.model_answer || ''} onChange={e => upForm({ model_answer: e.target.value })}
-                  placeholder={t('q_sample_answer_ph', { ns: 'teacher' })} rows={2}
-                  className="mt-2 w-full px-4 py-3 bg-violet-50 border border-violet-200 rounded-xl focus:outline-none text-sm resize-none" />
+                  placeholder={t('q_sample_answer_ph', { ns: 'teacher' })} rows={4}
+                  className="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-300 text-sm resize-y" />
+                <p className="text-xs text-slate-400 mt-1">{t('grading_criteria_hint', { ns: 'teacher' })}</p>
               </div>
             )}
 

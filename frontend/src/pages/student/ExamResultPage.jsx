@@ -4,8 +4,9 @@ import { fmtPoints, scoreText } from '@/utils/score'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { examsApi } from '@/api/exams'
-import { renderMath } from '@/utils/math'
+import { MathText, renderMath } from '@/utils/math'
 import PageSpinner from '@/components/common/PageSpinner'
+import { stepOf } from '@/utils/dimScale'
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -61,7 +62,9 @@ export default function ExamResultPage() {
         </h2>
         {needsGrading && <p className="text-amber-600 text-sm mt-1">{t('manual_grading_note', { ns: 'student' })}</p>}
         {exam && <p className="text-slate-500 text-sm mt-1">{exam.title}</p>}
-        <p className="text-slate-500 mt-1 font-semibold">{scoreText(result.score, result.total_points)} {t('score_word', { ns: 'student' })}</p>
+        {!needsGrading && (
+          <p className="text-slate-500 mt-1 font-semibold">{scoreText(result.score, result.total_points)} {t('score_word', { ns: 'student' })}</p>
+        )}
       </div>
 
       {result.penalty > 0 && (
@@ -190,7 +193,17 @@ export default function ExamResultPage() {
                 )}
 
                 {ans._partial && (
-                  <p className="text-xs text-amber-600 pl-8 mt-1"><i className="bi bi-circle-half mr-1"></i>{t('partial_points', { ns: 'student', earned: ans.points_earned, max: ans.question_points })}</p>
+                  <p className="text-xs text-amber-600 pl-8 mt-1">
+                    <i className="bi bi-circle-half mr-1"></i>
+                    {t('partial_points', { ns: 'student', earned: fmtPoints(ans.points_earned), max: fmtPoints(ans.question_points) })}
+                    {' '}({stepOf(ans.points_earned, ans.question_points)?.label})
+                  </p>
+                )}
+                {ans.criteria && (
+                  <div className="ml-8 mt-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
+                    <p className="font-semibold text-slate-500 mb-0.5"><i className="bi bi-clipboard-check mr-1"></i>{t('grading_criteria', { ns: 'student' })}</p>
+                    <MathText text={ans.criteria} className="block whitespace-pre-line" />
+                  </div>
                 )}
                 {ans.is_correct === null && !ans._partial && (
                   <p className="text-xs text-amber-500 pl-8 mt-1"><i className="bi bi-hourglass-split mr-1"></i>{t('pending_teacher_review', { ns: 'student' })}</p>
