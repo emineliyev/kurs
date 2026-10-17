@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
+import Swal from '@/utils/swal'
 import { AnnotateCanvas, applyLook, loadScript, trimWhitespace, PDFJS_CDN, PDFJS_WORKER } from '@/components/common/MediaPickerModal'
 
 /**
@@ -375,6 +376,66 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
     setLoading(null)
   }
 
+  // ── Removing pages / files ──────────────────────────────────────────────────
+  // Drops the pages `gone(page)` matches; questions cut on them go too (after a confirmation)
+  const dropPages = async (gone) => {
+    const lost = items.filter((i) => gone(pages[i.page])).length + (pending && gone(pages[pending.page]) ? 1 : 0)
+    if (lost) {
+      const { isConfirmed } = await Swal.fire({
+        title: t('bulk_remove_confirm', { ns: 'teacher', count: lost }),
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: t('delete'),
+        cancelButtonText: t('cancel'),
+        confirmButtonColor: '#EF4444',
+      })
+      if (!isConfirmed) return false
+    }
+    const next = pages.filter((p) => !gone(p))
+    setItems((prev) => prev.filter((i) => !gone(pages[i.page])).map((i) => ({ ...i, page: next.indexOf(pages[i.page]) })))
+    if (pending && gone(pages[pending.page])) setPending(null)
+    setPages(next)
+    setSel(null); setDraft(null); setActiveId(null); setStraight(null)
+    // a PDF without pages on screen is closed
+    const left = new Set(next.map((p) => p.doc).filter(Boolean))
+    docsRef.current.forEach((pdf, key) => { if (!left.has(key)) { pdf.destroy(); docsRef.current.delete(key) } })
+    setDocs((prev) => prev.filter((d) => left.has(d.key)))
+    return true
+  }
+
+  const removeDoc = (doc) => dropPages((p) => p.doc === doc.key)
+  const removePage = (index) => { const pg = pages[index]; return dropPages((p) => p === pg) }
+
+  // Everything back to an empty workspace (open PDFs are closed too)
+  const clearAll = () => {
+    docsRef.current.forEach((pdf) => pdf.destroy())
+    docsRef.current.clear()
+    setDocs([]); setPages([]); setItems([]); setPending(null); setActiveId(null)
+    setSel(null); setDraft(null); setStraight(null)
+  }
+
+  const startOver = async () => {
+    if (items.length) {
+      const { isConfirmed } = await Swal.fire({
+        title: t('bulk_start_over_confirm', { ns: 'teacher', count: items.length }),
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: t('delete'),
+        cancelButtonText: t('cancel'),
+        confirmButtonColor: '#EF4444',
+      })
+      if (!isConfirmed) return
+    }
+    clearAll()
+  }
+
+  // Back: with no questions cut there is nothing to keep — the next opening starts empty
+  const close = () => {
+    rangeAsk?.resolve(null)   // a PDF still asking for its pages is not opened
+    if (!single && !items.length && !pending) clearAll()
+    onClose()
+  }
+
   // ── Turning and straightening a page ────────────────────────────────────────
   const pageLocked = (index) => {
     if (items.some((i) => i.page === index) || pending?.page === index) {
@@ -530,7 +591,7 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return
       if (single) {
         if (e.key === 'Enter' && (sel || canUseWhole)) { e.preventDefault(); takeSelection() }
-        else if (e.key === 'Escape') { e.preventDefault(); if (sel) setSel(null); else onClose() }
+        else if (e.key === 'Escape') { e.preventDefault(); if (sel) setSel(null); else close() }
         return
       }
       const target = pending ? 'pending' : activeId ? 'active' : null
@@ -568,10 +629,6 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
     onDone(ordered.map((i) => ({ file: i.file, url: i.url, answer: i.answer, choiceCount })))
   }
 
-  const reset = () => {
-    setItems([]); setPages([]); setPending(null); setActiveId(null)
-  }
-
   if (!open) return null
   const pageW = baseW * zoom
   const noAnswer = ordered.filter((i) => i.answer == null).length
@@ -590,7 +647,7 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
     <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col">
       {/* Toolbar */}
       <div className="flex items-center gap-x-3 gap-y-2 px-4 py-2.5 bg-white border-b border-slate-200 shrink-0 flex-wrap">
-        <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800">
+        <button onClick={close} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800">
           <i className="bi bi-arrow-left"></i> {t('back')}
         </button>
         <h2 className="font-semibold text-slate-900 flex items-center gap-2 mr-2">
@@ -604,14 +661,21 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
         {docs.map((doc) => {
           const nums = pages.filter((p) => p.doc === doc.key).map((p) => p.num)
           return (
-            <button key={doc.key} onClick={() => changeRange(doc)} disabled={!!loading || !!rangeAsk}
-              title={t('bulk_range_change', { ns: 'teacher' })}
-              className="h-7 px-2.5 rounded-lg text-xs font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 flex items-center gap-1.5 max-w-[16rem] disabled:opacity-50">
-              <i className="bi bi-file-earmark-pdf"></i>
-              {docs.length > 1 && <span className="truncate max-w-[6rem]">{doc.name}</span>}
-              <span className="whitespace-nowrap"><span className="hidden 2xl:inline">{t('bulk_range_pages', { ns: 'teacher' })}: </span>{nums.length ? rangeLabel(nums) : '—'} / {doc.total}</span>
-              <i className="bi bi-chevron-down text-[10px]"></i>
-            </button>
+            <div key={doc.key} className="h-7 flex items-stretch rounded-lg border border-red-200 bg-red-50 text-red-700 text-xs font-medium max-w-[17rem] overflow-hidden">
+              <button onClick={() => changeRange(doc)} disabled={!!loading || !!rangeAsk}
+                title={t('bulk_range_change', { ns: 'teacher' })}
+                className="px-2.5 hover:bg-red-100 flex items-center gap-1.5 min-w-0 disabled:opacity-50">
+                <i className="bi bi-file-earmark-pdf"></i>
+                {docs.length > 1 && <span className="truncate max-w-[6rem]">{doc.name}</span>}
+                <span className="whitespace-nowrap"><span className="hidden 2xl:inline">{t('bulk_range_pages', { ns: 'teacher' })}: </span>{nums.length ? rangeLabel(nums) : '—'} / {doc.total}</span>
+                <i className="bi bi-chevron-down text-[10px]"></i>
+              </button>
+              <button onClick={() => removeDoc(doc)} disabled={!!loading || !!rangeAsk}
+                title={t('bulk_remove_file', { ns: 'teacher', name: doc.name })}
+                className="px-2 border-l border-red-200 hover:bg-red-600 hover:text-white disabled:opacity-50">
+                <i className="bi bi-x-lg text-[10px]"></i>
+              </button>
+            </div>
           )
         })}
         {!single && (
@@ -691,6 +755,8 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
                     <span className="flex gap-1 shrink-0">
                       <button onClick={() => rotate(pi, -1)} title={t('rotate_left')} className="w-6 h-6 rounded hover:bg-slate-200"><i className="bi bi-arrow-counterclockwise"></i></button>
                       <button onClick={() => rotate(pi, 1)} title={t('rotate_right')} className="w-6 h-6 rounded hover:bg-slate-200"><i className="bi bi-arrow-clockwise"></i></button>
+                      <button onClick={() => removePage(pi)} disabled={!!loading} title={t('bulk_remove_page', { ns: 'teacher' })}
+                        className="w-6 h-6 rounded hover:bg-red-100 hover:text-red-600 disabled:opacity-40"><i className="bi bi-trash"></i></button>
                       <button onClick={() => setStraight(straight === pi ? null : pi)} title={t('straighten')}
                         className={`h-6 px-1.5 rounded flex items-center gap-1 ${straight === pi || pg.fine ? 'bg-primary-50 text-primary-700' : 'hover:bg-slate-200'}`}>
                         <i className="bi bi-rulers"></i>{pg.fine ? `${pg.fine > 0 ? '+' : ''}${pg.fine}°` : ''}
@@ -816,9 +882,9 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
                 </button>
               ))}
             </div>
-            {ordered.length > 0 && (
+            {pages.length > 0 && (
               <div className="p-3 border-t border-slate-100">
-                <button onClick={reset} className="w-full text-xs text-slate-400 hover:text-red-600">
+                <button onClick={startOver} disabled={!!loading} className="w-full text-xs text-slate-400 hover:text-red-600 disabled:opacity-40">
                   <i className="bi bi-arrow-counterclockwise"></i> {t('bulk_start_over', { ns: 'teacher' })}
                 </button>
               </div>

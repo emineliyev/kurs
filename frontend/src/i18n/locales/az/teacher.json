@@ -715,5 +715,9 @@
   "pasted_image": "Yapışdırılmış şəkil",
   "paste_hint": "ekran görüntüsünü yapışdırın",
   "picker_cut_title": "Kəs və düzəlt",
-  "picker_cut_desc": "Şəkil, PDF: kəs, düzləndir, annotasiya"
+  "picker_cut_desc": "Şəkil, PDF: kəs, düzləndir, annotasiya",
+  "bulk_remove_confirm": "Bu səhifələrdə kəsilmiş suallar da silinəcək ({{count}}). Davam edilsin?",
+  "bulk_remove_file": "«{{name}}» faylını sil",
+  "bulk_remove_page": "Səhifəni sil",
+  "bulk_start_over_confirm": "Kəsilmiş suallar ({{count}}) və açılmış fayllar silinəcək. Davam edilsin?"
 }

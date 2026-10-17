@@ -709,5 +709,9 @@
   "pasted_image": "Pasted image",
   "paste_hint": "paste a screenshot",
   "picker_cut_title": "Cut and fix",
-  "picker_cut_desc": "Images, PDFs: cut, straighten, annotate"
+  "picker_cut_desc": "Images, PDFs: cut, straighten, annotate",
+  "bulk_remove_confirm": "Questions cut on these pages will be removed too ({{count}}). Continue?",
+  "bulk_remove_file": "Remove “{{name}}”",
+  "bulk_remove_page": "Remove page",
+  "bulk_start_over_confirm": "Cut questions ({{count}}) and the open files will be removed. Continue?"
 }
