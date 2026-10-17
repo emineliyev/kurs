@@ -88,7 +88,7 @@ export default function TestDetailPage() {
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center gap-3">
-        <Link to="/teacher/tests" className="text-slate-400 hover:text-slate-600">
+        <Link to="/teacher/exams" className="text-slate-400 hover:text-slate-600">
           <i className="bi bi-arrow-left text-xl"></i>
         </Link>
         <div className="flex-1">

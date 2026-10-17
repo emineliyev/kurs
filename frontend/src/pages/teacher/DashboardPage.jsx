@@ -95,7 +95,8 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard icon="bi-people-fill" value={data?.total_students} label={t('total_students', { ns: 'teacher' })} tone="bg-primary-50 text-primary-700" />
-        <StatCard icon="bi-journal-text" value={data?.total_tests} label={t('total_tests', { ns: 'teacher' })} tone="bg-blue-50 text-blue-600" />
+        <StatCard icon="bi-pencil-square" value={data ? Math.max(0, (data.total_tests || 0) - (data.published_tests || 0)) : null}
+          label={t('drafts', { ns: 'teacher' })} tone="bg-blue-50 text-blue-600" />
         <StatCard icon="bi-building" value={data?.total_classes} label={t('total_classes', { ns: 'teacher' })} tone="bg-green-50 text-green-600" />
         <StatCard icon="bi-clipboard-check" value={data?.total_exams} label={t('exams')} tone="bg-amber-50 text-amber-600" />
       </div>

@@ -31,7 +31,6 @@ const ErrorPage = lazyPage(() => import('@/pages/ErrorPage'))
 
 // Teacher pages
 const TeacherDashboard = lazyPage(() => import('@/pages/teacher/DashboardPage'))
-const TestsPage = lazyPage(() => import('@/pages/teacher/TestsPage'))
 const TestCreatePage = lazyPage(() => import('@/pages/teacher/TestCreatePage'))
 const TestDetailPage = lazyPage(() => import('@/pages/teacher/TestDetailPage'))
 const TestPrintPage = lazyPage(() => import('@/pages/teacher/TestPrintPage'))
@@ -40,7 +39,6 @@ const ClassesPage = lazyPage(() => import('@/pages/teacher/ClassesPage'))
 const ClassDetailPage = lazyPage(() => import('@/pages/teacher/ClassDetailPage'))
 const StudentsPage = lazyPage(() => import('@/pages/teacher/StudentsPage'))
 const ExamsPage = lazyPage(() => import('@/pages/teacher/ExamsPage'))
-const ExamCreatePage = lazyPage(() => import('@/pages/teacher/ExamCreatePage'))
 const ExamEditPage = lazyPage(() => import('@/pages/teacher/ExamEditPage'))
 const ExamResultsPage = lazyPage(() => import('@/pages/teacher/ExamResultsPage'))
 const PaperResultsPage = lazyPage(() => import('@/pages/teacher/PaperResultsPage'))
@@ -105,7 +103,7 @@ export default function App() {
         }
       >
         <Route index element={<TeacherDashboard />} />
-        <Route path="tests" element={<TestsPage />} />
+        <Route path="tests" element={<Navigate to="/teacher/exams" replace />} />
         <Route path="tests/create" element={<TestCreatePage />} />
         <Route path="tests/:id/edit" element={<TestCreatePage />} />
         <Route path="tests/:id" element={<TestDetailPage />} />
@@ -113,7 +111,7 @@ export default function App() {
         <Route path="classes/:id" element={<ClassDetailPage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="exams" element={<ExamsPage />} />
-        <Route path="exams/create" element={<ExamCreatePage />} />
+        <Route path="exams/create" element={<Navigate to="/teacher/tests/create" replace />} />
         <Route path="exams/:id/edit" element={<ExamEditPage />} />
         <Route path="exams/:id/results" element={<ExamResultsPage />} />
         <Route path="exams/:id/paper" element={<PaperResultsPage />} />

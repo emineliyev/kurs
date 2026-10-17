@@ -606,7 +606,7 @@ export default function TestCreatePage() {
       const test = testRes.data
       if (test.is_published) {
         toast.error(t('test_already_published', { ns: 'teacher' }))
-        navigate('/teacher/tests')
+        navigate('/teacher/exams')
         return
       }
       reset({
@@ -646,7 +646,7 @@ export default function TestCreatePage() {
       setStep(2)
     }).catch(() => {
       toast.error(t('error_occurred'))
-      navigate('/teacher/tests')
+      navigate('/teacher/exams')
     })
   }, [editId])
 
@@ -911,7 +911,7 @@ export default function TestCreatePage() {
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to="/teacher/tests"
+        <Link to="/teacher/exams"
           className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:border-primary-300 hover:text-primary-700 transition-all">
           <i className="bi bi-arrow-left"></i>
         </Link>
@@ -1249,7 +1249,7 @@ export default function TestCreatePage() {
             <ExamScheduleForm
               fixedTest={createdTest}
               onDone={() => navigate('/teacher/exams')}
-              onCancel={() => navigate('/teacher/tests')}
+              onCancel={() => navigate('/teacher/exams')}
               cancelLabel={t('schedule_later', { ns: 'teacher' })}
             />
           </div>

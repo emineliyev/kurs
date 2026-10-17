@@ -6,7 +6,6 @@ import Logo, { Wordmark } from '@/components/common/Logo'
 
 const NAV_ITEMS = [
   { to: '/teacher', icon: 'bi-grid-1x2', labelKey: 'dashboard', end: true },
-  { to: '/teacher/tests', icon: 'bi-file-earmark-text', labelKey: 'tests' },
   { to: '/teacher/classes', icon: 'bi-people', labelKey: 'classes' },
   { to: '/teacher/students', icon: 'bi-person-badge', labelKey: 'students' },
   { to: '/teacher/exams', icon: 'bi-journal-check', labelKey: 'exams' },
