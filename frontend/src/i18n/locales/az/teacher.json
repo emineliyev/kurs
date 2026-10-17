@@ -706,5 +706,8 @@
   "bulk_range_all": "Hamısı",
   "bulk_range_open": "Aç",
   "bulk_range_count": "{{count}} səhifə açılacaq",
-  "bulk_range_error": "Səhifələr 1 ilə {{total}} arasında olmalı, başlanğıc sondan böyük olmamalıdır."
+  "bulk_range_error": "Səhifələr 1 ilə {{total}} arasında olmalı, başlanğıc sondan böyük olmamalıdır.",
+  "bulk_range_change": "Səhifə aralığını dəyiş",
+  "bulk_range_pages": "Səhifələr",
+  "bulk_range_kept_note": "İçində sual kəsdiyiniz səhifələr aralıqdan kənarda qalsa da saxlanılır."
 }

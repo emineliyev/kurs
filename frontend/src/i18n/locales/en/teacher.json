@@ -700,5 +700,8 @@
   "bulk_range_open": "Open",
   "bulk_range_count_one": "{{count}} page will be opened",
   "bulk_range_count_other": "{{count}} pages will be opened",
-  "bulk_range_error": "Pages must be between 1 and {{total}}, and the first not after the last."
+  "bulk_range_error": "Pages must be between 1 and {{total}}, and the first not after the last.",
+  "bulk_range_change": "Change page range",
+  "bulk_range_pages": "Pages",
+  "bulk_range_kept_note": "Pages you have already cut questions from stay, even outside the range."
 }

@@ -36,10 +36,10 @@ async function openPdf(file) {
   return window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
 }
 
-// Renders pages from..to (1-based, inclusive); labels keep the real page numbers
-async function renderPdf(pdf, name, from, to, onPage) {
-  const total = to - from + 1
-  for (let i = from; i <= to; i++) {
+// Renders the given page numbers (1-based); labels keep the real page numbers
+async function renderPdf(pdf, name, docKey, nums, onPage) {
+  const total = nums.length
+  for (const [k, i] of nums.entries()) {
     const page = await pdf.getPage(i)
     const base = page.getViewport({ scale: 1 })
     const viewport = page.getViewport({ scale: PAGE_TARGET_W / base.width })
@@ -51,7 +51,7 @@ async function renderPdf(pdf, name, from, to, onPage) {
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     await page.render({ canvasContext: ctx, viewport }).promise
     const { url } = await blobUrl(canvas)
-    onPage({ url, w: canvas.width, h: canvas.height, label: `${name} · ${i}`, total, index: i - from + 1 })
+    onPage({ url, w: canvas.width, h: canvas.height, label: `${name} · ${i}`, doc: docKey, num: i, total, index: k + 1 })
     canvas.width = canvas.height = 0
   }
 }
@@ -94,6 +94,19 @@ async function cropFromPage(pageUrl, rect, look) {
 }
 
 // Reading order: page, then left column before right, then top to bottom.
+const range = (from, to) => Array.from({ length: to - from + 1 }, (_, k) => from + k)
+
+// [3, 5, 6, 7] → "3, 5–7"
+function rangeLabel(nums) {
+  const runs = []
+  for (const n of [...nums].sort((a, b) => a - b)) {
+    const last = runs[runs.length - 1]
+    if (last && n === last[1] + 1) last[1] = n
+    else runs.push([n, n])
+  }
+  return runs.map(([a, b]) => (a === b ? a : `${a}–${b}`)).join(', ')
+}
+
 function readingOrder(items, pages) {
   return [...items].sort((a, b) => {
     if (a.page !== b.page) return a.page - b.page
@@ -127,9 +140,9 @@ function AnswerBar({ count, answer, onPick, onOk, onCancel, t }) {
 }
 
 /** Which pages of a PDF to open: start and end page, both 1…total. */
-function PageRangeDialog({ t, name, total, onOpen, onCancel }) {
-  const [from, setFrom] = useState('1')
-  const [to, setTo] = useState(String(total))
+function PageRangeDialog({ t, name, total, initialFrom = 1, initialTo, keptNote = false, onOpen, onCancel }) {
+  const [from, setFrom] = useState(String(initialFrom))
+  const [to, setTo] = useState(String(initialTo || total))
   const a = Number(from), b = Number(to)
   const valid = Number.isInteger(a) && Number.isInteger(b) && a >= 1 && b <= total && a <= b
   const submit = (e) => { e.preventDefault(); if (valid) onOpen(a, b) }
@@ -162,6 +175,11 @@ function PageRangeDialog({ t, name, total, onOpen, onCancel }) {
           <button type="button" onClick={() => { setFrom('1'); setTo(String(total)) }}
             className="text-primary-700 font-medium hover:underline">{t('bulk_range_all', { ns: 'teacher' })}</button>
         </div>
+        {keptNote && (
+          <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 flex gap-1.5">
+            <i className="bi bi-info-circle mt-0.5"></i>{t('bulk_range_kept_note', { ns: 'teacher' })}
+          </p>
+        )}
         <div className="flex justify-end gap-2 pt-1">
           <button type="button" onClick={onCancel} className="btn-secondary text-sm">{t('cancel')}</button>
           <button type="submit" disabled={!valid} className="btn-primary text-sm">
@@ -190,7 +208,16 @@ export default function BulkCropWorkspace({ open, onClose, onDone, busy = false 
   const fileRef = useRef(null)
   const dragRef = useRef(null)
   const [draft, setDraft] = useState(null)          // box being drawn
-  const [rangeAsk, setRangeAsk] = useState(null)    // { name, total, resolve } while asking which pages
+  const [rangeAsk, setRangeAsk] = useState(null)    // { name, total, from, to, resolve } while asking which pages
+  const [docs, setDocs] = useState([])              // opened PDFs: { key, name, total }
+  const docsRef = useRef(new Map())                 // key → pdf.js document (kept to open other pages later)
+
+  // Free the PDFs when the workspace goes away
+  useEffect(() => () => { docsRef.current.forEach((pdf) => pdf.destroy()); docsRef.current.clear() }, [])
+
+  // Resolves with { from, to }, or null when the teacher cancels
+  const askRange = (name, total, from = 1, to = total, keptNote = false) =>
+    new Promise((resolve) => setRangeAsk({ name, total, from, to, keptNote, resolve }))
 
   // Width of a page on screen follows the available space
   useEffect(() => {
@@ -210,24 +237,23 @@ export default function BulkCropWorkspace({ open, onClose, onDone, busy = false 
   const addFiles = async (fileList) => {
     const files = [...(fileList || [])].filter((f) => f.type === 'application/pdf' || f.type.startsWith('image/'))
     if (!files.length) return
-    // Resolves with { from, to }, or null when the teacher skips this PDF
-    const askRange = (name, total) => new Promise((resolve) => setRangeAsk({ name, total, resolve }))
     setLoading({ done: 0, total: 0 })
     try {
       for (const f of files) {
         if (f.type === 'application/pdf') {
           const pdf = await openPdf(f)
           setLoading(null)
-          const range = await askRange(f.name, pdf.numPages)
+          const picked = await askRange(f.name, pdf.numPages)
           setRangeAsk(null)
-          if (range) {
-            setLoading({ done: 0, total: range.to - range.from + 1 })
-            await renderPdf(pdf, f.name, range.from, range.to, (pg) => {
-              setPages((prev) => [...prev, pg])
-              setLoading({ done: pg.index, total: pg.total })
-            })
-          }
-          pdf.destroy()
+          if (!picked) { pdf.destroy(); continue }
+          const key = `${f.name}#${Date.now()}`
+          docsRef.current.set(key, pdf)
+          setDocs((prev) => [...prev, { key, name: f.name, total: pdf.numPages }])
+          setLoading({ done: 0, total: picked.to - picked.from + 1 })
+          await renderPdf(pdf, f.name, key, range(picked.from, picked.to), (pg) => {
+            setPages((prev) => [...prev, pg])
+            setLoading({ done: pg.index, total: pg.total })
+          })
         } else {
           const pg = await renderImage(f)
           setPages((prev) => [...prev, pg])
@@ -240,6 +266,44 @@ export default function BulkCropWorkspace({ open, onClose, onDone, busy = false 
       setLoading(null)
       setRangeAsk(null)
     }
+  }
+
+  // Show another page range of an opened PDF. Pages that already have cut questions stay;
+  // pages already rendered (rotated ones included) are reused, only new ones are drawn.
+  const changeRange = async (doc) => {
+    const own = pages.filter((p) => p.doc === doc.key)
+    const nums = own.map((p) => p.num)
+    const withItems = new Set(items.map((i) => pages[i.page]).filter((p) => p?.doc === doc.key))
+    const picked = await askRange(doc.name, doc.total, nums.length ? Math.min(...nums) : 1,
+      nums.length ? Math.max(...nums) : doc.total, withItems.size > 0)
+    setRangeAsk(null)
+    if (!picked) return
+    const wanted = new Set(range(picked.from, picked.to))
+    withItems.forEach((p) => wanted.add(p.num))
+    const have = new Map(own.map((p) => [p.num, p]))
+    const missing = [...wanted].filter((n) => !have.has(n)).sort((a, b) => a - b)
+    setPending(null); setDraft(null); setActiveId(null)
+    setLoading({ done: 0, total: missing.length })
+    try {
+      await renderPdf(docsRef.current.get(doc.key), doc.name, doc.key, missing, (pg) => {
+        have.set(pg.num, pg)
+        setLoading({ done: pg.index, total: pg.total })
+      })
+    } catch (e) {
+      console.error(e)
+      toast.error(t('error_occurred'))
+      setLoading(null)
+      return
+    }
+    const block = [...wanted].sort((a, b) => a - b).map((n) => have.get(n))
+    // The PDF's pages go where its first page was; other files keep their place
+    const at = pages.findIndex((p) => p.doc === doc.key)
+    const rest = pages.filter((p) => p.doc !== doc.key)
+    const before = at < 0 ? rest.length : pages.slice(0, at).filter((p) => p.doc !== doc.key).length
+    const next = [...rest.slice(0, before), ...block, ...rest.slice(before)]
+    setItems((prev) => prev.map((i) => ({ ...i, page: next.indexOf(pages[i.page]) })))
+    setPages(next)
+    setLoading(null)
   }
 
   const rotate = async (index, dir) => {
@@ -397,6 +461,19 @@ export default function BulkCropWorkspace({ open, onClose, onDone, busy = false 
         <button onClick={() => fileRef.current?.click()} className="btn-secondary text-xs py-1.5">
           <i className="bi bi-plus-lg"></i> {t('bulk_add_files', { ns: 'teacher' })}
         </button>
+        {docs.map((doc) => {
+          const nums = pages.filter((p) => p.doc === doc.key).map((p) => p.num)
+          return (
+            <button key={doc.key} onClick={() => changeRange(doc)} disabled={!!loading || !!rangeAsk}
+              title={t('bulk_range_change', { ns: 'teacher' })}
+              className="h-7 px-2.5 rounded-lg text-xs font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 flex items-center gap-1.5 max-w-[16rem] disabled:opacity-50">
+              <i className="bi bi-file-earmark-pdf"></i>
+              {docs.length > 1 && <span className="truncate max-w-[6rem]">{doc.name}</span>}
+              <span className="whitespace-nowrap"><span className="hidden 2xl:inline">{t('bulk_range_pages', { ns: 'teacher' })}: </span>{nums.length ? rangeLabel(nums) : '—'} / {doc.total}</span>
+              <i className="bi bi-chevron-down text-[10px]"></i>
+            </button>
+          )
+        })}
         <div className="flex items-center gap-1 text-xs text-slate-500">
           {t('bulk_choices', { ns: 'teacher' })}:
           {[4, 5].map((n) => (
@@ -434,7 +511,8 @@ export default function BulkCropWorkspace({ open, onClose, onDone, busy = false 
 
       <div className="flex-1 min-h-0 flex relative">
         {rangeAsk && (
-          <PageRangeDialog key={rangeAsk.name + rangeAsk.total} t={t} name={rangeAsk.name} total={rangeAsk.total}
+          <PageRangeDialog key={`${rangeAsk.name}${rangeAsk.from}-${rangeAsk.to}`} t={t} name={rangeAsk.name} total={rangeAsk.total}
+            initialFrom={rangeAsk.from} initialTo={rangeAsk.to} keptNote={rangeAsk.keptNote}
             onOpen={(from, to) => rangeAsk.resolve({ from, to })} onCancel={() => rangeAsk.resolve(null)} />
         )}
         {/* Pages */}

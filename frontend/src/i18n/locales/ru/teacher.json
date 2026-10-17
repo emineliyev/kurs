@@ -704,5 +704,8 @@
   "bulk_range_count_few": "Будут открыты {{count}} страницы",
   "bulk_range_count_many": "Будет открыто {{count}} страниц",
   "bulk_range_count_other": "Будет открыто {{count}} страницы",
-  "bulk_range_error": "Страницы — от 1 до {{total}}, первая не больше последней."
+  "bulk_range_error": "Страницы — от 1 до {{total}}, первая не больше последней.",
+  "bulk_range_change": "Изменить диапазон страниц",
+  "bulk_range_pages": "Страницы",
+  "bulk_range_kept_note": "Страницы, на которых уже вырезаны вопросы, останутся, даже если они вне диапазона."
 }
