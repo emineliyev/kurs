@@ -17,6 +17,7 @@ export const authApi = {
   checkUsernames: (usernames) => client.post('/auth/students/check-usernames/', { usernames }),
   assignStudents: (ids, classId) => client.post('/auth/students/assign/', { student_ids: ids, class_id: classId }),
   resetStudentPasswords: (ids) => client.post('/auth/students/reset-passwords/', { student_ids: ids }),
+  purgeStudents: (ids) => client.post('/auth/students/purge/', { student_ids: ids }),
   verifyEmail: (token) => client.post('/auth/verify-email/', { token }),
   resendVerification: () => client.post('/auth/resend-verification/'),
   resetPasswordRequest: (email) => client.post('/auth/password/reset/', { email }),

@@ -591,7 +591,7 @@
   "no_class_hint": "Heç bir sinif seçilməyib — şagird imtahanları görməyəcək.",
   "students_active": "Aktiv",
   "students_archived": "Arxiv",
-  "archived_hint": "Arxivdəki şagirdlər sistemə daxil ola bilmir və tarif limitinə sayılmır. İmtahan nəticələri saxlanılır, istədiyiniz vaxt bərpa edə bilərsiniz.",
+  "archived_hint": "Arxivdəki şagirdlər sistemə daxil ola bilmir və tarif limitinə sayılmır. İmtahan nəticələri saxlanılır, istədiyiniz vaxt bərpa edə bilərsiniz. Lazım olmayanları birdəfəlik silə bilərsiniz — bu zaman nəticələri də silinir.",
   "no_archived_students": "Arxivdə şagird yoxdur",
   "archive_confirm_title": "{{name}} silinsin?",
   "archive_confirm_text": "Şagird arxivə köçürüləcək: sistemə daxil ola bilməyəcək, nəticələri isə saxlanılacaq. İstədiyiniz vaxt “Arxiv” bölməsindən bərpa edə bilərsiniz.",
@@ -791,5 +791,12 @@
   "delete_class_confirm": "«{{name}}» sinfi silinsin?",
   "delete_class_students": "Bu sinifdəki {{count}} şagird silinmir — sinifsiz qalacaq, sonra başqa sinfə sala bilərsiniz.",
   "delete_class_note": "Sinfə verilmiş imtahan varsa, sinif arxivlənəcək və nəticələr saxlanılacaq.",
-  "class_archived": "Sinif arxivləndi — imtahanları və nəticələri saxlanıldı"
+  "class_archived": "Sinif arxivləndi — imtahanları və nəticələri saxlanıldı",
+  "purge_one": "Birdəfəlik sil",
+  "purge_confirm_one": "«{{name}}» birdəfəlik silinsin?",
+  "purge_confirm_many": "{{count}} şagird birdəfəlik silinsin?",
+  "purge_warning": "Şagirdin hesabı, bütün imtahan nəticələri və cavabları silinəcək. Bu, geri qaytarıla bilməz.",
+  "purge_yes": "Bəli, birdəfəlik sil",
+  "purged": "{{count}} şagird birdəfəlik silindi",
+  "restored_many": "{{count}} şagird bərpa olundu"
 }

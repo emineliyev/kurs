@@ -333,13 +333,55 @@ export default function StudentsPage() {
     }
   }
 
+  // Archive only: delete for good — their exam results go too, there's no way back
+  const onPurge = async (students) => {
+    const one = students.length === 1
+    const { isConfirmed } = await Swal.fire({
+      titleText: one
+        ? t('purge_confirm_one', { ns: 'teacher', name: students[0].full_name })
+        : t('purge_confirm_many', { ns: 'teacher', count: students.length }),
+      text: t('purge_warning', { ns: 'teacher' }),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#EF4444',
+      confirmButtonText: t('purge_yes', { ns: 'teacher' }),
+      cancelButtonText: t('cancel'),
+      focusCancel: true,
+    })
+    if (!isConfirmed) return
+    setBusy(true)
+    try {
+      const res = await authApi.purgeStudents(students.map((s) => s.id))
+      toast.success(t('purged', { ns: 'teacher', count: res.data.deleted }))
+      clearSelection()
+      loadData()
+    } catch (err) {
+      toastApiError(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onRestoreMany = async (students) => {
+    setBusy(true)
+    let done = 0
+    for (const s of students) {
+      try { await authApi.restoreStudent(s.id); done++ } catch (err) { toastApiError(err); break }
+    }
+    if (done) toast.success(t('restored_many', { ns: 'teacher', count: done }))
+    setBusy(false)
+    clearSelection()
+    loadData()
+  }
+
   const list = tab === 'active' ? active : archived
   const q = search.trim().toLowerCase()
   const filtered = list.filter((s) =>
     (!q || s.full_name.toLowerCase().includes(q) || s.username.includes(q)) &&
     (!classFilter || (classFilter === 'none' ? !s.class_id : String(s.class_id) === classFilter)))
   const classless = active.filter((s) => !s.class_id).length
-  const selectable = tab === 'active'
+  const selectable = true
+  const selectedRows = filtered.filter((s) => selected.has(s.id))
   const allShown = filtered.length > 0 && filtered.every((s) => selected.has(s.id))
   const toggleAll = () => setSelected((prev) => {
     const n = new Set(prev)
@@ -357,6 +399,7 @@ export default function StudentsPage() {
     <>
       <ActionButton size={size} icon="bi-clock-history" tone="indigo" title={t('exam_history', { ns: 'teacher' })} onClick={() => setHistoryStudent(s)} />
       <ActionButton size={size} icon="bi-arrow-counterclockwise" tone="green" title={t('restore_student', { ns: 'teacher' })} onClick={() => onRestore(s)} />
+      <ActionButton size={size} icon="bi-trash3" tone="red" title={t('purge_one', { ns: 'teacher' })} onClick={() => onPurge([s])} />
     </>
   )
 
@@ -466,6 +509,16 @@ export default function StudentsPage() {
       {selectable && selected.size > 0 && (
         <div className="sticky top-0 z-10 rounded-xl bg-primary-700 text-white px-4 py-2.5 flex flex-wrap items-center gap-2 shadow-lg">
           <span className="font-semibold text-sm mr-1">{t('selected_count', { ns: 'teacher', count: selected.size })}</span>
+          {tab === 'archived' ? (
+            <>
+              <button onClick={() => onRestoreMany(selectedRows)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-white text-primary-700 text-sm font-semibold disabled:opacity-50">
+                <i className="bi bi-arrow-counterclockwise mr-1"></i>{t('restore_student', { ns: 'teacher' })}
+              </button>
+              <button onClick={() => onPurge(selectedRows)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold disabled:opacity-50">
+                <i className="bi bi-trash3 mr-1"></i>{t('purge_one', { ns: 'teacher' })}
+              </button>
+            </>
+          ) : (<>
           <div className="flex items-center gap-1.5 bg-white/10 rounded-lg p-1">
             <Select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="input-field py-1.5 text-sm text-slate-800 w-44">
               <option value="">{t('assign_to_class', { ns: 'teacher' })}</option>
@@ -479,6 +532,7 @@ export default function StudentsPage() {
           <button onClick={onResetPasswords} disabled={busy} className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium disabled:opacity-50">
             <i className="bi bi-key mr-1"></i>{t('reset_passwords', { ns: 'teacher' })}
           </button>
+          </>)}
           <button onClick={clearSelection} className="ml-auto w-8 h-8 rounded-lg hover:bg-white/10" title={t('cancel')}>
             <i className="bi bi-x-lg"></i>
           </button>

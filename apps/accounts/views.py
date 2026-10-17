@@ -394,6 +394,29 @@ class StudentResetPasswordsView(APIView):
         return Response({'credentials': out})
 
 
+class StudentPurgeView(APIView):
+    """POST {student_ids} — delete archived students for good (their results go with them)."""
+    permission_classes = [IsTeacher]
+
+    def post(self, request):
+        from django.db import transaction
+        ids = _ids(request)
+        if ids is None:
+            return Response({'detail': 'student_ids must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        students = students_of(request.user).filter(pk__in=ids)
+        if students.count() != len(set(ids)):
+            return Response({'detail': 'Şagird tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+        if students.filter(is_active=True).exists():
+            return Response({'detail': 'Yalnız arxivdəki şagirdləri birdəfəlik silmək olar.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            count = 0
+            for student in students:   # one by one so media cleanup signals run for each profile
+                student.delete()
+                count += 1
+        return Response({'deleted': count})
+
+
 class StudentRestoreView(APIView):
     permission_classes = [IsTeacher]
 

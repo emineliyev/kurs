@@ -583,7 +583,7 @@
   "no_class_hint": "No class selected — the student won’t see any exams.",
   "students_active": "Active",
   "students_archived": "Archive",
-  "archived_hint": "Archived students can’t sign in and don’t count toward your plan limit. Their exam results are kept and you can restore them at any time.",
+  "archived_hint": "Archived students cannot sign in and do not count toward your plan limit. Their exam results are kept and you can restore them any time. Ones you no longer need can be deleted for good — their results go too.",
   "no_archived_students": "No archived students",
   "archive_confirm_title": "Delete {{name}}?",
   "archive_confirm_text": "The student will be moved to the archive: they won’t be able to sign in, but their results are kept. You can restore them from “Archive” at any time.",
@@ -786,5 +786,12 @@
   "delete_class_confirm": "Delete the class “{{name}}”?",
   "delete_class_students": "Its {{count}} students are not deleted — they will have no class and can be moved later.",
   "delete_class_note": "If exams were given to this class, it is archived and the results are kept.",
-  "class_archived": "Class archived — its exams and results are kept"
+  "class_archived": "Class archived — its exams and results are kept",
+  "purge_one": "Delete for good",
+  "purge_confirm_one": "Delete “{{name}}” for good?",
+  "purge_confirm_many": "Delete {{count}} students for good?",
+  "purge_warning": "The student account and all exam results and answers will be deleted. This cannot be undone.",
+  "purge_yes": "Yes, delete for good",
+  "purged": "{{count}} students deleted for good",
+  "restored_many": "{{count}} students restored"
 }
