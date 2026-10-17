@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { lazyPage } from '@/utils/lazyPage'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import PageSpinner from '@/components/common/PageSpinner'
 import { useAuthStore } from '@/store/authStore'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
@@ -35,8 +35,6 @@ const TestCreatePage = lazyPage(() => import('@/pages/teacher/TestCreatePage'))
 const TestDetailPage = lazyPage(() => import('@/pages/teacher/TestDetailPage'))
 const TestPrintPage = lazyPage(() => import('@/pages/teacher/TestPrintPage'))
 const ReportCardsPage = lazyPage(() => import('@/pages/teacher/ReportCardsPage'))
-const ClassesPage = lazyPage(() => import('@/pages/teacher/ClassesPage'))
-const ClassDetailPage = lazyPage(() => import('@/pages/teacher/ClassDetailPage'))
 const StudentsPage = lazyPage(() => import('@/pages/teacher/StudentsPage'))
 const ExamsPage = lazyPage(() => import('@/pages/teacher/ExamsPage'))
 const ExamEditPage = lazyPage(() => import('@/pages/teacher/ExamEditPage'))
@@ -56,6 +54,12 @@ const StudentExams = lazyPage(() => import('@/pages/student/ExamsPage'))
 const TakeExamPage = lazyPage(() => import('@/pages/student/TakeExamPage'))
 const ExamResultPage = lazyPage(() => import('@/pages/student/ExamResultPage'))
 const StudentProfile = lazyPage(() => import('@/pages/student/ProfilePage'))
+
+// Classes live on the students page now; old class links open it with that class selected
+function ClassRedirect() {
+  const { id } = useParams()
+  return <Navigate to={`/teacher/students?class=${id}`} replace />
+}
 
 // Start page of the installed app
 function AppEntry() {
@@ -107,8 +111,8 @@ export default function App() {
         <Route path="tests/create" element={<TestCreatePage />} />
         <Route path="tests/:id/edit" element={<TestCreatePage />} />
         <Route path="tests/:id" element={<TestDetailPage />} />
-        <Route path="classes" element={<ClassesPage />} />
-        <Route path="classes/:id" element={<ClassDetailPage />} />
+        <Route path="classes" element={<Navigate to="/teacher/students" replace />} />
+        <Route path="classes/:id" element={<ClassRedirect />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="exams" element={<ExamsPage />} />
         <Route path="exams/create" element={<Navigate to="/teacher/tests/create" replace />} />

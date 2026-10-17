@@ -777,5 +777,14 @@
   "exams_hub_subtitle": "All your exams and drafts in one place",
   "drafts_and_ready": "Drafts",
   "exam_time": "Time",
-  "drafts": "Drafts"
+  "drafts": "Drafts",
+  "classes_and_students": "Classes and students",
+  "class_count": "{{count}} classes",
+  "all_students": "All students",
+  "new_class_short": "Class",
+  "new_class_option": "Create a new class",
+  "delete_class_confirm": "Delete the class “{{name}}”?",
+  "delete_class_students": "Its {{count}} students are not deleted — they will have no class and can be moved later.",
+  "delete_class_note": "If exams were given to this class, it is archived and the results are kept.",
+  "class_archived": "Class archived — its exams and results are kept"
 }

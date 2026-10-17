@@ -94,7 +94,7 @@ def _strong_student_password(value):
 
 def _teacher_classes(serializer):
     from apps.classes.models import Class
-    return Class.objects.filter(teacher=serializer.context['request'].user)
+    return Class.objects.filter(teacher=serializer.context['request'].user, is_active=True)
 
 
 class StudentSerializer(serializers.ModelSerializer):

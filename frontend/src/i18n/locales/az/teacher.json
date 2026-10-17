@@ -782,5 +782,14 @@
   "exams_hub_subtitle": "Yaratdığınız bütün imtahanlar və qaralamalar bir yerdə",
   "drafts_and_ready": "Qaralama",
   "exam_time": "Vaxt",
-  "drafts": "Qaralamalar"
+  "drafts": "Qaralamalar",
+  "classes_and_students": "Siniflər və şagirdlər",
+  "class_count": "{{count}} sinif",
+  "all_students": "Bütün şagirdlər",
+  "new_class_short": "Sinif",
+  "new_class_option": "Yeni sinif yarat",
+  "delete_class_confirm": "«{{name}}» sinfi silinsin?",
+  "delete_class_students": "Bu sinifdəki {{count}} şagird silinmir — sinifsiz qalacaq, sonra başqa sinfə sala bilərsiniz.",
+  "delete_class_note": "Sinfə verilmiş imtahan varsa, sinif arxivlənəcək və nəticələr saxlanılacaq.",
+  "class_archived": "Sinif arxivləndi — imtahanları və nəticələri saxlanıldı"
 }

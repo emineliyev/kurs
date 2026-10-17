@@ -236,5 +236,6 @@
   "pwa_ios_step3": "Tap “Add” in the top right",
   "pwa_ok": "Got it",
   "pwa_offline": "No internet connection. Work will continue once you are back online.",
-  "select_all": "Select all"
+  "select_all": "Select all",
+  "classes_and_students_short": "Classes and students"
 }

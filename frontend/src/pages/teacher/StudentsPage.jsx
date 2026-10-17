@@ -6,12 +6,14 @@ import { format } from 'date-fns'
 import { classesApi } from '@/api/classes'
 import { authApi } from '@/api/auth'
 import { analyticsApi } from '@/api/analytics'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import PageSpinner from '@/components/common/PageSpinner'
 import Select from '@/components/common/Select'
 import StudentFormModal from '@/components/teacher/StudentFormModal'
 import BulkAddModal from '@/components/teacher/students/BulkAddModal'
 import CredentialsSheet from '@/components/teacher/students/CredentialsSheet'
+import PickStudentsModal from '@/components/teacher/students/PickStudentsModal'
+import { ClassFormModal } from '@/components/teacher/students/ClassFields'
 import { toastApiError } from '@/api/errors'
 import { scoreText } from '@/utils/score'
 
@@ -99,6 +101,53 @@ function ClassChips({ student }) {
   return <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium whitespace-nowrap">{student.class_name}</span>
 }
 
+function ClassPanel({ classes, current, onPick, counts, onNew, mobile = false }) {
+  const { t } = useTranslation(['common', 'teacher'])
+  const item = (key, icon, label, count, tone = '') => {
+    const on = current === key
+    return mobile ? (
+      <button key={key} onClick={() => onPick(key)}
+        className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${on ? 'bg-primary-700 text-white' : `bg-white border border-slate-200 ${tone || 'text-slate-600'}`}`}>
+        {label} <span className={`ml-1 text-xs ${on ? 'text-white/70' : 'text-slate-400'}`}>{count}</span>
+      </button>
+    ) : (
+      <button key={key} onClick={() => onPick(key)}
+        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-left transition-colors ${on ? 'bg-primary-50 text-primary-700 font-semibold' : `hover:bg-slate-50 ${tone || 'text-slate-700'}`}`}>
+        <i className={`bi ${icon} shrink-0`}></i>
+        <span className="flex-1 truncate">{label}</span>
+        <span className={`text-xs ${on ? 'text-primary-600' : 'text-slate-400'}`}>{count}</span>
+      </button>
+    )
+  }
+  const list = [
+    item('', 'bi-people', t('all_students', { ns: 'teacher' }), counts.all),
+    counts.none > 0 && item('none', 'bi-exclamation-triangle', t('no_class', { ns: 'teacher' }), counts.none, 'text-amber-700'),
+    ...classes.map((c) => item(String(c.id), 'bi-collection', c.name, c.student_count)),
+  ].filter(Boolean)
+  if (mobile) {
+    return (
+      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+        {list}
+        <button onClick={onNew} className="shrink-0 px-3 py-1.5 rounded-full text-sm font-medium border border-dashed border-primary-300 text-primary-700 whitespace-nowrap">
+          <i className="bi bi-plus-lg"></i> {t('new_class_short', { ns: 'teacher' })}
+        </button>
+      </div>
+    )
+  }
+  return (
+    <aside className="card p-2.5 space-y-0.5 self-start sticky top-0">
+      <p className="px-3 pt-1.5 pb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('classes')}</p>
+      {list.slice(0, counts.none > 0 ? 2 : 1)}
+      {classes.length > 0 && <div className="my-1.5 border-t border-slate-100" />}
+      {list.slice(counts.none > 0 ? 2 : 1)}
+      <button onClick={onNew}
+        className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-primary-700 border border-dashed border-primary-200 hover:bg-primary-50">
+        <i className="bi bi-plus-lg"></i> {t('create_class', { ns: 'teacher' })}
+      </button>
+    </aside>
+  )
+}
+
 export default function StudentsPage() {
   const { t } = useTranslation(['common', 'teacher'])
   const [classes, setClasses] = useState([])
@@ -109,7 +158,11 @@ export default function StudentsPage() {
   const [editing, setEditing] = useState(null) // null | 'new' | student
   const [historyStudent, setHistoryStudent] = useState(null)
   const [search, setSearch] = useState('')
-  const [classFilter, setClassFilter] = useState('')
+  const [params, setParams] = useSearchParams()
+  const classFilter = params.get('class') || ''
+  const setClassFilter = (v) => setParams(v ? { class: v } : {}, { replace: true })
+  const [classForm, setClassForm] = useState(null)      // null | 'new' | class being edited
+  const [picking, setPicking] = useState(false)
   const [showBulk, setShowBulk] = useState(false)
   const [credentials, setCredentials] = useState(null)   // logins to show once (new / reset)
   const [selected, setSelected] = useState(new Set())
@@ -143,6 +196,47 @@ export default function StudentsPage() {
   const onAdded = (creds) => {
     setEditing(null); setShowBulk(false)
     setCredentials(creds)
+    loadData()
+  }
+
+  const currentClass = classes.find((c) => String(c.id) === classFilter) || null
+
+  const onClassSaved = (cls) => {
+    const isNew = classForm === 'new'
+    setClassForm(null)
+    toast.success(isNew ? t('class_created', { ns: 'teacher' }) : t('class_updated', { ns: 'teacher' }))
+    loadData()
+    if (isNew) setClassFilter(String(cls.id))
+  }
+
+  // Deleting a class: its students become classless first; a class with exams is archived (results stay)
+  const onDeleteClass = async (cls) => {
+    const inside = active.filter((st) => st.class_id === cls.id)
+    const { isConfirmed } = await Swal.fire({
+      titleText: t('delete_class_confirm', { ns: 'teacher', name: cls.name }),
+      text: inside.length ? t('delete_class_students', { ns: 'teacher', count: inside.length }) : t('delete_class_note', { ns: 'teacher' }),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#EF4444',
+      confirmButtonText: t('yes_delete'),
+      cancelButtonText: t('cancel'),
+    })
+    if (!isConfirmed) return
+    try {
+      if (inside.length) await authApi.assignStudents(inside.map((st) => st.id), null)
+      const res = await classesApi.delete(cls.id)
+      toast.success(res.data?.archived ? t('class_archived', { ns: 'teacher' }) : t('deleted'))
+      setClassFilter('')
+    } catch (err) {
+      toastApiError(err)
+    } finally {
+      loadData()   // whatever happened, show the real state (students may already be classless)
+    }
+  }
+
+  const onPicked = (count) => {
+    setPicking(false)
+    toast.success(t('assigned_to_class', { ns: 'teacher', count, class: currentClass?.name }))
     loadData()
   }
 
@@ -280,18 +374,25 @@ export default function StudentsPage() {
         <StudentFormModal
           student={editing === 'new' ? null : editing}
           classes={classes}
+          defaultClassId={editing === 'new' ? currentClass?.id : undefined}
           onClose={() => setEditing(null)}
           onSaved={onSaved}
           onDone={onAdded}
         />
       )}
-      {showBulk && <BulkAddModal classes={classes} onClose={() => setShowBulk(false)} onDone={onAdded} />}
+      {showBulk && <BulkAddModal classes={classes} defaultClassId={currentClass?.id} onClose={() => setShowBulk(false)}
+        onDone={onAdded} onClassCreated={() => loadData()} />}
+      {classForm && <ClassFormModal cls={classForm === 'new' ? null : classForm} classes={classes}
+        onClose={() => setClassForm(null)} onSaved={onClassSaved} />}
+      {picking && currentClass && <PickStudentsModal cls={currentClass} onClose={() => setPicking(false)} onDone={onPicked} />}
       {credentials && <CredentialsSheet rows={credentials} onClose={() => setCredentials(null)} />}
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('students')}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{t('student_count', { ns: 'teacher', count: active.length })}</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('classes_and_students', { ns: 'teacher' })}</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {t('class_count', { ns: 'teacher', count: classes.length })} · {t('student_count', { ns: 'teacher', count: active.length })}
+          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setShowBulk(true)} className="btn-secondary shrink-0 whitespace-nowrap">
@@ -313,6 +414,39 @@ export default function StudentsPage() {
         </div>
       )}
 
+      <div className="md:hidden">
+        <ClassPanel mobile classes={classes} current={classFilter} onPick={(k) => { setClassFilter(k); clearSelection() }}
+          counts={{ all: active.length, none: classless }} onNew={() => setClassForm('new')} />
+      </div>
+
+      <div className="grid md:grid-cols-[15rem_1fr] gap-5 items-start">
+      <div className="hidden md:block">
+        <ClassPanel classes={classes} current={classFilter} onPick={(k) => { setClassFilter(k); clearSelection() }}
+          counts={{ all: active.length, none: classless }} onNew={() => setClassForm('new')} />
+      </div>
+      <div className="space-y-4 min-w-0">
+      {currentClass && (
+        <div className="card p-4 flex flex-wrap items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center shrink-0"><i className="bi bi-collection"></i></div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-slate-900 truncate">{currentClass.name}</p>
+            <p className="text-xs text-slate-500">
+              {[currentClass.grade && t('grade_nth', { ns: 'teacher', grade: currentClass.grade }),
+                currentClass.group && t('group_card', { ns: 'teacher', group: currentClass.group }),
+                currentClass.subject, t('student_count', { ns: 'teacher', count: currentClass.student_count })].filter(Boolean).join(' · ')}
+            </p>
+          </div>
+          <button onClick={() => setPicking(true)} className="btn-secondary text-sm whitespace-nowrap">
+            <i className="bi bi-people"></i> {t('add_existing', { ns: 'teacher' })}
+          </button>
+          <button onClick={() => setClassForm(currentClass)} title={t('edit')} className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100">
+            <i className="bi bi-pencil"></i>
+          </button>
+          <button onClick={() => onDeleteClass(currentClass)} title={t('delete')} className="w-9 h-9 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
+            <i className="bi bi-trash"></i>
+          </button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row gap-3">
         <div className="inline-flex bg-slate-100 rounded-xl p-1 self-start">
           {tabButton('active', t('students_active', { ns: 'teacher' }), active.length)}
@@ -327,11 +461,6 @@ export default function StudentsPage() {
             className="input-field pl-9"
           />
         </div>
-        <Select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} className="input-field md:w-48">
-          <option value="">{t('all_classes', { ns: 'teacher' })}</option>
-          {classes.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
-          <option value="none">{t('no_class', { ns: 'teacher' })}</option>
-        </Select>
       </div>
 
       {selectable && selected.size > 0 && (
@@ -438,6 +567,8 @@ export default function StudentsPage() {
           </div>
         </>
       )}
+      </div>
+      </div>
     </div>
   )
 }

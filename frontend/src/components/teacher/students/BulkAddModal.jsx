@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { authApi } from '@/api/auth'
+import { classesApi } from '@/api/classes'
 import { toastApiError } from '@/api/errors'
 import Select from '@/components/common/Select'
 import { USERNAME_RE, dedupeUsernames, friendlyPassword, parseNames, suggestUsername } from './studentUtils'
+import { ClassFields, EMPTY_CLASS, classPayload, useSubjectSuggestions } from './ClassFields'
+
+const NEW_CLASS = '__new'
 
 const MAX = 200
 
@@ -13,11 +17,15 @@ const MAX = 200
  * easy passwords (editable) → add them all, optionally into one class.
  * onDone(credentials[]) after saving.
  */
-export default function BulkAddModal({ classes, defaultClassId, onClose, onDone }) {
+export default function BulkAddModal({ classes, defaultClassId, onClose, onDone, onClassCreated }) {
   const { t } = useTranslation(['common', 'teacher'])
   const [text, setText] = useState('')
   const [rows, setRows] = useState([])        // { key, first_name, last_name, username, password, touched }
   const [classId, setClassId] = useState(defaultClassId ? String(defaultClassId) : '')
+  const [newClass, setNewClass] = useState(EMPTY_CLASS)   // filled when "+ New class" is chosen
+  const [extraClasses, setExtraClasses] = useState([])   // created here, before the students were saved
+  const allClasses = [...classes, ...extraClasses.filter((c) => !classes.some((x) => x.id === c.id))]
+  const suggestions = useSubjectSuggestions(allClasses)
   const [taken, setTaken] = useState(new Set())
   const [serverErrors, setServerErrors] = useState({})
   const [saving, setSaving] = useState(false)
@@ -89,9 +97,18 @@ export default function BulkAddModal({ classes, defaultClassId, onClose, onDone 
   const save = async () => {
     setSaving(true)
     try {
+      let target = classId
+      if (classId === NEW_CLASS) {
+        // the class first; if the students then fail, it stays selected (no second copy on retry)
+        const created = (await classesApi.create(classPayload(newClass))).data
+        setExtraClasses((list) => [...list, created])
+        setClassId(String(created.id))
+        onClassCreated?.(created)
+        target = String(created.id)
+      }
       const payload = rows.map(({ first_name, last_name, username, password }) => ({
         first_name: first_name.trim(), last_name: last_name.trim(), username, password }))
-      const res = await authApi.bulkCreateStudents(payload, classId ? Number(classId) : null)
+      const res = await authApi.bulkCreateStudents(payload, target ? Number(target) : null)
       onDone(res.data.map((s, i) => ({ full_name: s.full_name, username: s.username, password: payload[i].password, class_name: s.class_name })))
     } catch (err) {
       const perRow = err?.response?.data?.students
@@ -123,14 +140,22 @@ export default function BulkAddModal({ classes, defaultClassId, onClose, onDone 
             <p className="text-xs text-slate-400 mt-1">{t('bulk_students_hint', { ns: 'teacher', max: MAX })}</p>
           </div>
 
-          <div className="sm:w-72">
-            <label className="block text-sm font-medium mb-1">
-              {t('class_label_one', { ns: 'teacher' })} <span className="text-slate-400 font-normal">{t('optional_paren', { ns: 'teacher' })}</span>
-            </label>
-            <Select value={classId} onChange={(e) => setClassId(e.target.value)} className="input-field">
-              <option value="">{t('no_class', { ns: 'teacher' })}</option>
-              {classes.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
-            </Select>
+          <div className="space-y-3">
+            <div className="sm:w-72">
+              <label className="block text-sm font-medium mb-1">
+                {t('class_label_one', { ns: 'teacher' })} <span className="text-slate-400 font-normal">{t('optional_paren', { ns: 'teacher' })}</span>
+              </label>
+              <Select value={classId} onChange={(e) => setClassId(e.target.value)} className="input-field">
+                <option value="">{t('no_class', { ns: 'teacher' })}</option>
+                {allClasses.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+                <option value={NEW_CLASS}>＋ {t('new_class_option', { ns: 'teacher' })}</option>
+              </Select>
+            </div>
+            {classId === NEW_CLASS && (
+              <div className="p-4 rounded-xl bg-primary-50/50 border border-primary-100">
+                <ClassFields value={newClass} onChange={setNewClass} suggestions={suggestions} autoFocus compact />
+              </div>
+            )}
           </div>
 
           {rows.length > 0 && (
@@ -182,7 +207,8 @@ export default function BulkAddModal({ classes, defaultClassId, onClose, onDone 
 
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-100">
           <button type="button" onClick={onClose} className="btn-secondary">{t('cancel')}</button>
-          <button type="button" onClick={save} disabled={!rows.length || invalid > 0 || saving || checking} className="btn-primary">
+          <button type="button" onClick={save}
+            disabled={!rows.length || invalid > 0 || saving || checking || (classId === NEW_CLASS && !newClass.name.trim())} className="btn-primary">
             {saving || checking ? <i className="bi bi-arrow-repeat animate-spin"></i> : <i className="bi bi-person-plus"></i>}
             {t('bulk_students_add', { ns: 'teacher', count: rows.length })}
           </button>

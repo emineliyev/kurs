@@ -109,6 +109,8 @@ class ExamSerializer(serializers.ModelSerializer):
             class_room = attrs.get('class_room')
             if class_room is not None and class_room.teacher_id != request.user.id:
                 raise serializers.ValidationError({'class_room': 'Sinif tapılmadı.'})
+            if class_room is not None and not class_room.is_active and (exam is None or class_room != exam.class_room):
+                raise serializers.ValidationError({'class_room': 'Bu sinif arxivdədir.'})
         return attrs
 
 

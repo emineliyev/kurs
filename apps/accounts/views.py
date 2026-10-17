@@ -360,7 +360,7 @@ class StudentAssignView(APIView):
         class_id = request.data.get('class_id')
         class_room = None
         if class_id is not None:
-            class_room = Class.objects.filter(pk=class_id, teacher=request.user).first()
+            class_room = Class.objects.filter(pk=class_id, teacher=request.user, is_active=True).first()
             if class_room is None:
                 return Response({'detail': 'Sinif tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
         own = list(students_of(request.user).filter(pk__in=ids).values_list('pk', flat=True))

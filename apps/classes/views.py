@@ -23,7 +23,9 @@ class ClassViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_teacher:
-            return Class.objects.filter(teacher=user)
+            qs = Class.objects.filter(teacher=user)
+            # archived classes (kept for their exams' results) are left out of the list
+            return qs.filter(is_active=True) if self.action == 'list' else qs
         return Class.objects.filter(enrollments__student=user, is_active=True)
 
     def get_permissions(self):
@@ -53,9 +55,14 @@ class ClassViewSet(viewsets.ModelViewSet):
         student_count = class_obj.student_count
         if student_count > 0:
             return Response(
-                {'detail': f'Bu sinifdə {student_count} şagird var. Əvvəlcə şagirdləri sifdən çıxarın.'},
+                {'detail': f'Bu sinifdə {student_count} şagird var. Əvvəlcə şagirdləri başqa sinfə köçürün və ya sinifsiz edin.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        # Exams belong to the class (deleting it would delete them and their results): archive instead
+        if class_obj.exams.exists():
+            class_obj.is_active = False
+            class_obj.save(update_fields=['is_active'])
+            return Response({'archived': True, 'detail': 'Sinif arxivləndi, imtahanları və nəticələri saxlanıldı.'})
         return super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=['get'])
@@ -73,6 +80,8 @@ class ClassViewSet(viewsets.ModelViewSet):
         class_obj = self.get_object()
         if class_obj.teacher != request.user:
             return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        if not class_obj.is_active:
+            return Response({'detail': 'Bu sinif arxivdədir.'}, status=status.HTTP_400_BAD_REQUEST)
         from apps.subscriptions.models import Subscription
         sub = Subscription.objects.filter(teacher=request.user).first()
         if sub is None or not sub.is_active:
