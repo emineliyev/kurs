@@ -6,11 +6,15 @@ import App from './App'
 import './i18n'
 import './index.css'
 import { reloadForNewVersion } from './utils/lazyPage'
+import { initPwa } from './utils/pwa'
 
 // A script the current page depends on is gone (the site was updated meanwhile): reload once
 window.addEventListener('vite:preloadError', (event) => {
   if (reloadForNewVersion()) event.preventDefault()
 })
+
+// Installable app: the browser's install offer + the service worker (production)
+initPwa()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

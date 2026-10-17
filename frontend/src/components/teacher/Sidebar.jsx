@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSiteSettings } from '@/api/site'
+import { InstallAppLink } from '@/components/common/InstallApp'
 import Logo, { Wordmark } from '@/components/common/Logo'
 
 const NAV_ITEMS = [
@@ -81,6 +82,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
 
       {/* Bottom nav */}
       <div className={`p-3 pt-3 border-t border-slate-100 space-y-1 ${expanded ? 'mx-3 px-0' : ''}`}>
+        <InstallAppLink compact={!expanded} className="sidebar-link w-full text-primary-700 hover:bg-primary-50" />
         {youtubeUrl && (
           <a
             href={youtubeUrl}

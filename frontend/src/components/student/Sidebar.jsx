@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/store/authStore'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher'
 import Logo from '@/components/common/Logo'
+import { InstallAppLink } from '@/components/common/InstallApp'
 
 const NAV_ITEMS = [
   { to: '/student', icon: 'bi-house-fill', iconInactive: 'bi-house', labelKey: 'dashboard', end: true },
@@ -53,6 +54,7 @@ export default function StudentSidebar() {
 
       {/* Bottom: language + user */}
       <div className="p-3 border-t border-slate-100 space-y-2 shrink-0">
+        <InstallAppLink className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-primary-700 hover:bg-primary-50 transition-colors" />
         <div className="px-1">
           <LanguageSwitcher />
         </div>

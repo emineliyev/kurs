@@ -78,9 +78,9 @@ client.interceptors.response.use(
     }
 
     if (!error.response) {
-      toast.error(i18n.t('network_error', { ns: 'common' }))
+      toast.error(i18n.t('network_error', { ns: 'common' }), { id: 'network-error' })  // one toast, not one per request
     } else if (error.response.status >= 500) {
-      toast.error(i18n.t('server_error', { ns: 'common' }))
+      toast.error(i18n.t('server_error', { ns: 'common' }), { id: 'server-error' })
     }
 
     return Promise.reject(error)

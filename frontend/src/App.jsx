@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { lazyPage } from '@/utils/lazyPage'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import PageSpinner from '@/components/common/PageSpinner'
 import { useAuthStore } from '@/store/authStore'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
@@ -58,6 +58,13 @@ const StudentExams = lazyPage(() => import('@/pages/student/ExamsPage'))
 const TakeExamPage = lazyPage(() => import('@/pages/student/TakeExamPage'))
 const ExamResultPage = lazyPage(() => import('@/pages/student/ExamResultPage'))
 const StudentProfile = lazyPage(() => import('@/pages/student/ProfilePage'))
+
+// Start page of the installed app
+function AppEntry() {
+  const { isAuthenticated, user } = useAuthStore()
+  if (!isAuthenticated || !user) return <Navigate to="/login" replace />
+  return <Navigate to={user.role === 'student' ? '/student' : '/teacher'} replace />
+}
 
 export default function App() {
   useAuthStore()
@@ -140,6 +147,7 @@ export default function App() {
 
       {/* Landing page */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/app" element={<AppEntry />} />
       <Route path="/legal/:slug" element={<LegalPage />} />
       <Route path="/privacy" element={<LegalPage slug="privacy" />} />
       <Route path="/terms" element={<LegalPage slug="terms" />} />

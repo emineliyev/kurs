@@ -225,5 +225,15 @@
   "legal_updated": "Last updated: {{date}}",
   "legal_not_found": "Page not found.",
   "legal_load_error": "Couldn't load the page. Please try again shortly.",
-  "legal_back_home": "Back to home"
+  "legal_back_home": "Back to home",
+  "pwa_install": "Install the app",
+  "pwa_install_short": "Install",
+  "pwa_install_title": "Install the Kursum app",
+  "pwa_install_desc": "Open it with one tap from your home screen",
+  "pwa_ios_intro": "3 steps on iPhone and iPad",
+  "pwa_ios_step1": "In Safari, tap the Share button",
+  "pwa_ios_step2": "Choose “Add to Home Screen”",
+  "pwa_ios_step3": "Tap “Add” in the top right",
+  "pwa_ok": "Got it",
+  "pwa_offline": "No internet connection. Work will continue once you are back online."
 }

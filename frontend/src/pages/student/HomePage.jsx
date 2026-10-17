@@ -7,6 +7,7 @@ import { analyticsApi } from '@/api/analytics'
 import { useAuthStore } from '@/store/authStore'
 import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
+import { InstallAppCard } from '@/components/common/InstallApp'
 
 export default function StudentHome() {
   const { t } = useTranslation(['common', 'student'])
@@ -36,6 +37,7 @@ export default function StudentHome() {
 
   return (
     <div className="space-y-6">
+      <InstallAppCard />
 
       {/* Greeting banner */}
       <div className="bg-gradient-to-br from-primary-700 to-primary-800 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">

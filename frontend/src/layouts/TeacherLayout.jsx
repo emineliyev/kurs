@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom'
+import { OfflineBanner } from '@/components/common/InstallApp'
 import { useTranslation } from 'react-i18next'
 import Sidebar from '@/components/teacher/Sidebar'
 import TopBar from '@/components/teacher/TopBar'
@@ -88,6 +89,7 @@ export default function TeacherLayout() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <OfflineBanner />
         <TopBar onMenuToggle={() => setSidebarOpen(v => !v)} />
         {user && user.is_email_verified === false && <EmailVerificationBanner />}
         <main className="flex-1 overflow-auto p-4 lg:p-6">

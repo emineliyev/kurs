@@ -223,5 +223,15 @@
   "legal_updated": "Son yenilənmə: {{date}}",
   "legal_not_found": "Səhifə tapılmadı.",
   "legal_load_error": "Səhifəni yükləmək alınmadı. Bir az sonra yenidən yoxlayın.",
-  "legal_back_home": "Ana səhifəyə qayıt"
+  "legal_back_home": "Ana səhifəyə qayıt",
+  "pwa_install": "Tətbiqi quraşdır",
+  "pwa_install_short": "Quraşdır",
+  "pwa_install_title": "Kursum tətbiqini quraşdırın",
+  "pwa_install_desc": "Ana ekrandan bir toxunuşla açın",
+  "pwa_ios_intro": "iPhone və iPad-də 3 addım",
+  "pwa_ios_step1": "Safari-də «Paylaş» düyməsinə toxunun",
+  "pwa_ios_step2": "«Ana ekrana əlavə et» seçin",
+  "pwa_ios_step3": "Sağ yuxarıda «Əlavə et» basın",
+  "pwa_ok": "Aydındır",
+  "pwa_offline": "İnternet bağlantısı yoxdur. Bağlantı bərpa olunanda iş davam edəcək."
 }

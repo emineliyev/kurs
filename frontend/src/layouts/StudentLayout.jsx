@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import StudentTopBar from '@/components/student/TopBar'
 import StudentSidebar from '@/components/student/Sidebar'
 import BottomNavigation from '@/components/student/BottomNavigation'
+import { OfflineBanner } from '@/components/common/InstallApp'
 
 export default function StudentLayout() {
   return (
@@ -11,6 +12,7 @@ export default function StudentLayout() {
 
       {/* Main content area */}
       <div className="flex flex-col flex-1 min-w-0 md:pl-60">
+        <div className="sticky top-0 z-30"><OfflineBanner /></div>
         {/* Mobile top bar only */}
         <StudentTopBar />
 
