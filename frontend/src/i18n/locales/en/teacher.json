@@ -554,7 +554,7 @@
   "bulk_rendering": "Preparing pages… {{done}} / {{total}}",
   "bulk_list_title": "Cut questions ({{count}})",
   "bulk_missing_answers": "{{count}} without a correct answer",
-  "bulk_how_to": "Draw a box around a question with the mouse. Then pick the correct choice and press OK (keys: A–E or 1–5, Enter). For a written task with no choices pick “Open” (O). You can paste a screenshot with Ctrl+V. Questions are numbered in page order.",
+  "bulk_how_to": "Draw a box around a question with the mouse. Then pick the correct choice and press OK (keys: A–E or 1–5, Enter). For a short-answer question pick “Short” and type the answer (Q); for a written task with no choices pick “Open” (O). You can paste a screenshot with Ctrl+V. Questions are numbered in page order.",
   "bulk_start_over": "Delete all and start over",
   "bulk_drop_title": "Drop a PDF or page photos here",
   "bulk_drop_hint": "You can pick several files · PDF, JPG, PNG",
@@ -713,5 +713,10 @@
   "bulk_remove_confirm": "Questions cut on these pages will be removed too ({{count}}). Continue?",
   "bulk_remove_file": "Remove “{{name}}”",
   "bulk_remove_page": "Remove page",
-  "bulk_start_over_confirm": "Cut questions ({{count}}) and the open files will be removed. Continue?"
+  "bulk_start_over_confirm": "Cut questions ({{count}}) and the open files will be removed. Continue?",
+  "bulk_short_q": "Short",
+  "bulk_short_q_tip": "A short-answer question — type the correct answer next to it (key: Q)",
+  "bulk_short_ph": "Correct answer",
+  "bulk_short_is": "Short answer: {{text}}",
+  "bulk_short_missing": "Short answer — no answer typed"
 }

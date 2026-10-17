@@ -255,10 +255,12 @@ export default function QuestionBankPage() {
       for (const it of items) {
         const fd = new FormData()
         const open = it.answer === 'open'   // a written task: the cut image, no choices
-        fd.append('question_type', open ? 'long_answer' : 'image_mcq')
+        const short = it.answer === 'short' // a short answer: the cut image + the typed key
+        fd.append('question_type', open ? 'long_answer' : short ? 'short_answer' : 'image_mcq')
         fd.append('text', '')
         fd.append('points', 1)
-        if (!open) {
+        if (short) fd.append('correct_answer', it.text || '')
+        if (!open && !short) {
           fd.append('answers', JSON.stringify(
             ['A', 'B', 'C', 'D', 'E'].slice(0, it.choiceCount)
               .map((label, j) => ({ text: label, is_correct: j === it.answer, order: j }))))

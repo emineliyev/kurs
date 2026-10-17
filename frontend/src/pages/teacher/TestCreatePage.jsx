@@ -724,12 +724,14 @@ export default function TestCreatePage() {
       for (let i = 0; i < total; i++) {
         const it = items[i]
         const open = it.answer === 'open'   // a written task: the cut image, no choices
-        const res = await testsApi.createQuestion(open ? {
+        const short = it.answer === 'short' // a short answer: the cut image + the typed key
+        const res = await testsApi.createQuestion(open || short ? {
           test: createdTest.id,
-          question_type: 'long_answer',
+          question_type: open ? 'long_answer' : 'short_answer',
           text: '',
           points: 1,
           order: questions.length + i,
+          ...(short && { correct_answer: it.text || '' }),
         } : {
           test: createdTest.id,
           question_type: 'image_mcq',
@@ -742,8 +744,9 @@ export default function TestCreatePage() {
         const fd = new FormData()
         fd.append('image', it.file)
         const up = await testsApi.updateQuestion(res.data.id, fd)
-        added.push(open ? {
-          ...defaultQuestion('long_answer'),
+        added.push(open || short ? {
+          ...defaultQuestion(open ? 'long_answer' : 'short_answer'),
+          ...(short && { correct_answer: it.text || '' }),
           image: up.data.image, _imagePreview: it.url || up.data.image,
           _id: res.data.id, _saved: true,
         } : {

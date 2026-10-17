@@ -8,8 +8,9 @@ import { AnnotateCanvas, applyLook, loadScript, trimWhitespace, PDFJS_CDN, PDFJS
 /**
  * The one image cutter for questions — PDFs, page photos and pasted screenshots (Ctrl+V).
  *
- * mode="bulk":   draw a box around each question → pick the correct letter (or "open") → OK;
- *                `onDone(items)` gets [{ file, url, answer (index | 'open' | null), choiceCount }]
+ * mode="bulk":   draw a box around each question → pick the correct letter, "short" (+ the
+ *                answer text) or "open" → OK; `onDone(items)` gets
+ *                [{ file, url, answer (index | 'short' | 'open' | null), text, choiceCount }]
  *                in reading order. Keep it mounted (open=false) to preserve the work.
  * mode="single": one box (move it, resize it from the handles) or the whole image → optional
  *                annotation → `onPick(file, url)`. Used by a question's "Image" button.
@@ -20,6 +21,7 @@ import { AnnotateCanvas, applyLook, loadScript, trimWhitespace, PDFJS_CDN, PDFJS
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E']
 const OPEN = 'open'                // bulk answer for a written (no choices) question
+const SHORT = 'short'              // bulk answer for a short-answer question; the key is in `text`
 const PAGE_TARGET_W = 1600         // render width for PDF pages (good crop quality)
 const MAX_IMAGE_SIDE = 2400
 const MIN_BOX = 12
@@ -146,7 +148,7 @@ function readingOrder(items, pages) {
 
 const isUsable = (f) => f && (f.type === 'application/pdf' || f.type.startsWith('image/'))
 
-function AnswerBar({ count, answer, onPick, onOk, onCancel, t }) {
+function AnswerBar({ count, answer, text = '', onPick, onText, onOk, onCancel, t }) {
   const pick = (a) => onPick(answer === a ? null : a)
   return (
     <div className="flex items-center gap-1.5 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5"
@@ -158,6 +160,17 @@ function AnswerBar({ count, answer, onPick, onOk, onCancel, t }) {
           {l}
         </button>
       ))}
+      <button onClick={() => pick(SHORT)} title={t('bulk_short_q_tip', { ns: 'teacher' })}
+        className={`h-9 px-2.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${answer === SHORT
+          ? 'bg-teal-600 text-white shadow' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'}`}>
+        <i className="bi bi-input-cursor-text"></i>{t('bulk_short_q', { ns: 'teacher' })}
+      </button>
+      {answer === SHORT && (
+        <input autoFocus value={text} onChange={(e) => onText(e.target.value)} maxLength={200}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onOk() } }}
+          placeholder={t('bulk_short_ph', { ns: 'teacher' })}
+          className="h-9 w-36 px-2.5 rounded-lg border-2 border-teal-300 focus:border-teal-500 focus:outline-none text-sm font-semibold text-slate-800" />
+      )}
       <button onClick={() => pick(OPEN)} title={t('bulk_open_q_tip', { ns: 'teacher' })}
         className={`h-9 px-2.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${answer === OPEN
           ? 'bg-violet-600 text-white shadow' : 'bg-violet-50 text-violet-700 hover:bg-violet-100'}`}>
@@ -551,6 +564,7 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
   }, [])
 
   const setAnswer = (id, answer) => setItems((prev) => prev.map((i) => (i.id === id ? { ...i, answer } : i)))
+  const setText = (id, text) => setItems((prev) => prev.map((i) => (i.id === id ? { ...i, text } : i)))
   const removeItem = (id) => {
     setItems((prev) => prev.filter((i) => i.id !== id))
     if (activeId === id) setActiveId(null)
@@ -583,7 +597,7 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
     setCut(await cropFromPage(page.url, rect, look, true))
   }, [sel, pages, canUseWhole, look])
 
-  // Keyboard. bulk: letters / 1–5 pick, O = open question, Enter confirms, Esc cancels.
+  // Keyboard. bulk: letters / 1–5 pick, Q = short answer, O = open question, Enter confirms, Esc cancels.
   // single: Enter cuts, Esc clears the box (or closes).
   useEffect(() => {
     if (!open || editing || cut || rangeAsk) return
@@ -600,6 +614,7 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
       let pick = LETTERS.slice(0, choiceCount).map((l) => l.toLowerCase()).indexOf(key)
       if (pick < 0 && /^[1-5]$/.test(key) && Number(key) <= choiceCount) pick = Number(key) - 1
       if (pick < 0 && key === 'o') pick = OPEN
+      if (pick < 0 && key === 'q') pick = SHORT
       if (pick !== -1) {
         e.preventDefault()
         const toggle = (cur) => (cur === pick ? null : pick)
@@ -626,21 +641,25 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
 
   const finish = () => {
     if (!ordered.length) return
-    onDone(ordered.map((i) => ({ file: i.file, url: i.url, answer: i.answer, choiceCount })))
+    onDone(ordered.map((i) => ({ file: i.file, url: i.url, answer: i.answer, text: (i.text || '').trim(), choiceCount })))
   }
 
   if (!open) return null
   const pageW = baseW * zoom
-  const noAnswer = ordered.filter((i) => i.answer == null).length
+  const missing = (i) => i.answer == null || (i.answer === SHORT && !(i.text || '').trim())
+  const noAnswer = ordered.filter(missing).length
 
   const boxStyle = (r, page) => {
     const s = pageW / pages[page].w
     return { left: r.x * s, top: r.y * s, width: r.w * s, height: r.h * s }
   }
   const barBelow = (r, page) => (r.y + r.h) / pages[page].h < 0.88
-  const answerLabel = (a) => (a === OPEN ? t('bulk_open_q', { ns: 'teacher' })
+  const answerLabel = (a, text) => (a === SHORT ? ((text || '').trim()
+    ? t('bulk_short_is', { ns: 'teacher', text: text.trim() }) : t('bulk_short_missing', { ns: 'teacher' }))
+    : a === OPEN ? t('bulk_open_q', { ns: 'teacher' })
     : a != null ? t('bulk_correct_is', { ns: 'teacher', letter: LETTERS[a] }) : t('bulk_no_answer', { ns: 'teacher' }))
-  const answerTone = (a) => (a === OPEN ? 'bg-violet-600 text-white' : a != null ? 'bg-red-500 text-white' : 'bg-amber-100 text-amber-700')
+  const answerTone = (a, text) => (a === SHORT ? ((text || '').trim() ? 'bg-teal-600 text-white' : 'bg-amber-100 text-amber-700')
+    : a === OPEN ? 'bg-violet-600 text-white' : a != null ? 'bg-red-500 text-white' : 'bg-amber-100 text-amber-700')
 
   // Portal to <body>: an ancestor with a transform would otherwise trap position:fixed
   return createPortal(
@@ -820,12 +839,13 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
                           </div>
                           {activeId === it.id ? (
                             <div className={`absolute left-0 z-10 ${below ? 'top-full mt-2' : 'bottom-full mb-9'}`}>
-                              <AnswerBar t={t} count={choiceCount} answer={it.answer}
-                                onPick={(a) => setAnswer(it.id, a)} onOk={() => setActiveId(null)} />
+                              <AnswerBar t={t} count={choiceCount} answer={it.answer} text={it.text}
+                                onPick={(a) => setAnswer(it.id, a)} onText={(text) => setText(it.id, text)}
+                                onOk={() => setActiveId(null)} />
                             </div>
                           ) : (
-                            <span className={`absolute left-[-2px] top-full mt-1 px-2 py-0.5 rounded-md text-xs font-bold whitespace-nowrap ${answerTone(it.answer)}`}>
-                              {answerLabel(it.answer)}
+                            <span className={`absolute left-[-2px] top-full mt-1 px-2 py-0.5 rounded-md text-xs font-bold whitespace-nowrap max-w-[18rem] truncate ${answerTone(it.answer, it.text)}`}>
+                              {answerLabel(it.answer, it.text)}
                             </span>
                           )}
                         </div>
@@ -835,8 +855,9 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
                     {pending?.page === pi && (
                       <div style={boxStyle(pending, pi)} className="absolute border-2 border-dashed border-primary-600 bg-primary-500/10">
                         <div className={`absolute left-0 z-10 ${barBelow(pending, pi) ? 'top-full mt-2' : 'bottom-full mb-2'}`}>
-                          <AnswerBar t={t} count={choiceCount} answer={pending.answer}
+                          <AnswerBar t={t} count={choiceCount} answer={pending.answer} text={pending.text}
                             onPick={(a) => setPending((p) => ({ ...p, answer: a }))}
+                            onText={(text) => setPending((p) => ({ ...p, text }))}
                             onOk={confirmPending} onCancel={() => setPending(null)} />
                         </div>
                       </div>
@@ -873,9 +894,12 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
                   className={`w-full text-left p-2 rounded-xl border transition-colors ${activeId === it.id ? 'border-primary-400 bg-primary-50' : 'border-slate-200 hover:border-slate-300'}`}>
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <span className="font-semibold text-slate-700">{t('bulk_question_n', { ns: 'teacher', n: idx + 1 })}</span>
-                    <span className={`px-1.5 py-0.5 rounded font-bold ${it.answer === OPEN ? 'bg-violet-100 text-violet-700'
+                    <span className={`px-1.5 py-0.5 rounded font-bold max-w-[7rem] truncate ${missing(it) ? 'bg-amber-100 text-amber-700'
+                      : it.answer === SHORT ? 'bg-teal-100 text-teal-700'
+                      : it.answer === OPEN ? 'bg-violet-100 text-violet-700'
                       : it.answer != null ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {it.answer === OPEN ? <i className="bi bi-pencil-square"></i> : it.answer != null ? LETTERS[it.answer] : '?'}
+                      {it.answer === SHORT ? ((it.text || '').trim() || '?')
+                        : it.answer === OPEN ? <i className="bi bi-pencil-square"></i> : it.answer != null ? LETTERS[it.answer] : '?'}
                     </span>
                   </div>
                   <img src={it.url} alt="" className="w-full max-h-24 object-contain object-left rounded border border-slate-100 bg-white" />

@@ -562,7 +562,7 @@
   "bulk_rendering": "Səhifələr hazırlanır… {{done}} / {{total}}",
   "bulk_list_title": "Kəsilmiş suallar ({{count}})",
   "bulk_missing_answers": "{{count}} sualda düzgün cavab seçilməyib",
-  "bulk_how_to": "Siçanla sualın ətrafında çərçivə çəkin. Sonra düzgün variantı seçib OK basın (klaviatura: A–E və ya 1–5, Enter). Variantsız yazılı tapşırıq üçün «Açıq» seçin (O). Ekran görüntüsünü Ctrl+V ilə yapışdıra bilərsiniz. Suallar səhifədəki ardıcıllıqla nömrələnir.",
+  "bulk_how_to": "Siçanla sualın ətrafında çərçivə çəkin. Sonra düzgün variantı seçib OK basın (klaviatura: A–E və ya 1–5, Enter). Qısa cavablı sual üçün «Qısa» seçib cavabı yazın (Q), variantsız yazılı tapşırıq üçün «Açıq» seçin (O). Ekran görüntüsünü Ctrl+V ilə yapışdıra bilərsiniz. Suallar səhifədəki ardıcıllıqla nömrələnir.",
   "bulk_start_over": "Hamısını sil və yenidən başla",
   "bulk_drop_title": "PDF və ya səhifə şəkillərini buraya atın",
   "bulk_drop_hint": "Bir neçə fayl seçə bilərsiniz · PDF, JPG, PNG",
@@ -719,5 +719,10 @@
   "bulk_remove_confirm": "Bu səhifələrdə kəsilmiş suallar da silinəcək ({{count}}). Davam edilsin?",
   "bulk_remove_file": "«{{name}}» faylını sil",
   "bulk_remove_page": "Səhifəni sil",
-  "bulk_start_over_confirm": "Kəsilmiş suallar ({{count}}) və açılmış fayllar silinəcək. Davam edilsin?"
+  "bulk_start_over_confirm": "Kəsilmiş suallar ({{count}}) və açılmış fayllar silinəcək. Davam edilsin?",
+  "bulk_short_q": "Qısa",
+  "bulk_short_q_tip": "Qısa cavablı sual — düzgün cavabı yanındakı xanaya yazın (klaviatura: Q)",
+  "bulk_short_ph": "Düzgün cavab",
+  "bulk_short_is": "Qısa cavab: {{text}}",
+  "bulk_short_missing": "Qısa cavab — cavab yazılmayıb"
 }
