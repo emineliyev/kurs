@@ -141,13 +141,13 @@ export default function ClassesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <h1 className="text-2xl font-bold text-slate-900">{t('classes')}</h1>
         <button onClick={() => {
           // New classes start with the subject from the teacher's profile
           if (!showForm) reset({ subject: profileSubject })
           setShowForm(!showForm)
-        }} className="btn-primary">
+        }} className="btn-primary shrink-0 whitespace-nowrap">
           <i className="bi bi-plus-lg"></i> {t('create_class', { ns: 'teacher' })}
         </button>
       </div>

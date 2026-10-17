@@ -690,5 +690,19 @@
   "grading_criteria": "Критерии оценивания",
   "grading_criteria_hint": "Видны рядом с ответом при проверке; ученик увидит их вместе с результатами.",
   "grading_criteria_empty": "Для этого вопроса критерии не заданы.",
-  "grade_saved": "Сохранено"
+  "grade_saved": "Сохранено",
+  "bulk_range_title": "Какие страницы открыть?",
+  "bulk_range_info_one": "{{name}} — {{count}} страница",
+  "bulk_range_info_few": "{{name}} — {{count}} страницы",
+  "bulk_range_info_many": "{{name}} — {{count}} страниц",
+  "bulk_range_info_other": "{{name}} — {{count}} страницы",
+  "bulk_range_from": "Первая страница",
+  "bulk_range_to": "Последняя страница",
+  "bulk_range_all": "Все",
+  "bulk_range_open": "Открыть",
+  "bulk_range_count_one": "Будет открыта {{count}} страница",
+  "bulk_range_count_few": "Будут открыты {{count}} страницы",
+  "bulk_range_count_many": "Будет открыто {{count}} страниц",
+  "bulk_range_count_other": "Будет открыто {{count}} страницы",
+  "bulk_range_error": "Страницы — от 1 до {{total}}, первая не больше последней."
 }

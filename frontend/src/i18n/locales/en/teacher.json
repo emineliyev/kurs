@@ -690,5 +690,15 @@
   "grading_criteria": "Grading criteria",
   "grading_criteria_hint": "Shown next to the answer while grading; students see it with their results.",
   "grading_criteria_empty": "No criteria written for this question.",
-  "grade_saved": "Saved"
+  "grade_saved": "Saved",
+  "bulk_range_title": "Which pages should we open?",
+  "bulk_range_info_one": "{{name}} — {{count}} page",
+  "bulk_range_info_other": "{{name}} — {{count}} pages",
+  "bulk_range_from": "First page",
+  "bulk_range_to": "Last page",
+  "bulk_range_all": "All",
+  "bulk_range_open": "Open",
+  "bulk_range_count_one": "{{count}} page will be opened",
+  "bulk_range_count_other": "{{count}} pages will be opened",
+  "bulk_range_error": "Pages must be between 1 and {{total}}, and the first not after the last."
 }

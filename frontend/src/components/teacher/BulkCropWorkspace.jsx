@@ -30,11 +30,16 @@ function loadImage(src) {
   })
 }
 
-async function renderPdf(file, onPage) {
+async function openPdf(file) {
   await loadScript(PDFJS_CDN)
   window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER
-  const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
-  for (let i = 1; i <= pdf.numPages; i++) {
+  return window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise
+}
+
+// Renders pages from..to (1-based, inclusive); labels keep the real page numbers
+async function renderPdf(pdf, name, from, to, onPage) {
+  const total = to - from + 1
+  for (let i = from; i <= to; i++) {
     const page = await pdf.getPage(i)
     const base = page.getViewport({ scale: 1 })
     const viewport = page.getViewport({ scale: PAGE_TARGET_W / base.width })
@@ -46,7 +51,7 @@ async function renderPdf(file, onPage) {
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     await page.render({ canvasContext: ctx, viewport }).promise
     const { url } = await blobUrl(canvas)
-    onPage({ url, w: canvas.width, h: canvas.height, label: `${file.name} · ${i}`, total: pdf.numPages, index: i })
+    onPage({ url, w: canvas.width, h: canvas.height, label: `${name} · ${i}`, total, index: i - from + 1 })
     canvas.width = canvas.height = 0
   }
 }
@@ -121,6 +126,53 @@ function AnswerBar({ count, answer, onPick, onOk, onCancel, t }) {
   )
 }
 
+/** Which pages of a PDF to open: start and end page, both 1…total. */
+function PageRangeDialog({ t, name, total, onOpen, onCancel }) {
+  const [from, setFrom] = useState('1')
+  const [to, setTo] = useState(String(total))
+  const a = Number(from), b = Number(to)
+  const valid = Number.isInteger(a) && Number.isInteger(b) && a >= 1 && b <= total && a <= b
+  const submit = (e) => { e.preventDefault(); if (valid) onOpen(a, b) }
+  const field = (label, value, set) => (
+    <label className="flex-1">
+      <span className="text-xs font-medium text-slate-500 block mb-1">{label}</span>
+      <input type="number" inputMode="numeric" min={1} max={total} value={value} onChange={(e) => set(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        className="input-field text-center text-lg font-semibold py-2" />
+    </label>
+  )
+  return (
+    <div className="absolute inset-0 z-30 bg-slate-900/40 flex items-center justify-center p-4">
+      <form onSubmit={submit} className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+        <div>
+          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+            <i className="bi bi-file-earmark-pdf text-red-500"></i>{t('bulk_range_title', { ns: 'teacher' })}
+          </h3>
+          <p className="text-sm text-slate-500 mt-1 break-all">{t('bulk_range_info', { ns: 'teacher', name, count: total })}</p>
+        </div>
+        <div className="flex items-end gap-2">
+          {field(t('bulk_range_from', { ns: 'teacher' }), from, setFrom)}
+          <span className="pb-3 text-slate-400">–</span>
+          {field(t('bulk_range_to', { ns: 'teacher' }), to, setTo)}
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          {valid
+            ? <span className="text-slate-500">{t('bulk_range_count', { ns: 'teacher', count: b - a + 1 })}</span>
+            : <span className="text-red-500">{t('bulk_range_error', { ns: 'teacher', total })}</span>}
+          <button type="button" onClick={() => { setFrom('1'); setTo(String(total)) }}
+            className="text-primary-700 font-medium hover:underline">{t('bulk_range_all', { ns: 'teacher' })}</button>
+        </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onCancel} className="btn-secondary text-sm">{t('cancel')}</button>
+          <button type="submit" disabled={!valid} className="btn-primary text-sm">
+            <i className="bi bi-box-arrow-in-down"></i> {t('bulk_range_open', { ns: 'teacher' })}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 export default function BulkCropWorkspace({ open, onClose, onDone, busy = false }) {
   const { t } = useTranslation(['common', 'teacher'])
   const [pages, setPages] = useState([])            // { url, w, h, label }
@@ -138,6 +190,7 @@ export default function BulkCropWorkspace({ open, onClose, onDone, busy = false 
   const fileRef = useRef(null)
   const dragRef = useRef(null)
   const [draft, setDraft] = useState(null)          // box being drawn
+  const [rangeAsk, setRangeAsk] = useState(null)    // { name, total, resolve } while asking which pages
 
   // Width of a page on screen follows the available space
   useEffect(() => {
@@ -157,14 +210,24 @@ export default function BulkCropWorkspace({ open, onClose, onDone, busy = false 
   const addFiles = async (fileList) => {
     const files = [...(fileList || [])].filter((f) => f.type === 'application/pdf' || f.type.startsWith('image/'))
     if (!files.length) return
+    // Resolves with { from, to }, or null when the teacher skips this PDF
+    const askRange = (name, total) => new Promise((resolve) => setRangeAsk({ name, total, resolve }))
     setLoading({ done: 0, total: 0 })
     try {
       for (const f of files) {
         if (f.type === 'application/pdf') {
-          await renderPdf(f, (pg) => {
-            setPages((prev) => [...prev, pg])
-            setLoading({ done: pg.index, total: pg.total })
-          })
+          const pdf = await openPdf(f)
+          setLoading(null)
+          const range = await askRange(f.name, pdf.numPages)
+          setRangeAsk(null)
+          if (range) {
+            setLoading({ done: 0, total: range.to - range.from + 1 })
+            await renderPdf(pdf, f.name, range.from, range.to, (pg) => {
+              setPages((prev) => [...prev, pg])
+              setLoading({ done: pg.index, total: pg.total })
+            })
+          }
+          pdf.destroy()
         } else {
           const pg = await renderImage(f)
           setPages((prev) => [...prev, pg])
@@ -175,6 +238,7 @@ export default function BulkCropWorkspace({ open, onClose, onDone, busy = false 
       toast.error(t('error_occurred'))
     } finally {
       setLoading(null)
+      setRangeAsk(null)
     }
   }
 
@@ -368,7 +432,11 @@ export default function BulkCropWorkspace({ open, onClose, onDone, busy = false 
           onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
       </div>
 
-      <div className="flex-1 min-h-0 flex">
+      <div className="flex-1 min-h-0 flex relative">
+        {rangeAsk && (
+          <PageRangeDialog key={rangeAsk.name + rangeAsk.total} t={t} name={rangeAsk.name} total={rangeAsk.total}
+            onOpen={(from, to) => rangeAsk.resolve({ from, to })} onCancel={() => rangeAsk.resolve(null)} />
+        )}
         {/* Pages */}
         <div ref={scrollRef} className="flex-1 min-w-0 overflow-auto"
           onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); addFiles(e.dataTransfer.files) }}>

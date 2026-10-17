@@ -112,9 +112,9 @@ export default function TestsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <h1 className="text-2xl font-bold text-slate-900">{t('tests')}</h1>
-        <Link to="/teacher/tests/create" className="btn-primary">
+        <Link to="/teacher/tests/create" className="btn-primary shrink-0 whitespace-nowrap">
           <i className="bi bi-plus-lg"></i> {t('create_test', { ns: 'teacher' })}
         </Link>
       </div>

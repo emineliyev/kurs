@@ -698,5 +698,13 @@
   "grading_criteria": "Qiymətləndirmə meyarı",
   "grading_criteria_hint": "Yoxlayanda cavabın yanında görünür, nəticələr açılanda şagird də görür.",
   "grading_criteria_empty": "Bu sual üçün meyar yazılmayıb.",
-  "grade_saved": "Saxlandı"
+  "grade_saved": "Saxlandı",
+  "bulk_range_title": "Hansı səhifələri açaq?",
+  "bulk_range_info": "{{name}} — {{count}} səhifə",
+  "bulk_range_from": "Başlanğıc səhifə",
+  "bulk_range_to": "Son səhifə",
+  "bulk_range_all": "Hamısı",
+  "bulk_range_open": "Aç",
+  "bulk_range_count": "{{count}} səhifə açılacaq",
+  "bulk_range_error": "Səhifələr 1 ilə {{total}} arasında olmalı, başlanğıc sondan böyük olmamalıdır."
 }

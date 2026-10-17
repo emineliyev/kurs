@@ -347,13 +347,13 @@ export default function QuestionBankPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="page-title">{t('bank_title', { ns: 'teacher' })}</h1>
           <p className="text-sm text-slate-500 mt-1">{t('bank_subtitle', { ns: 'teacher' })}</p>
         </div>
         {editingId === null && (
-          <button onClick={startCreate} className="btn-primary">
+          <button onClick={startCreate} className="btn-primary shrink-0 whitespace-nowrap">
             <i className="bi bi-plus-lg"></i>
             {t('new_bank_question', { ns: 'teacher' })}
           </button>

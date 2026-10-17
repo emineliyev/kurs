@@ -207,12 +207,12 @@ export default function StudentsPage() {
         />
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{t('students')}</h1>
           <p className="text-sm text-slate-500 mt-0.5">{t('student_count', { ns: 'teacher', count: active.length })}</p>
         </div>
-        <button onClick={() => setEditing('new')} className="btn-primary">
+        <button onClick={() => setEditing('new')} className="btn-primary shrink-0 whitespace-nowrap">
           <i className="bi bi-person-plus"></i> {t('add_student', { ns: 'teacher' })}
         </button>
       </div>
