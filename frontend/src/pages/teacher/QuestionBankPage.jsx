@@ -254,12 +254,15 @@ export default function QuestionBankPage() {
     try {
       for (const it of items) {
         const fd = new FormData()
-        fd.append('question_type', 'image_mcq')
+        const open = it.answer === 'open'   // a written task: the cut image, no choices
+        fd.append('question_type', open ? 'long_answer' : 'image_mcq')
         fd.append('text', '')
         fd.append('points', 1)
-        fd.append('answers', JSON.stringify(
-          ['A', 'B', 'C', 'D', 'E'].slice(0, it.choiceCount)
-            .map((label, j) => ({ text: label, is_correct: j === it.answer, order: j }))))
+        if (!open) {
+          fd.append('answers', JSON.stringify(
+            ['A', 'B', 'C', 'D', 'E'].slice(0, it.choiceCount)
+              .map((label, j) => ({ text: label, is_correct: j === it.answer, order: j }))))
+        }
         fd.append('image', it.file)
         if (currentFolder != null) fd.append('folder', currentFolder)
         const res = await bankApi.create(fd)

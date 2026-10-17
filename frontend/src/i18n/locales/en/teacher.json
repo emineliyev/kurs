@@ -554,7 +554,7 @@
   "bulk_rendering": "Preparing pages… {{done}} / {{total}}",
   "bulk_list_title": "Cut questions ({{count}})",
   "bulk_missing_answers": "{{count}} without a correct answer",
-  "bulk_how_to": "Drag a box around a question. Then pick the correct choice and press OK (keyboard: A–E or 1–5, Enter). Questions are numbered in page order.",
+  "bulk_how_to": "Draw a box around a question with the mouse. Then pick the correct choice and press OK (keys: A–E or 1–5, Enter). For a written task with no choices pick “Open” (O). You can paste a screenshot with Ctrl+V. Questions are numbered in page order.",
   "bulk_start_over": "Delete all and start over",
   "bulk_drop_title": "Drop a PDF or page photos here",
   "bulk_drop_hint": "You can pick several files · PDF, JPG, PNG",
@@ -703,5 +703,11 @@
   "bulk_range_error": "Pages must be between 1 and {{total}}, and the first not after the last.",
   "bulk_range_change": "Change page range",
   "bulk_range_pages": "Pages",
-  "bulk_range_kept_note": "Pages you have already cut questions from stay, even outside the range."
+  "bulk_range_kept_note": "Pages you have already cut questions from stay, even outside the range.",
+  "bulk_open_q": "Open",
+  "bulk_open_q_tip": "A written task with no choices — added as an open question (key: O)",
+  "pasted_image": "Pasted image",
+  "paste_hint": "paste a screenshot",
+  "picker_cut_title": "Cut and fix",
+  "picker_cut_desc": "Images, PDFs: cut, straighten, annotate"
 }

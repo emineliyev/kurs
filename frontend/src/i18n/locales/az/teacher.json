@@ -562,7 +562,7 @@
   "bulk_rendering": "Səhifələr hazırlanır… {{done}} / {{total}}",
   "bulk_list_title": "Kəsilmiş suallar ({{count}})",
   "bulk_missing_answers": "{{count}} sualda düzgün cavab seçilməyib",
-  "bulk_how_to": "Siçanla sualın ətrafında çərçivə çəkin. Sonra düzgün variantı seçib OK basın (klaviatura: A–E və ya 1–5, Enter). Suallar səhifədəki ardıcıllıqla nömrələnir.",
+  "bulk_how_to": "Siçanla sualın ətrafında çərçivə çəkin. Sonra düzgün variantı seçib OK basın (klaviatura: A–E və ya 1–5, Enter). Variantsız yazılı tapşırıq üçün «Açıq» seçin (O). Ekran görüntüsünü Ctrl+V ilə yapışdıra bilərsiniz. Suallar səhifədəki ardıcıllıqla nömrələnir.",
   "bulk_start_over": "Hamısını sil və yenidən başla",
   "bulk_drop_title": "PDF və ya səhifə şəkillərini buraya atın",
   "bulk_drop_hint": "Bir neçə fayl seçə bilərsiniz · PDF, JPG, PNG",
@@ -709,5 +709,11 @@
   "bulk_range_error": "Səhifələr 1 ilə {{total}} arasında olmalı, başlanğıc sondan böyük olmamalıdır.",
   "bulk_range_change": "Səhifə aralığını dəyiş",
   "bulk_range_pages": "Səhifələr",
-  "bulk_range_kept_note": "İçində sual kəsdiyiniz səhifələr aralıqdan kənarda qalsa da saxlanılır."
+  "bulk_range_kept_note": "İçində sual kəsdiyiniz səhifələr aralıqdan kənarda qalsa da saxlanılır.",
+  "bulk_open_q": "Açıq",
+  "bulk_open_q_tip": "Variantsız yazılı tapşırıq — açıq sual kimi əlavə olunur (klaviatura: O)",
+  "pasted_image": "Yapışdırılmış şəkil",
+  "paste_hint": "ekran görüntüsünü yapışdırın",
+  "picker_cut_title": "Kəs və düzəlt",
+  "picker_cut_desc": "Şəkil, PDF: kəs, düzləndir, annotasiya"
 }
