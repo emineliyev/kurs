@@ -11,7 +11,6 @@ export default defineConfig({
       // a student in the middle of an exam is never interrupted
       injectRegister: false,
       registerType: 'autoUpdate',
-      includeAssets: ['favicon/favicon.svg', 'favicon/favicon.ico', 'favicon/apple-touch-icon.png'],
       manifest: {
         id: '/app',
         name: 'Kursum — Müəllim Platforması',
@@ -36,7 +35,7 @@ export default defineConfig({
       workbox: {
         // Only the icons are downloaded up front; pages and code are cached as they are used,
         // so a student's phone never downloads the teacher's editor
-        globPatterns: ['*.{png,svg,ico}', 'favicon/*'],
+        globPatterns: ['*.{png,svg,ico}'],
         navigateFallback: null,
         skipWaiting: true,
         clientsClaim: true,
