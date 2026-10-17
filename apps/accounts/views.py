@@ -297,6 +297,103 @@ class StudentDetailView(APIView):
         return Response({'detail': 'Şagird arxivə köçürüldü.'})
 
 
+def _ids(request):
+    ids = request.data.get('student_ids')
+    if not isinstance(ids, list) or not ids or len(ids) > 500 or not all(isinstance(i, int) for i in ids):
+        return None
+    return ids
+
+
+class StudentBulkCreateView(APIView):
+    """POST {students: [{first_name, last_name, username, password}], class_id?} — a pasted list."""
+    permission_classes = [IsTeacher]
+
+    def post(self, request):
+        from apps.subscriptions.models import Subscription
+        from .serializers import StudentBulkCreateSerializer
+        from .students import active_student_count
+        error = student_limit_error(request.user)
+        if error:
+            return Response({'detail': error}, status=status.HTTP_403_FORBIDDEN)
+        serializer = StudentBulkCreateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        sub = Subscription.objects.select_related('plan').get(teacher=request.user)
+        limit = sub.plan.max_students
+        room = limit - active_student_count(request.user) if limit != -1 else None
+        if room is not None and len(serializer.validated_data['students']) > room:
+            return Response({'detail': f'Şagird limitinə görə yalnız {room} şagird əlavə edə bilərsiniz ({limit}).'},
+                            status=status.HTTP_403_FORBIDDEN)
+        created = serializer.save()
+        order = {u.pk: i for i, u in enumerate(created)}
+        rows = sorted(_with_classes(students_of(request.user).filter(pk__in=order), request.user),
+                      key=lambda u: order[u.pk])
+        return Response(StudentSerializer(rows, many=True).data, status=status.HTTP_201_CREATED)
+
+
+class StudentUsernameCheckView(APIView):
+    """POST {usernames: [...]} → {taken: [...]} — for the paste preview."""
+    permission_classes = [IsTeacher]
+
+    def post(self, request):
+        names = request.data.get('usernames')
+        if not isinstance(names, list) or len(names) > 500:
+            return Response({'detail': 'usernames must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        wanted = {str(n).strip().lower() for n in names if str(n).strip()}
+        taken = {u.lower() for u in User.objects.filter(username__in=wanted).values_list('username', flat=True)}
+        # case-insensitive leftovers (old mixed-case accounts)
+        from django.db.models.functions import Lower
+        taken |= set(User.objects.annotate(l=Lower('username')).filter(l__in=wanted - taken)
+                     .values_list('l', flat=True))
+        return Response({'taken': sorted(taken)})
+
+
+class StudentAssignView(APIView):
+    """POST {student_ids, class_id (null = no class)} — a student is in one class at most."""
+    permission_classes = [IsTeacher]
+
+    def post(self, request):
+        from apps.classes.membership import place_students
+        from apps.classes.models import Class
+        ids = _ids(request)
+        if ids is None:
+            return Response({'detail': 'student_ids must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        class_id = request.data.get('class_id')
+        class_room = None
+        if class_id is not None:
+            class_room = Class.objects.filter(pk=class_id, teacher=request.user).first()
+            if class_room is None:
+                return Response({'detail': 'Sinif tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+        own = list(students_of(request.user).filter(pk__in=ids).values_list('pk', flat=True))
+        if len(own) != len(set(ids)):
+            return Response({'detail': 'Şagird tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+        moved = place_students(own, class_room)
+        rows = _with_classes(students_of(request.user).filter(pk__in=own), request.user)
+        return Response({'moved': len(moved), 'students': StudentSerializer(rows, many=True).data})
+
+
+class StudentResetPasswordsView(APIView):
+    """POST {student_ids} → new easy-to-type passwords, shown once (they're stored hashed)."""
+    permission_classes = [IsTeacher]
+
+    def post(self, request):
+        from django.db import transaction
+        from .students import friendly_password
+        ids = _ids(request)
+        if ids is None:
+            return Response({'detail': 'student_ids must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        students = list(students_of(request.user).filter(pk__in=ids).order_by('first_name', 'last_name'))
+        if len(students) != len(set(ids)):
+            return Response({'detail': 'Şagird tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+        out = []
+        with transaction.atomic():
+            for s in students:
+                password = friendly_password(s.first_name)
+                s.set_password(password)
+                s.save(update_fields=['password'])
+                out.append({'id': s.pk, 'full_name': s.get_full_name(), 'username': s.username, 'password': password})
+        return Response({'credentials': out})
+
+
 class StudentRestoreView(APIView):
     permission_classes = [IsTeacher]
 

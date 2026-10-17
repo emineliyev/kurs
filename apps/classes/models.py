@@ -54,6 +54,11 @@ class ClassEnrollment(models.Model):
         verbose_name_plural = 'Sinif üzvlükləri'
         unique_together = ['student', 'class_room']
         ordering = ['-enrolled_at']
+        constraints = [
+            # a student is in one class at most (old memberships stay, inactive, as history)
+            models.UniqueConstraint(fields=['student'], condition=models.Q(is_active=True),
+                                    name='one_active_class_per_student'),
+        ]
 
     def __str__(self):
         return f'{self.student.get_full_name()} -> {self.class_room.name}'

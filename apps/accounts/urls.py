@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     TeacherRegisterView, LoginView, LogoutView,
     ProfileView, PasswordChangeView, StudentListCreateView, StudentDetailView, StudentRestoreView,
+    StudentBulkCreateView, StudentUsernameCheckView, StudentAssignView, StudentResetPasswordsView,
     GoogleAuthView, FeedbackCreateView, VerifyEmailView, ResendVerificationView,
     PasswordResetRequestView, PasswordResetConfirmView,
 )
@@ -15,6 +16,10 @@ urlpatterns = [
     path('profile/', ProfileView.as_view(), name='profile'),
     path('password/change/', PasswordChangeView.as_view(), name='password-change'),
     path('students/', StudentListCreateView.as_view(), name='student-create'),
+    path('students/bulk/', StudentBulkCreateView.as_view(), name='student-bulk-create'),
+    path('students/check-usernames/', StudentUsernameCheckView.as_view(), name='student-check-usernames'),
+    path('students/assign/', StudentAssignView.as_view(), name='student-assign'),
+    path('students/reset-passwords/', StudentResetPasswordsView.as_view(), name='student-reset-passwords'),
     path('students/<int:student_id>/', StudentDetailView.as_view(), name='student-update'),
     path('students/<int:student_id>/restore/', StudentRestoreView.as_view(), name='student-restore'),
     path('google/', GoogleAuthView.as_view(), name='google-auth'),

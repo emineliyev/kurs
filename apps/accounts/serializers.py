@@ -98,17 +98,36 @@ def _teacher_classes(serializer):
 
 
 class StudentSerializer(serializers.ModelSerializer):
-    """A student as the owning teacher sees it, with the teacher's classes it's enrolled in."""
+    """A student as the owning teacher sees it, with the class it's in (one at most)."""
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     classes = serializers.SerializerMethodField()
+    class_id = serializers.SerializerMethodField()
+    class_name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'first_name', 'last_name', 'full_name', 'username', 'is_active', 'created_at', 'classes']
+        fields = ['id', 'first_name', 'last_name', 'full_name', 'username', 'is_active', 'created_at',
+                  'classes', 'class_id', 'class_name']
 
     def get_classes(self, obj):
         # relies on the view's prefetch of active enrollments (to_attr='active_enrollments')
         return [{'id': e.class_room_id, 'name': e.class_room.name} for e in obj.active_enrollments]
+
+    def get_class_id(self, obj):
+        return obj.active_enrollments[0].class_room_id if obj.active_enrollments else None
+
+    def get_class_name(self, obj):
+        return obj.active_enrollments[0].class_room.name if obj.active_enrollments else None
+
+
+def _own_class(serializer, value):
+    """One of the teacher's classes, or None."""
+    if value is None:
+        return None
+    cls = _teacher_classes(serializer).filter(pk=value).first()
+    if cls is None:
+        raise serializers.ValidationError('Sinif tapılmadı.')
+    return cls
 
 
 class StudentCreateSerializer(serializers.ModelSerializer):
@@ -116,7 +135,8 @@ class StudentCreateSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(max_length=100)
     username = serializers.CharField(max_length=50)
     password = serializers.CharField(write_only=True)
-    class_id = serializers.IntegerField(write_only=True)
+    # optional: a student can be added without a class and placed in one later
+    class_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = User
@@ -129,24 +149,74 @@ class StudentCreateSerializer(serializers.ModelSerializer):
         return _strong_student_password(value)
 
     def validate_class_id(self, value):
-        if not _teacher_classes(self).filter(pk=value).exists():
-            raise serializers.ValidationError('Sinif tapılmadı.')
-        return value
+        return _own_class(self, value)
 
     def create(self, validated_data):
         from django.db import transaction
         from apps.classes.models import ClassEnrollment
         from .models import StudentProfile
         password = validated_data.pop('password')
-        class_id = validated_data.pop('class_id')
+        class_room = validated_data.pop('class_id', None)
         with transaction.atomic():
             user = User(**validated_data, role=User.ROLE_STUDENT, email=None,
                         created_by=self.context['request'].user)
             user.set_password(password)
             user.save()
             StudentProfile.objects.get_or_create(user=user)
-            ClassEnrollment.objects.create(student=user, class_room_id=class_id, is_active=True)
+            if class_room is not None:
+                ClassEnrollment.objects.create(student=user, class_room=class_room, is_active=True)
         return user
+
+
+class StudentBulkCreateSerializer(serializers.Serializer):
+    """Many students in one go (a pasted list), optionally all into one class."""
+    MAX = 200
+    students = serializers.ListField(child=serializers.DictField(), allow_empty=False, max_length=MAX)
+    class_id = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate_class_id(self, value):
+        return _own_class(self, value)
+
+    def validate_students(self, rows):
+        errors = {}
+        # the same username twice in the list — flagged on every such row, whatever else is wrong
+        by_name = {}
+        for i, row in enumerate(rows):
+            by_name.setdefault(str(row.get('username') or '').strip().lower(), []).append(i)
+        for name, idx in by_name.items():
+            if name and len(idx) > 1:
+                for i in idx:
+                    errors[i] = {'username': 'Bu istifadəçi adı siyahıda təkrarlanır.'}
+        for i, row in enumerate(rows):
+            row_serializer = StudentCreateSerializer(data={k: row.get(k) for k in
+                                                           ('first_name', 'last_name', 'username', 'password')},
+                                                     context=self.context)
+            if not row_serializer.is_valid():
+                errors[i] = {**{k: v[0] for k, v in row_serializer.errors.items()}, **errors.get(i, {})}
+                continue
+            rows[i] = row_serializer.validated_data
+        if errors:
+            raise serializers.ValidationError({str(k): v for k, v in sorted(errors.items())})
+        return rows
+
+    def create(self, validated_data):
+        from django.db import transaction
+        from apps.classes.models import ClassEnrollment
+        teacher = self.context['request'].user  # profiles come from the post_save signal
+        class_room = validated_data.get('class_id')
+        created = []
+        with transaction.atomic():
+            for row in validated_data['students']:
+                row = dict(row)
+                password = row.pop('password')
+                user = User(**row, role=User.ROLE_STUDENT, email=None, created_by=teacher)
+                user.set_password(password)
+                user.save()
+                created.append(user)
+            if class_room is not None:
+                ClassEnrollment.objects.bulk_create([
+                    ClassEnrollment(student=u, class_room=class_room, is_active=True) for u in created])
+        return created
 
 
 class LoginSerializer(serializers.Serializer):
@@ -188,12 +258,14 @@ class StudentUpdateSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(max_length=100)
     username = serializers.CharField(max_length=50)
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    # Full set of the teacher's classes the student should be in; omitted = leave as is
+    # The student's class (null = no class); omitted = leave as is
+    class_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    # Older clients send a list — at most one class now
     class_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'username', 'password', 'class_ids']
+        fields = ['first_name', 'last_name', 'username', 'password', 'class_id', 'class_ids']
 
     def validate_username(self, value):
         return _clean_username(value, self.instance)
@@ -203,32 +275,30 @@ class StudentUpdateSerializer(serializers.ModelSerializer):
             return value  # blank = keep the current password
         return _strong_student_password(value)
 
+    def validate_class_id(self, value):
+        return _own_class(self, value)
+
     def validate_class_ids(self, value):
-        value = set(value)
-        if len(value) != _teacher_classes(self).filter(pk__in=value).count():
-            raise serializers.ValidationError('Sinif tapılmadı.')
-        return value
+        value = list(dict.fromkeys(value))
+        if len(value) > 1:
+            raise serializers.ValidationError('Şagird yalnız bir sinifdə ola bilər.')
+        return _own_class(self, value[0]) if value else None
 
     def update(self, instance, validated_data):
         from django.db import transaction
-        from apps.classes.models import ClassEnrollment
+        from apps.classes.membership import place_students
         password = validated_data.pop('password', None)
-        class_ids = validated_data.pop('class_ids', None)
+        has_class = 'class_id' in validated_data or 'class_ids' in validated_data
+        class_room = validated_data.pop('class_id', validated_data.pop('class_ids', None))
+        validated_data.pop('class_ids', None)
         with transaction.atomic():
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             if password:
                 instance.set_password(password)
             instance.save()
-            if class_ids is not None:
-                mine = ClassEnrollment.objects.filter(student=instance, class_room__in=_teacher_classes(self))
-                mine.exclude(class_room_id__in=class_ids).update(is_active=False)
-                mine.filter(class_room_id__in=class_ids).update(is_active=True)
-                existing = set(mine.values_list('class_room_id', flat=True))
-                ClassEnrollment.objects.bulk_create([
-                    ClassEnrollment(student=instance, class_room_id=cid, is_active=True)
-                    for cid in class_ids - existing
-                ])
+            if has_class:
+                place_students([instance.pk], class_room)
         return instance
 
 

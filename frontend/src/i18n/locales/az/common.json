@@ -233,5 +233,6 @@
   "pwa_ios_step2": "«Ana ekrana əlavə et» seçin",
   "pwa_ios_step3": "Sağ yuxarıda «Əlavə et» basın",
   "pwa_ok": "Aydındır",
-  "pwa_offline": "İnternet bağlantısı yoxdur. Bağlantı bərpa olunanda iş davam edəcək."
+  "pwa_offline": "İnternet bağlantısı yoxdur. Bağlantı bərpa olunanda iş davam edəcək.",
+  "select_all": "Hamısını seç"
 }

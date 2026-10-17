@@ -235,5 +235,6 @@
   "pwa_ios_step2": "Choose “Add to Home Screen”",
   "pwa_ios_step3": "Tap “Add” in the top right",
   "pwa_ok": "Got it",
-  "pwa_offline": "No internet connection. Work will continue once you are back online."
+  "pwa_offline": "No internet connection. Work will continue once you are back online.",
+  "select_all": "Select all"
 }

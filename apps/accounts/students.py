@@ -30,6 +30,20 @@ def student_limit_error(teacher):
     return None
 
 
+_LATIN = str.maketrans({'ə': 'e', 'Ə': 'E', 'ı': 'i', 'İ': 'I', 'ö': 'o', 'Ö': 'O', 'ü': 'u', 'Ü': 'U',
+                        'ğ': 'g', 'Ğ': 'G', 'ş': 's', 'Ş': 'S', 'ç': 'c', 'Ç': 'C'})
+
+
+def friendly_password(first_name=''):
+    """Easy to read and type, yet meets the strong-password rules: 'Aysel.4827'."""
+    import secrets
+    word = re.sub(r'[^A-Za-z]', '', (first_name or '').translate(_LATIN))[:8] or 'Kursum'
+    word = word[0].upper() + word[1:].lower()
+    if len(word) < 3 or word == word.upper():
+        word = 'Kursum'
+    return f'{word}.{secrets.randbelow(9000) + 1000}'
+
+
 def find_by_username(username):
     """Case-insensitive lookup; an exact match wins if old accounts differ only by case."""
     username = (username or '').strip()

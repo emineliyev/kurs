@@ -9,11 +9,13 @@ import { analyticsApi } from '@/api/analytics'
 import { Link } from 'react-router-dom'
 import PageSpinner from '@/components/common/PageSpinner'
 import Select from '@/components/common/Select'
-import StudentFormModal, { showCredentials } from '@/components/teacher/StudentFormModal'
+import StudentFormModal from '@/components/teacher/StudentFormModal'
+import BulkAddModal from '@/components/teacher/students/BulkAddModal'
+import CredentialsSheet from '@/components/teacher/students/CredentialsSheet'
 import { toastApiError } from '@/api/errors'
 import { scoreText } from '@/utils/score'
 
-const classNames = (s) => s.classes.map((c) => c.name).join(', ')
+const classNames = (s) => s.class_name || ''
 
 function StudentHistoryModal({ student, onClose }) {
   const { t } = useTranslation(['common', 'teacher'])
@@ -33,7 +35,7 @@ function StudentHistoryModal({ student, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
             <p className="font-bold text-slate-900">{student.full_name}</p>
-            <p className="text-xs text-slate-400">{student.username}{student.classes.length > 0 && ` · ${classNames(student)}`}</p>
+            <p className="text-xs text-slate-400">{student.username}{student.class_name && ` · ${classNames(student)}`}</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400">
             <i className="bi bi-x-lg"></i>
@@ -91,16 +93,10 @@ function ActionButton({ icon, title, tone, onClick, size = 'w-8 h-8' }) {
 
 function ClassChips({ student }) {
   const { t } = useTranslation('teacher')
-  if (!student.classes.length) {
-    return <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">{t('no_class')}</span>
+  if (!student.class_id) {
+    return <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium whitespace-nowrap">{t('no_class')}</span>
   }
-  return (
-    <div className="flex flex-wrap gap-1">
-      {student.classes.map((c) => (
-        <span key={c.id} className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">{c.name}</span>
-      ))}
-    </div>
-  )
+  return <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium whitespace-nowrap">{student.class_name}</span>
 }
 
 export default function StudentsPage() {
@@ -114,6 +110,11 @@ export default function StudentsPage() {
   const [historyStudent, setHistoryStudent] = useState(null)
   const [search, setSearch] = useState('')
   const [classFilter, setClassFilter] = useState('')
+  const [showBulk, setShowBulk] = useState(false)
+  const [credentials, setCredentials] = useState(null)   // logins to show once (new / reset)
+  const [selected, setSelected] = useState(new Set())
+  const [assignTo, setAssignTo] = useState('')
+  const [busy, setBusy] = useState(false)
 
   const loadData = async () => {
     try {
@@ -132,11 +133,80 @@ export default function StudentsPage() {
 
   useEffect(() => { loadData() }, [])
 
-  const onSaved = (student, credentials) => {
+  const onSaved = () => {
     setEditing(null)
-    if (credentials) showCredentials(t, credentials)
-    else toast.success(t('student_updated', { ns: 'teacher' }))
+    toast.success(t('student_updated', { ns: 'teacher' }))
     loadData()
+  }
+
+  // New students (one by one or a pasted list): show their logins once
+  const onAdded = (creds) => {
+    setEditing(null); setShowBulk(false)
+    setCredentials(creds)
+    loadData()
+  }
+
+  const toggle = (id) => setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const clearSelection = () => { setSelected(new Set()); setAssignTo('') }
+
+  // Put the selected students into one class (or none); ones from another class are moved
+  const onAssign = async () => {
+    if (!assignTo) return
+    const ids = [...selected]
+    const target = assignTo === 'none' ? null : Number(assignTo)
+    const targetName = target ? classes.find((c) => c.id === target)?.name : null
+    const moving = active.filter((s) => selected.has(s.id) && s.class_id && s.class_id !== target)
+    if (moving.length) {
+      const { isConfirmed } = await Swal.fire({
+        titleText: target
+          ? t('move_confirm_title', { ns: 'teacher', count: moving.length, class: targetName })
+          : t('remove_class_confirm', { ns: 'teacher', count: moving.length }),
+        text: t('move_confirm_note', { ns: 'teacher' }),
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: target ? t('move_confirm_yes', { ns: 'teacher' }) : t('yes_remove', { ns: 'teacher' }),
+        cancelButtonText: t('cancel'),
+      })
+      if (!isConfirmed) return
+    }
+    setBusy(true)
+    try {
+      await authApi.assignStudents(ids, target)
+      toast.success(target
+        ? t('assigned_to_class', { ns: 'teacher', count: ids.length, class: targetName })
+        : t('removed_from_class', { ns: 'teacher', count: ids.length }))
+      clearSelection()
+      loadData()
+    } catch (err) {
+      toastApiError(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // New easy passwords for the selected students, shown once on login slips
+  const onResetPasswords = async () => {
+    const ids = [...selected]
+    const { isConfirmed } = await Swal.fire({
+      titleText: t('reset_passwords_confirm', { ns: 'teacher', count: ids.length }),
+      text: t('reset_passwords_note', { ns: 'teacher' }),
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: t('reset_passwords_yes', { ns: 'teacher' }),
+      cancelButtonText: t('cancel'),
+    })
+    if (!isConfirmed) return
+    setBusy(true)
+    try {
+      const res = await authApi.resetStudentPasswords(ids)
+      const byId = new Map(active.map((s) => [s.id, s]))
+      setCredentials(res.data.credentials.map((c) => ({ ...c, class_name: byId.get(c.id)?.class_name })))
+      clearSelection()
+    } catch (err) {
+      toastApiError(err)
+    } finally {
+      setBusy(false)
+    }
   }
 
   const onArchive = async (student) => {
@@ -173,7 +243,15 @@ export default function StudentsPage() {
   const q = search.trim().toLowerCase()
   const filtered = list.filter((s) =>
     (!q || s.full_name.toLowerCase().includes(q) || s.username.includes(q)) &&
-    (!classFilter || (classFilter === 'none' ? !s.classes.length : s.classes.some((c) => String(c.id) === classFilter))))
+    (!classFilter || (classFilter === 'none' ? !s.class_id : String(s.class_id) === classFilter)))
+  const classless = active.filter((s) => !s.class_id).length
+  const selectable = tab === 'active'
+  const allShown = filtered.length > 0 && filtered.every((s) => selected.has(s.id))
+  const toggleAll = () => setSelected((prev) => {
+    const n = new Set(prev)
+    filtered.forEach((s) => (allShown ? n.delete(s.id) : n.add(s.id)))
+    return n
+  })
 
   const actions = (s, size) => tab === 'active' ? (
     <>
@@ -189,7 +267,7 @@ export default function StudentsPage() {
   )
 
   const tabButton = (key, label, count) => (
-    <button onClick={() => setTab(key)}
+    <button onClick={() => { setTab(key); clearSelection() }}
       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === key ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
       {label} <span className="ml-1 text-xs text-slate-400">{count}</span>
     </button>
@@ -204,18 +282,36 @@ export default function StudentsPage() {
           classes={classes}
           onClose={() => setEditing(null)}
           onSaved={onSaved}
+          onDone={onAdded}
         />
       )}
+      {showBulk && <BulkAddModal classes={classes} onClose={() => setShowBulk(false)} onDone={onAdded} />}
+      {credentials && <CredentialsSheet rows={credentials} onClose={() => setCredentials(null)} />}
 
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">{t('students')}</h1>
           <p className="text-sm text-slate-500 mt-0.5">{t('student_count', { ns: 'teacher', count: active.length })}</p>
         </div>
-        <button onClick={() => setEditing('new')} className="btn-primary shrink-0 whitespace-nowrap">
-          <i className="bi bi-person-plus"></i> {t('add_student', { ns: 'teacher' })}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowBulk(true)} className="btn-secondary shrink-0 whitespace-nowrap">
+            <i className="bi bi-list-check"></i> {t('paste_list', { ns: 'teacher' })}
+          </button>
+          <button onClick={() => setEditing('new')} className="btn-primary shrink-0 whitespace-nowrap">
+            <i className="bi bi-person-plus"></i> {t('add_student', { ns: 'teacher' })}
+          </button>
+        </div>
       </div>
+
+      {classless > 0 && tab === 'active' && classFilter !== 'none' && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <i className="bi bi-exclamation-triangle"></i>
+          <span className="flex-1 min-w-[12rem]">{t('classless_warning', { ns: 'teacher', count: classless })}</span>
+          <button onClick={() => setClassFilter('none')} className="font-semibold underline underline-offset-2 hover:text-amber-900">
+            {t('show_them', { ns: 'teacher' })}
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col md:flex-row gap-3">
         <div className="inline-flex bg-slate-100 rounded-xl p-1 self-start">
@@ -237,6 +333,28 @@ export default function StudentsPage() {
           <option value="none">{t('no_class', { ns: 'teacher' })}</option>
         </Select>
       </div>
+
+      {selectable && selected.size > 0 && (
+        <div className="sticky top-0 z-10 rounded-xl bg-primary-700 text-white px-4 py-2.5 flex flex-wrap items-center gap-2 shadow-lg">
+          <span className="font-semibold text-sm mr-1">{t('selected_count', { ns: 'teacher', count: selected.size })}</span>
+          <div className="flex items-center gap-1.5 bg-white/10 rounded-lg p-1">
+            <Select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} className="input-field py-1.5 text-sm text-slate-800 w-44">
+              <option value="">{t('assign_to_class', { ns: 'teacher' })}</option>
+              {classes.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+              <option value="none">{t('no_class', { ns: 'teacher' })}</option>
+            </Select>
+            <button onClick={onAssign} disabled={!assignTo || busy} className="px-3 py-1.5 rounded-md bg-white text-primary-700 text-sm font-semibold disabled:opacity-50">
+              {t('apply', { ns: 'teacher' })}
+            </button>
+          </div>
+          <button onClick={onResetPasswords} disabled={busy} className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-medium disabled:opacity-50">
+            <i className="bi bi-key mr-1"></i>{t('reset_passwords', { ns: 'teacher' })}
+          </button>
+          <button onClick={clearSelection} className="ml-auto w-8 h-8 rounded-lg hover:bg-white/10" title={t('cancel')}>
+            <i className="bi bi-x-lg"></i>
+          </button>
+        </div>
+      )}
 
       {tab === 'archived' && (
         <p className="text-sm text-slate-500 flex items-start gap-2">
@@ -260,16 +378,22 @@ export default function StudentsPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50">
                 <tr>
+                  {selectable && (
+                    <th className="pl-5 py-3 w-8"><input type="checkbox" checked={allShown} onChange={toggleAll} aria-label={t('select_all')} /></th>
+                  )}
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('full_name')}</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('username_field', { ns: 'teacher' })}</th>
-                  <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('classes_label', { ns: 'teacher' })}</th>
+                  <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('class_label_one', { ns: 'teacher' })}</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">{t('created_at')}</th>
                   <th className="px-5 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50">
+                  <tr key={s.id} className={selected.has(s.id) ? 'bg-primary-50/60' : 'hover:bg-slate-50'}>
+                    {selectable && (
+                      <td className="pl-5 py-3"><input type="checkbox" checked={selected.has(s.id)} onChange={() => toggle(s.id)} aria-label={s.full_name} /></td>
+                    )}
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 text-xs font-bold shrink-0">
@@ -293,8 +417,9 @@ export default function StudentsPage() {
           {/* Mobile cards */}
           <div className="md:hidden space-y-3">
             {filtered.map((s) => (
-              <div key={s.id} className="card p-4 space-y-3">
+              <div key={s.id} className={`card p-4 space-y-3 ${selected.has(s.id) ? 'ring-2 ring-primary-300' : ''}`}>
                 <div className="flex items-center gap-3 min-w-0">
+                  {selectable && <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggle(s.id)} aria-label={s.full_name} />}
                   <div className="w-9 h-9 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 text-xs font-bold shrink-0">
                     {(s.first_name[0] || '') + (s.last_name[0] || '')}
                   </div>

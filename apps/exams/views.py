@@ -51,7 +51,8 @@ class ExamViewSet(viewsets.ModelViewSet):
         enrolled_classes = user.enrollments.filter(is_active=True).values_list('class_room_id', flat=True)
         # A passive exam is hidden — except from students already inside it, so they can finish
         from django.db.models import Q
-        return Exam.objects.filter(class_room__in=enrolled_classes).filter(
+        # the current class's exams, plus any exam they've taken (kept after moving to another class)
+        return Exam.objects.filter(Q(class_room__in=enrolled_classes) | Q(results__student=user)).filter(
             Q(is_active=True) | Q(results__student=user, results__status=ExamResult.STATUS_IN_PROGRESS)
         ).distinct().select_related('test', 'class_room')
 

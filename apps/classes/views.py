@@ -80,15 +80,10 @@ class ClassViewSet(viewsets.ModelViewSet):
             return Response({'detail': message}, status=status.HTTP_403_FORBIDDEN)
         serializer = EnrollStudentSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        enrollment, created = ClassEnrollment.objects.get_or_create(
-            student_id=serializer.validated_data['student_id'],
-            class_room=class_obj,
-            defaults={'is_active': True}
-        )
-        if not created and not enrollment.is_active:
-            enrollment.is_active = True
-            enrollment.save(update_fields=['is_active'])
-        return Response({'detail': 'Student enrolled successfully.'})
+        # one class per student: joining this class leaves the previous one
+        from .membership import place_students
+        moved = place_students([serializer.validated_data['student_id']], class_obj)
+        return Response({'detail': 'Student enrolled successfully.', 'moved': bool(moved)})
 
     @action(detail=True, methods=['post'], permission_classes=[IsTeacher])
     def unenroll(self, request, pk=None):

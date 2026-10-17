@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
@@ -6,7 +6,10 @@ import PageSpinner from '@/components/common/PageSpinner'
 import Swal from '@/utils/swal'
 import { classesApi } from '@/api/classes'
 import { toastApiError } from '@/api/errors'
-import StudentFormModal, { showCredentials } from '@/components/teacher/StudentFormModal'
+import StudentFormModal from '@/components/teacher/StudentFormModal'
+import BulkAddModal from '@/components/teacher/students/BulkAddModal'
+import PickStudentsModal from '@/components/teacher/students/PickStudentsModal'
+import CredentialsSheet from '@/components/teacher/students/CredentialsSheet'
 
 export default function ClassDetailPage() {
   const { id } = useParams()
@@ -14,7 +17,18 @@ export default function ClassDetailPage() {
   const [cls, setCls] = useState(null)
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showAddStudent, setShowAddStudent] = useState(false)
+  const [adding, setAdding] = useState(null)      // null | 'new' | 'paste' | 'pick'
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [credentials, setCredentials] = useState(null)
+  const menuRef = useRef(null)
+
+  // close the add menu on an outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDown = (e) => { if (!menuRef.current?.contains(e.target)) setMenuOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [menuOpen])
 
   const load = async () => {
     setLoading(true)
@@ -32,11 +46,19 @@ export default function ClassDetailPage() {
 
   useEffect(() => { load() }, [id])
 
-  const onStudentAdded = (student, credentials) => {
-    setShowAddStudent(false)
-    showCredentials(t, credentials)
+  const onStudentsAdded = (creds) => {
+    setAdding(null)
+    setCredentials(creds)
     load()
   }
+
+  const onPicked = (count) => {
+    setAdding(null)
+    toast.success(t('assigned_to_class', { ns: 'teacher', count, class: cls?.name }))
+    load()
+  }
+
+  const open = (mode) => { setMenuOpen(false); setAdding(mode) }
 
   const onUnenroll = async (enrollment) => {
     const result = await Swal.fire({
@@ -78,15 +100,40 @@ export default function ClassDetailPage() {
       <div className="card">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <h2 className="font-semibold">{t('students_with_count', { ns: 'teacher', count: students.length })}</h2>
-          <button onClick={() => setShowAddStudent(true)} className="btn-primary text-sm">
-            <i className="bi bi-person-plus"></i> {t('add_student', { ns: 'teacher' })}
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button onClick={() => setMenuOpen((v) => !v)} className="btn-primary text-sm whitespace-nowrap">
+              <i className="bi bi-person-plus"></i> {t('add_student', { ns: 'teacher' })}
+              <i className={`bi bi-chevron-${menuOpen ? 'up' : 'down'} text-xs`}></i>
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-20">
+                {[
+                  ['new', 'bi-person-plus', t('add_new_student', { ns: 'teacher' }), t('add_new_student_hint', { ns: 'teacher' })],
+                  ['paste', 'bi-list-check', t('paste_list', { ns: 'teacher' }), t('paste_list_hint', { ns: 'teacher' })],
+                  ['pick', 'bi-people', t('add_existing', { ns: 'teacher' }), t('add_existing_hint', { ns: 'teacher' })],
+                ].map(([mode, icon, label, hint]) => (
+                  <button key={mode} onClick={() => open(mode)} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 flex gap-3">
+                    <i className={`bi ${icon} text-primary-700 mt-0.5`}></i>
+                    <span>
+                      <span className="block text-sm font-medium text-slate-800">{label}</span>
+                      <span className="block text-xs text-slate-400">{hint}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {showAddStudent && (
+        {adding === 'new' && (
           <StudentFormModal classes={[cls]} defaultClassId={cls.id}
-            onClose={() => setShowAddStudent(false)} onSaved={onStudentAdded} />
+            onClose={() => setAdding(null)} onDone={onStudentsAdded} />
         )}
+        {adding === 'paste' && (
+          <BulkAddModal classes={[cls]} defaultClassId={cls.id} onClose={() => setAdding(null)} onDone={onStudentsAdded} />
+        )}
+        {adding === 'pick' && <PickStudentsModal cls={cls} onClose={() => setAdding(null)} onDone={onPicked} />}
+        {credentials && <CredentialsSheet rows={credentials} onClose={() => setCredentials(null)} />}
 
         <table className="w-full text-sm">
           <thead className="bg-slate-50">
