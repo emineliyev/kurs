@@ -587,6 +587,7 @@ export default function TestCreatePage() {
   const [addingBankId, setAddingBankId]   = useState(null)
   const [bankFolders, setBankFolders]     = useState([])
   const [bankSel, setBankSel]             = useState('all')
+  const [bankTreeOpen, setBankTreeOpen]   = useState(false)   // phones: the folder tree folds away
   const [randomCount, setRandomCount]     = useState('')
   const [addingMany, setAddingMany]       = useState(false)
   const { register, handleSubmit, reset, watch } = useForm({
@@ -1133,11 +1134,25 @@ export default function TestCreatePage() {
                     <i className="bi bi-x-lg"></i>
                   </button>
                 </div>
-                <div className="flex-1 min-h-0 grid md:grid-cols-[14rem_minmax(0,1fr)]">
-                <aside className="border-r border-slate-100 p-3 overflow-y-auto hidden md:block">
-                  <BankFolderTree folders={bankFolders} questions={bankQuestions} selected={bankSel} onSelect={setBankSel} />
+                <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-[14rem_minmax(0,1fr)]">
+                <button onClick={() => setBankTreeOpen(o => !o)}
+                  className="md:hidden flex items-center gap-2 px-4 py-2.5 border-b border-slate-100 text-sm font-medium text-slate-700">
+                  <i className="bi bi-folder2"></i>
+                  <span className="truncate">
+                    {t('folders', { ns: 'teacher' })}:{' '}
+                    <span className="text-primary-700">
+                      {bankSel === 'all' ? t('folder_all', { ns: 'teacher' })
+                        : bankSel === 'none' ? t('folder_none', { ns: 'teacher' })
+                        : bankFolders.find(f => f.id === bankSel)?.name}
+                    </span>
+                  </span>
+                  <i className={`bi bi-chevron-${bankTreeOpen ? 'up' : 'down'} ml-auto text-slate-400`}></i>
+                </button>
+                <aside className={`${bankTreeOpen ? 'block max-h-[40vh] border-b' : 'hidden'} md:block md:max-h-none md:border-b-0 border-r border-slate-100 p-3 overflow-y-auto`}>
+                  <BankFolderTree folders={bankFolders} questions={bankQuestions} selected={bankSel}
+                    onSelect={(sel) => { setBankSel(sel); setBankTreeOpen(false) }} />
                 </aside>
-                <div className="flex flex-col min-h-0">
+                <div className="flex-1 flex flex-col min-h-0">
                 {!bankLoading && bankQuestions.length > 0 && (() => {
                   const left = bankQuestions.filter(q => inSelection(q, bankSel, bankFolders) && !addedBankIds.has(q.id)).length
                   return (
@@ -1182,10 +1197,10 @@ export default function TestCreatePage() {
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium bg-${cfg?.color || 'slate'}-50 text-${cfg?.color || 'slate'}-700`}>
                               <i className={`bi ${cfg?.icon} mr-1`}></i>{typeLabel}
                             </span>
-                            <span className="text-xs text-slate-400">{q.points} {t('q_points_label', { ns: 'teacher' })}</span>
+                            <span className="text-xs text-slate-400">{fmtPoints(q.points)} {t('q_points_label', { ns: 'teacher' })}</span>
                           </div>
                           {q.image && (
-                            <img src={q.image} alt="" className="mt-1 mb-1 max-h-20 max-w-xs rounded-lg object-contain border border-slate-200" />
+                            <img src={q.image} alt="" className="mt-1 mb-1 max-h-20 max-w-full sm:max-w-xs rounded-lg object-contain border border-slate-200" />
                           )}
                           {q.text && (
                             <div className="text-sm text-slate-700 line-clamp-2">
