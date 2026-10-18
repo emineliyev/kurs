@@ -801,5 +801,6 @@
   "print_group_format": "Формат",
   "print_group_sheet": "На листе",
   "print_variants_short": "Варианты",
-  "print_school": "Школа"
+  "print_school": "Школа",
+  "exam_field": "Экзамен"
 }

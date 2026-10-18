@@ -15,7 +15,7 @@ export default defineConfig({
         id: '/app',
         name: 'Kursum — İmtahan Platforması',
         short_name: 'Kursum',
-        description: 'Testlər, onlayn və kağız imtahanlar, nəticələr və analitika — müəllimlər və şagirdlər üçün.',
+        description: 'Onlayn və kağız imtahanlar, nəticələr və analitika — müəllimlər və şagirdlər üçün.',
         lang: 'az',
         dir: 'ltr',
         start_url: '/app',

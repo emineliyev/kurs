@@ -231,7 +231,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: t('students'), value: '128', icon: 'bi-people-fill', color: 'bg-blue-500' },
-                { label: t('tests'), value: '34', icon: 'bi-file-text', color: 'bg-purple-500' },
+                { label: t('landing_stat_questions'), value: '1 240', icon: 'bi-question-circle', color: 'bg-purple-500' },
                 { label: t('exams'), value: '12', icon: 'bi-journal-check', color: 'bg-green-500' },
                 { label: t('landing_avg_score'), value: '78/100', icon: 'bi-graph-up', color: 'bg-amber-500' },
               ].map((item) => (

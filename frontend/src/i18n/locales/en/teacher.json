@@ -797,5 +797,6 @@
   "print_group_format": "Format",
   "print_group_sheet": "On the sheet",
   "print_variants_short": "Variants",
-  "print_school": "School"
+  "print_school": "School",
+  "exam_field": "Exam"
 }

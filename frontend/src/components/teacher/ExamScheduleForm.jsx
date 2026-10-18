@@ -124,7 +124,7 @@ export default function ExamScheduleForm({ fixedTest = null, onDone, onCancel, c
         </div>
       ) : (
         <div>
-          <label className="block text-sm font-medium mb-1">{t('tests')} <span className="text-red-500">*</span></label>
+          <label className="block text-sm font-medium mb-1">{t('exam_field', { ns: 'teacher' })} <span className="text-red-500">*</span></label>
           {readyTests.length === 0 ? (
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-500 flex items-center justify-between gap-3">
               <span><i className="bi bi-info-circle mr-1"></i>{t('no_ready_tests', { ns: 'teacher' })}</span>
