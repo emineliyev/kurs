@@ -229,6 +229,7 @@
 .print-school { font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; }
 .print-title { font-size: 1.5em; font-weight: 700; line-height: 1.2; }
 .print-topic { font-size: 0.95em; color: #475569; margin-top: 1mm; }
+.print-teacher { font-size: 0.9em; color: #334155; margin-top: 1mm; }
 .print-variant {
   flex-shrink: 0; border: 2px solid #0f172a; border-radius: 6px;
   padding: 1.5mm 4mm; font-weight: 700; font-size: 1.1em; white-space: nowrap;
@@ -299,6 +300,7 @@
 @media print {
   .print-sheet { width: auto; min-height: 0; padding: 0; box-shadow: none; margin: 0; }
   .print-sheet + .print-sheet { break-before: page; }
+  .print-preview { zoom: 1 !important; }
   .print-passage { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 @media print {

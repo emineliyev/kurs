@@ -798,5 +798,6 @@
   "purge_warning": "Şagirdin hesabı, bütün imtahan nəticələri və cavabları silinəcək. Bu, geri qaytarıla bilməz.",
   "purge_yes": "Bəli, birdəfəlik sil",
   "purged": "{{count}} şagird birdəfəlik silindi",
-  "restored_many": "{{count}} şagird bərpa olundu"
+  "restored_many": "{{count}} şagird bərpa olundu",
+  "print_teacher_name": "Müəllim adı"
 }

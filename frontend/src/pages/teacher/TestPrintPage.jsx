@@ -10,6 +10,20 @@ import { useAuthStore } from '@/store/authStore'
 
 const FONT_SIZES = { sm: '10pt', md: '11.5pt', lg: '13pt' }
 const SCHOOL_KEY = 'print-school-name'
+const TEACHER_KEY = 'print-teacher'        // { on, name, phoneOn, phone }
+const SHEET_PX = 794                        // 210mm on screen
+
+// Phones: shrink the A4 preview to the screen width (printing always uses the full page)
+function usePreviewZoom() {
+  const calc = () => Math.min(1, (window.innerWidth - 16) / SHEET_PX)
+  const [zoom, setZoom] = useState(calc)
+  useEffect(() => {
+    const onResize = () => setZoom(calc())
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  return zoom
+}
 
 function Seg({ value, options, onChange }) {
   return (
@@ -90,6 +104,16 @@ export default function TestPrintPage() {
   const [watermark, setWatermark] = useState(() => localStorage.getItem(WATERMARK_TEXT_KEY) || teacherName)
   useEffect(() => { localStorage.setItem(WATERMARK_ON_KEY, watermarkOn ? '1' : '0') }, [watermarkOn])
   useEffect(() => { localStorage.setItem(WATERMARK_TEXT_KEY, watermark) }, [watermark])
+  // Teacher's name and phone in the sheet header; the phone can be left off
+  const profilePhone = user?.teacher_profile?.phone || ''
+  const [teacher, setTeacher] = useState(() => {
+    let saved = {}
+    try { saved = JSON.parse(localStorage.getItem(TEACHER_KEY)) || {} } catch { /* ignore */ }
+    return { on: true, phoneOn: !!profilePhone, ...saved, name: saved.name || teacherName, phone: saved.phone || profilePhone }
+  })
+  const setT = (patch) => setTeacher((cur) => ({ ...cur, ...patch }))
+  useEffect(() => { localStorage.setItem(TEACHER_KEY, JSON.stringify(teacher)) }, [teacher])
+  const zoom = usePreviewZoom()
 
   useEffect(() => {
     testsApi.get(id).then((r) => setTest(r.data)).catch(() => setError(true))
@@ -109,11 +133,15 @@ export default function TestPrintPage() {
 
   const sheetStyle = { fontSize: FONT_SIZES[fontSize] }
   const many = variants > 1
+  const teacherLine = [
+    teacher.on && teacher.name.trim() && `${t('print_teacher')}: ${teacher.name.trim()}`,
+    teacher.phoneOn && teacher.phone.trim() && `${t('phone', { ns: 'teacher' })}: ${teacher.phone.trim()}`,
+  ].filter(Boolean).join('  ·  ')
 
   return (
     <div className="min-h-screen bg-slate-200 print:bg-white">
       {/* Controls (not printed) */}
-      <div className="print:hidden sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm">
+      <div className="print:hidden sm:sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-x-4 gap-y-2 flex-wrap">
           <Link to={`/teacher/tests/${id}`} className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1">
             <i className="bi bi-arrow-left"></i> {t('back')}
@@ -151,6 +179,26 @@ export default function TestPrintPage() {
                 placeholder={teacherName} className="input-field py-1.5 text-xs w-44" />
             )}
           </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={teacher.on} onChange={(e) => setT({ on: e.target.checked })} />
+              {t('print_teacher_name', { ns: 'teacher' })}
+            </label>
+            {teacher.on && (
+              <input value={teacher.name} onChange={(e) => setT({ name: e.target.value })} maxLength={80}
+                placeholder={teacherName} className="input-field py-1.5 text-xs w-44" />
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={teacher.phoneOn} onChange={(e) => setT({ phoneOn: e.target.checked })} />
+              {t('phone', { ns: 'teacher' })}
+            </label>
+            {teacher.phoneOn && (
+              <input value={teacher.phone} onChange={(e) => setT({ phone: e.target.value })} maxLength={30}
+                placeholder="+994 50 xxx xx xx" className="input-field py-1.5 text-xs w-40" />
+            )}
+          </div>
           <button onClick={() => window.print()} className="btn-primary ml-auto">
             <i className="bi bi-printer"></i> {t('print_btn', { ns: 'teacher' })}
           </button>
@@ -161,7 +209,7 @@ export default function TestPrintPage() {
       </div>
 
       {/* Sheets */}
-      <div className="py-8 print:py-0 space-y-8 print:space-y-0">
+      <div className="print-preview py-4 sm:py-8 print:py-0 space-y-8 print:space-y-0" style={{ zoom }}>
         {built.map((v) => (
           <section key={v.letter} className="print-sheet" style={sheetStyle}>
             {watermarkOn && <Watermark text={watermark || teacherName} />}
@@ -171,6 +219,7 @@ export default function TestPrintPage() {
                   {school && <p className="print-school">{school}</p>}
                   <h2 className="print-title">{test.title}</h2>
                   {test.topic && <p className="print-topic">{test.topic}</p>}
+                  {teacherLine && <p className="print-teacher">{teacherLine}</p>}
                 </div>
                 {many && <div className="print-variant">{t('print_variant', { ns: 'teacher' })} {v.letter}</div>}
               </div>

@@ -793,5 +793,6 @@
   "purge_warning": "The student account and all exam results and answers will be deleted. This cannot be undone.",
   "purge_yes": "Yes, delete for good",
   "purged": "{{count}} students deleted for good",
-  "restored_many": "{{count}} students restored"
+  "restored_many": "{{count}} students restored",
+  "print_teacher_name": "Teacher's name"
 }
