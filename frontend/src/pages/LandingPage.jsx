@@ -139,7 +139,7 @@ export default function LandingPage() {
             <Link to="/login" className="text-sm font-medium text-slate-700 hover:text-primary-700 transition-colors px-3 py-2">
               {t('landing_login')}
             </Link>
-            <Link to="/login?as=student" className="text-sm font-medium text-primary-700 border border-primary-200 hover:bg-primary-50 transition-colors px-4 py-2 rounded-lg">
+            <Link to="/login?as=student" className="text-sm font-semibold text-slate-900 bg-amber-300 hover:bg-amber-400 shadow-sm transition-colors px-4 py-2 rounded-lg">
               <i className="bi bi-mortarboard mr-1.5"></i>{t('landing_student_login')}
             </Link>
             <Link to="/register" className="bg-primary-700 hover:bg-primary-600 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
@@ -162,7 +162,7 @@ export default function LandingPage() {
             <div className="pt-1">
               <LanguageSwitcher />
             </div>
-            <Link to="/login?as=student" className="block text-center border border-primary-200 bg-primary-50 text-primary-700 py-2.5 rounded-lg text-sm font-semibold">
+            <Link to="/login?as=student" className="block text-center bg-amber-300 hover:bg-amber-400 text-slate-900 py-2.5 rounded-lg text-sm font-semibold shadow-sm">
               <i className="bi bi-mortarboard mr-1.5"></i>{t('landing_student_login')}
             </Link>
             <div className="flex gap-3">
@@ -209,7 +209,7 @@ export default function LandingPage() {
           </div>
           <p className="anim-item mt-6 text-blue-100 text-sm" data-delay="350">
             {t('landing_student_hint')}{' '}
-            <Link to="/login?as=student" className="text-white font-semibold underline underline-offset-4 hover:text-yellow-200">
+            <Link to="/login?as=student" className="text-yellow-300 font-semibold underline underline-offset-4 hover:text-yellow-200">
               {t('landing_student_login')} →
             </Link>
           </p>
