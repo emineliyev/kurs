@@ -136,8 +136,11 @@ export default function LandingPage() {
 
           <div className="hidden md:flex items-center gap-3">
             <LanguageSwitcher />
-            <Link to="/login" className="text-sm font-medium text-slate-700 hover:text-primary-700 transition-colors px-4 py-2">
+            <Link to="/login" className="text-sm font-medium text-slate-700 hover:text-primary-700 transition-colors px-3 py-2">
               {t('landing_login')}
+            </Link>
+            <Link to="/login?as=student" className="text-sm font-medium text-primary-700 border border-primary-200 hover:bg-primary-50 transition-colors px-4 py-2 rounded-lg">
+              <i className="bi bi-mortarboard mr-1.5"></i>{t('landing_student_login')}
             </Link>
             <Link to="/register" className="bg-primary-700 hover:bg-primary-600 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
               {t('landing_start_free_nav')}
@@ -159,7 +162,10 @@ export default function LandingPage() {
             <div className="pt-1">
               <LanguageSwitcher />
             </div>
-            <div className="flex gap-3 pt-1">
+            <Link to="/login?as=student" className="block text-center border border-primary-200 bg-primary-50 text-primary-700 py-2.5 rounded-lg text-sm font-semibold">
+              <i className="bi bi-mortarboard mr-1.5"></i>{t('landing_student_login')}
+            </Link>
+            <div className="flex gap-3">
               <Link to="/login" className="flex-1 text-center border border-slate-200 text-slate-700 py-2 rounded-lg text-sm font-medium">{t('landing_login')}</Link>
               <Link to="/register" className="flex-1 text-center bg-primary-700 text-white py-2 rounded-lg text-sm font-medium">{t('landing_register')}</Link>
             </div>
@@ -201,6 +207,12 @@ export default function LandingPage() {
               </a>
             )}
           </div>
+          <p className="anim-item mt-6 text-blue-100 text-sm" data-delay="350">
+            {t('landing_student_hint')}{' '}
+            <Link to="/login?as=student" className="text-white font-semibold underline underline-offset-4 hover:text-yellow-200">
+              {t('landing_student_login')} →
+            </Link>
+          </p>
           <p className="anim-item text-blue-200 text-sm mt-6" data-delay="400">
             <i className="bi bi-check-lg mr-1"></i>
             {trialNote}

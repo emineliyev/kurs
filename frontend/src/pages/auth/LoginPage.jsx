@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
@@ -21,6 +21,8 @@ export default function LoginPage() {
   const { t } = useTranslation('auth')
   const { login } = useAuthStore()
   const navigate = useNavigate()
+  // ?as=student — the landing's "student login": no sign-up or Google here, the teacher gave them the account
+  const asStudent = useSearchParams()[0].get('as') === 'student'
   const [loading, setLoading] = useState(false)
   const { register, handleSubmit, watch, formState: { touchedFields } } = useForm({ mode: 'onChange' })
 
@@ -67,19 +69,26 @@ export default function LoginPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-900 mb-2">{t('login')}</h2>
-      <p className="text-slate-500 text-sm mb-6">{t('have_account')}</p>
+      <h2 className="text-2xl font-bold text-slate-900 mb-2">{asStudent ? t('student_login') : t('login')}</h2>
+      {asStudent ? (
+        <div className="mb-6 flex gap-2.5 rounded-xl bg-primary-50 border border-primary-100 p-3 text-sm text-primary-800">
+          <i className="bi bi-info-circle mt-0.5 shrink-0"></i>
+          <span>{t('student_login_hint')}</span>
+        </div>
+      ) : (
+        <p className="text-slate-500 text-sm mb-6">{t('have_account')}</p>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <FieldInput
-          label={t('email_or_username')}
+          label={asStudent ? t('username') : t('email_or_username')}
           error={touchedFields.email && !loginValid ? t('min_3_chars') : null}
           success={loginValid ? null : null}
         >
           <input
             {...register('email', { required: true, minLength: 3 })}
             type="text"
-            placeholder={t('email_or_username_placeholder')}
+            placeholder={asStudent ? t('username_placeholder') : t('email_or_username_placeholder')}
             className={fieldClass('email', loginValid)}
             autoComplete="username"
           />
@@ -110,12 +119,22 @@ export default function LoginPage() {
         </button>
 
         <div className="text-center">
-          <Link to="/forgot-password" className="text-sm text-slate-500 hover:text-primary-700 hover:underline">
-            {t('forgot_password')}
-          </Link>
+          {asStudent ? (
+            <p className="text-sm text-slate-500">{t('student_forgot_password')}</p>
+          ) : (
+            <Link to="/forgot-password" className="text-sm text-slate-500 hover:text-primary-700 hover:underline">
+              {t('forgot_password')}
+            </Link>
+          )}
         </div>
       </form>
 
+      {asStudent ? (
+        <p className="mt-6 text-center text-sm text-slate-500">
+          {t('are_you_teacher')}{' '}
+          <Link to="/login" replace className="text-primary-700 font-semibold hover:underline">{t('teacher_login')}</Link>
+        </p>
+      ) : (<>
       <div className="relative my-5">
         <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
         <div className="relative flex justify-center text-xs text-slate-400 bg-white px-3">{t('or', { ns: 'common' })}</div>
@@ -124,9 +143,11 @@ export default function LoginPage() {
       <GoogleLoginButton />
 
       <p className="mt-6 text-center text-sm text-slate-500">
-        {t('no_account')}{' '}
+        {t('teacher_no_account')}{' '}
         <Link to="/register" className="text-primary-700 font-semibold hover:underline">{t('register')}</Link>
       </p>
+      <p className="mt-2 text-center text-xs text-slate-400">{t('student_no_register')}</p>
+      </>)}
     </div>
   )
 }

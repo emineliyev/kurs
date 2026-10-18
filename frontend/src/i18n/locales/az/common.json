@@ -143,8 +143,8 @@
   "landing_nav_how": "Necə işləyir",
   "landing_nav_pricing": "Qiymətlər",
   "landing_login": "Daxil ol",
-  "landing_register": "Qeydiyyat",
-  "landing_start_free_nav": "Başla — Pulsuzdur",
+  "landing_register": "Müəllim qeydiyyatı",
+  "landing_start_free_nav": "Müəllim kimi başla",
   "landing_hero_badge": "Müəllimlər üçün ən asan test platforması",
   "landing_hero_title_1": "Testlər yaradın,",
   "landing_hero_title_2": "Nəticələri izləyin",
@@ -235,5 +235,7 @@
   "pwa_ok": "Aydındır",
   "pwa_offline": "İnternet bağlantısı yoxdur. Bağlantı bərpa olunanda iş davam edəcək.",
   "select_all": "Hamısını seç",
-  "classes_and_students_short": "Siniflər və şagirdlər"
+  "classes_and_students_short": "Siniflər və şagirdlər",
+  "landing_student_login": "Şagird girişi",
+  "landing_student_hint": "Şagirdsiniz? Qeydiyyat lazım deyil, hesabı müəlliminiz verir."
 }

@@ -143,8 +143,8 @@
   "landing_nav_how": "Как работает",
   "landing_nav_pricing": "Цены",
   "landing_login": "Войти",
-  "landing_register": "Регистрация",
-  "landing_start_free_nav": "Начать — Бесплатно",
+  "landing_register": "Регистрация учителя",
+  "landing_start_free_nav": "Начать как учитель",
   "landing_hero_badge": "Самая простая платформа тестирования для учителей",
   "landing_hero_title_1": "Создавайте тесты,",
   "landing_hero_title_2": "Отслеживайте результаты",
@@ -241,5 +241,7 @@
   "pwa_ok": "Понятно",
   "pwa_offline": "Нет подключения к интернету. Работа продолжится, когда связь восстановится.",
   "select_all": "Выбрать все",
-  "classes_and_students_short": "Классы и ученики"
+  "classes_and_students_short": "Классы и ученики",
+  "landing_student_login": "Вход для ученика",
+  "landing_student_hint": "Вы ученик? Регистрация не нужна — аккаунт выдаёт учитель."
 }

@@ -143,8 +143,8 @@
   "landing_nav_how": "How it works",
   "landing_nav_pricing": "Pricing",
   "landing_login": "Log in",
-  "landing_register": "Register",
-  "landing_start_free_nav": "Start — It's Free",
+  "landing_register": "Teacher sign-up",
+  "landing_start_free_nav": "Start as a teacher",
   "landing_hero_badge": "The easiest test platform for teachers",
   "landing_hero_title_1": "Create tests,",
   "landing_hero_title_2": "Track results",
@@ -237,5 +237,7 @@
   "pwa_ok": "Got it",
   "pwa_offline": "No internet connection. Work will continue once you are back online.",
   "select_all": "Select all",
-  "classes_and_students_short": "Classes and students"
+  "classes_and_students_short": "Classes and students",
+  "landing_student_login": "Student login",
+  "landing_student_hint": "A student? No need to sign up — your teacher gives you the account."
 }
