@@ -8,6 +8,7 @@ import { LABELS } from '@/utils/examConstants'
 import { renderMath } from '@/utils/math'
 import PageSpinner from '@/components/common/PageSpinner'
 import ScheduleExamModal from '@/components/teacher/ScheduleExamModal'
+import { fmtPoints } from '@/utils/score'
 
 const TYPE_COLORS = {
   multiple_choice: 'bg-blue-50 text-blue-700',
@@ -87,30 +88,34 @@ export default function TestDetailPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center gap-3">
-        <Link to="/teacher/exams" className="text-slate-400 hover:text-slate-600">
-          <i className="bi bi-arrow-left text-xl"></i>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-slate-900">{test?.title}</h1>
-          <p className="text-sm text-slate-500">
-            {test?.question_count} {t('q_word_questions', { ns: 'teacher' })} · {test?.total_points} {t('q_word_points', { ns: 'teacher' })}
-          </p>
-        </div>
-        {questions.length > 0 && (
-          <Link to={`/teacher/tests/${id}/print`} className="btn-secondary">
-            <i className="bi bi-printer"></i> {t('print_open', { ns: 'teacher' })}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link to="/teacher/exams" className="text-slate-400 hover:text-slate-600 shrink-0">
+            <i className="bi bi-arrow-left text-xl"></i>
           </Link>
-        )}
-        {test?.is_published && (
-          <button onClick={() => setScheduling(true)} className="btn-primary">
-            <i className="bi bi-calendar-plus"></i> {t('schedule_exam', { ns: 'teacher' })}
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-slate-900 break-words">{test?.title}</h1>
+            <p className="text-sm text-slate-500">
+              {test?.question_count} {t('q_word_questions', { ns: 'teacher' })} · {fmtPoints(test?.total_points)} {t('q_word_points', { ns: 'teacher' })}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 sm:pl-8 [&>*]:flex-1 sm:[&>*]:flex-none [&>*]:justify-center [&>*]:whitespace-nowrap">
+          {questions.length > 0 && (
+            <Link to={`/teacher/tests/${id}/print`} className="btn-secondary">
+              <i className="bi bi-printer"></i> {t('print_open', { ns: 'teacher' })}
+            </Link>
+          )}
+          {test?.is_published && (
+            <button onClick={() => setScheduling(true)} className="btn-primary">
+              <i className="bi bi-calendar-plus"></i> {t('schedule_exam', { ns: 'teacher' })}
+            </button>
+          )}
+          <button onClick={togglePublish} disabled={toggling} className={test?.is_published ? 'btn-secondary' : 'btn-primary'}>
+            <i className={`bi ${toggling ? 'bi-arrow-repeat animate-spin' : test?.is_published ? 'bi-pencil-square' : 'bi-check2-circle'}`}></i>
+            {test?.is_published ? t('move_to_draft', { ns: 'teacher' }) : t('publish', { ns: 'teacher' })}
           </button>
-        )}
-        <button onClick={togglePublish} disabled={toggling} className={test?.is_published ? 'btn-secondary' : 'btn-primary'}>
-          <i className={`bi ${toggling ? 'bi-arrow-repeat animate-spin' : test?.is_published ? 'bi-pencil-square' : 'bi-check2-circle'}`}></i>
-          {test?.is_published ? t('move_to_draft', { ns: 'teacher' }) : t('publish', { ns: 'teacher' })}
-        </button>
+        </div>
       </div>
       {scheduling && (
         <ScheduleExamModal
@@ -193,7 +198,7 @@ export default function TestDetailPage() {
 
                 <div className="flex gap-2 shrink-0">
                   <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                    {q.points} {t('q_word_points', { ns: 'teacher' })}
+                    {fmtPoints(q.points)} {t('q_word_points', { ns: 'teacher' })}
                   </span>
                   <button onClick={() => deleteQuestion(q.id)} className="text-slate-300 hover:text-red-500 transition-colors">
                     <i className="bi bi-trash"></i>
