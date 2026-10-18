@@ -38,7 +38,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
           {expanded && (
             <div className="min-w-0">
               <Wordmark className="h-[15px]" />
-              <p className="text-xs text-slate-400 leading-none mt-1">{t('teacher_platform')}</p>
+              <p className="text-xs text-slate-400 leading-none mt-1">{t('platform_tagline')}</p>
             </div>
           )}
         </div>

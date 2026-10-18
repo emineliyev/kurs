@@ -23,7 +23,7 @@ export default function AuthLayout() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="flex justify-center"><Logo withText tone="white" className="h-14" title="Kursum" /></h1>
-            <p className="text-blue-200 mt-1">{t('teacher_platform')}</p>
+            <p className="text-blue-200 mt-1">{t('platform_tagline')}</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl p-8">

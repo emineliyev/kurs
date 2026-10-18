@@ -13,7 +13,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       manifest: {
         id: '/app',
-        name: 'Kursum — Müəllim Platforması',
+        name: 'Kursum — İmtahan Platforması',
         short_name: 'Kursum',
         description: 'Testlər, onlayn və kağız imtahanlar, nəticələr və analitika — müəllimlər və şagirdlər üçün.',
         lang: 'az',

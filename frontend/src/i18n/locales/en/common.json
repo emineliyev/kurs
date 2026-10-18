@@ -60,7 +60,7 @@
   "yes_logout": "Yes, log out",
   "grading_pending_count": "{{count}} results awaiting grading",
   "teacher_role": "Teacher",
-  "teacher_platform": "Teacher Platform",
+  "platform_tagline": "Exam Platform",
   "main_section": "Main",
   "not_found_title": "Page not found",
   "not_found_message": "The page you are looking for does not exist or has been removed.",

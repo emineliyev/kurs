@@ -56,7 +56,7 @@ export default function LegalPage({ slug: fixedSlug }) {
 
   useEffect(() => {
     if (state.page) document.title = `${state.page.title} — ${t('app_name')}`
-    return () => { document.title = 'Kursum - Müəllim Platforması' }
+    return () => { document.title = 'Kursum - İmtahan Platforması' }
   }, [state.page, t])
 
   const { loading, page, error } = state

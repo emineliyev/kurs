@@ -60,7 +60,7 @@
   "yes_logout": "Да, выйти",
   "grading_pending_count": "{{count}} результатов ожидают проверки",
   "teacher_role": "Учитель",
-  "teacher_platform": "Платформа учителя",
+  "platform_tagline": "Платформа экзаменов",
   "main_section": "Главное",
   "not_found_title": "Страница не найдена",
   "not_found_message": "Искомая страница не существует или была удалена.",
