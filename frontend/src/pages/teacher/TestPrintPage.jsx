@@ -27,7 +27,7 @@ function usePreviewZoom() {
 
 function Seg({ value, options, onChange }) {
   return (
-    <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden">
+    <div className="inline-flex rounded-lg border border-slate-200 bg-white overflow-hidden">
       {options.map(([v, label]) => (
         <button key={v} onClick={() => onChange(v)}
           className={`px-3 py-1.5 text-xs font-semibold transition-colors ${value === v ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>
@@ -35,6 +35,34 @@ function Seg({ value, options, onChange }) {
         </button>
       ))}
     </div>
+  )
+}
+
+function Group({ title, children }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-2">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{title}</p>
+      {children}
+    </div>
+  )
+}
+
+// One settings line: a fixed-width label (text or a checkbox) and its control
+function Row({ label, children }) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="w-24 shrink-0 text-xs text-slate-600">{label}</div>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  )
+}
+
+function Check({ checked, onChange, label }) {
+  return (
+    <label className="inline-flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      {label}
+    </label>
   )
 }
 
@@ -142,70 +170,60 @@ export default function TestPrintPage() {
     <div className="min-h-screen bg-slate-200 print:bg-white">
       {/* Controls (not printed) */}
       <div className="print:hidden sm:sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-x-4 gap-y-2 flex-wrap">
-          <Link to={`/teacher/tests/${id}`} className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1">
-            <i className="bi bi-arrow-left"></i> {t('back')}
-          </Link>
-          <h1 className="font-semibold text-slate-900 truncate max-w-[16rem]">{test.title}</h1>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            {t('print_variants', { ns: 'teacher' })}
-            <Seg value={variants} onChange={setVariants} options={[[1, 'A'], [2, 'A–B'], [4, 'A–D']]} />
+        <div className="max-w-5xl mx-auto px-4 py-3 space-y-3">
+          <div className="flex items-center gap-3">
+            <Link to={`/teacher/tests/${id}`} className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1 shrink-0">
+              <i className="bi bi-arrow-left"></i> <span className="hidden sm:inline">{t('back')}</span>
+            </Link>
+            <h1 className="font-semibold text-slate-900 truncate flex-1 min-w-0">{test.title}</h1>
+            <button onClick={() => window.print()} className="btn-primary shrink-0 whitespace-nowrap">
+              <i className="bi bi-printer"></i> {t('print_btn', { ns: 'teacher' })}
+            </button>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            {t('print_columns', { ns: 'teacher' })}
-            <Seg value={columns} onChange={setColumns} options={[[1, '1'], [2, '2']]} />
+
+          <div className="grid md:grid-cols-[auto_minmax(0,1fr)] gap-3">
+            <Group title={t('print_group_format', { ns: 'teacher' })}>
+              <Row label={t('print_variants_short', { ns: 'teacher' })}>
+                <Seg value={variants} onChange={setVariants} options={[[1, 'A'], [2, 'A–B'], [4, 'A–D']]} />
+              </Row>
+              <Row label={t('print_columns', { ns: 'teacher' })}>
+                <Seg value={columns} onChange={setColumns} options={[[1, '1'], [2, '2']]} />
+              </Row>
+              <Row label={t('print_font', { ns: 'teacher' })}>
+                <Seg value={fontSize} onChange={setFontSize} options={[['sm', 'A−'], ['md', 'A'], ['lg', 'A+']]} />
+              </Row>
+            </Group>
+
+            <Group title={t('print_group_sheet', { ns: 'teacher' })}>
+              <div className="flex flex-wrap gap-x-5 gap-y-1.5 pb-0.5">
+                <Check checked={withHeader} onChange={setWithHeader} label={t('print_student_fields', { ns: 'teacher' })} />
+                <Check checked={withKey} onChange={setWithKey} label={t('print_answer_key', { ns: 'teacher' })} />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-x-4 gap-y-2">
+                <Row label={t('print_school', { ns: 'teacher' })}>
+                  <input value={school} onChange={(e) => setSchool(e.target.value)} maxLength={120}
+                    placeholder={t('print_school_ph', { ns: 'teacher' })} className="input-field py-1.5 text-xs w-full" />
+                </Row>
+                <Row label={<Check checked={teacher.on} onChange={(v) => setT({ on: v })} label={t('print_teacher')} />}>
+                  <input value={teacher.name} onChange={(e) => setT({ name: e.target.value })} maxLength={80} disabled={!teacher.on}
+                    placeholder={teacherName} className="input-field py-1.5 text-xs w-full disabled:opacity-40" />
+                </Row>
+                <Row label={<Check checked={teacher.phoneOn} onChange={(v) => setT({ phoneOn: v })} label={t('phone', { ns: 'teacher' })} />}>
+                  <input value={teacher.phone} onChange={(e) => setT({ phone: e.target.value })} maxLength={30} disabled={!teacher.phoneOn}
+                    placeholder="+994 50 xxx xx xx" className="input-field py-1.5 text-xs w-full disabled:opacity-40" />
+                </Row>
+                <Row label={<Check checked={watermarkOn} onChange={setWatermarkOn} label={t('print_watermark', { ns: 'teacher' })} />}>
+                  <input value={watermark} onChange={(e) => setWatermark(e.target.value)} maxLength={80} disabled={!watermarkOn}
+                    placeholder={teacherName} className="input-field py-1.5 text-xs w-full disabled:opacity-40" />
+                </Row>
+              </div>
+            </Group>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            {t('print_font', { ns: 'teacher' })}
-            <Seg value={fontSize} onChange={setFontSize} options={[['sm', 'A−'], ['md', 'A'], ['lg', 'A+']]} />
-          </div>
-          <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-            <input type="checkbox" checked={withHeader} onChange={(e) => setWithHeader(e.target.checked)} />
-            {t('print_student_fields', { ns: 'teacher' })}
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-            <input type="checkbox" checked={withKey} onChange={(e) => setWithKey(e.target.checked)} />
-            {t('print_answer_key', { ns: 'teacher' })}
-          </label>
-          <input value={school} onChange={(e) => setSchool(e.target.value)} maxLength={120}
-            placeholder={t('print_school_ph', { ns: 'teacher' })} className="input-field py-1.5 text-xs w-56" />
-          <div className="flex items-center gap-1.5">
-            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={watermarkOn} onChange={(e) => setWatermarkOn(e.target.checked)} />
-              {t('print_watermark', { ns: 'teacher' })}
-            </label>
-            {watermarkOn && (
-              <input value={watermark} onChange={(e) => setWatermark(e.target.value)} maxLength={80}
-                placeholder={teacherName} className="input-field py-1.5 text-xs w-44" />
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={teacher.on} onChange={(e) => setT({ on: e.target.checked })} />
-              {t('print_teacher_name', { ns: 'teacher' })}
-            </label>
-            {teacher.on && (
-              <input value={teacher.name} onChange={(e) => setT({ name: e.target.value })} maxLength={80}
-                placeholder={teacherName} className="input-field py-1.5 text-xs w-44" />
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={teacher.phoneOn} onChange={(e) => setT({ phoneOn: e.target.checked })} />
-              {t('phone', { ns: 'teacher' })}
-            </label>
-            {teacher.phoneOn && (
-              <input value={teacher.phone} onChange={(e) => setT({ phone: e.target.value })} maxLength={30}
-                placeholder="+994 50 xxx xx xx" className="input-field py-1.5 text-xs w-40" />
-            )}
-          </div>
-          <button onClick={() => window.print()} className="btn-primary ml-auto">
-            <i className="bi bi-printer"></i> {t('print_btn', { ns: 'teacher' })}
-          </button>
+
+          <p className="text-xs text-slate-400">
+            <i className="bi bi-info-circle mr-1"></i>{t('print_hint', { ns: 'teacher' })}
+          </p>
         </div>
-        <p className="max-w-5xl mx-auto px-4 pb-2 text-xs text-slate-400">
-          <i className="bi bi-info-circle mr-1"></i>{t('print_hint', { ns: 'teacher' })}
-        </p>
       </div>
 
       {/* Sheets */}

@@ -799,5 +799,8 @@
   "purge_yes": "Bəli, birdəfəlik sil",
   "purged": "{{count}} şagird birdəfəlik silindi",
   "restored_many": "{{count}} şagird bərpa olundu",
-  "print_teacher_name": "Müəllim adı"
+  "print_group_format": "Format",
+  "print_group_sheet": "Vərəqdə",
+  "print_variants_short": "Variantlar",
+  "print_school": "Məktəb"
 }

@@ -798,5 +798,8 @@
   "purge_yes": "Да, удалить навсегда",
   "purged": "Удалено навсегда учеников: {{count}}",
   "restored_many": "Восстановлено учеников: {{count}}",
-  "print_teacher_name": "Имя учителя"
+  "print_group_format": "Формат",
+  "print_group_sheet": "На листе",
+  "print_variants_short": "Варианты",
+  "print_school": "Школа"
 }

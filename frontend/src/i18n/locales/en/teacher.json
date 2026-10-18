@@ -794,5 +794,8 @@
   "purge_yes": "Yes, delete for good",
   "purged": "{{count}} students deleted for good",
   "restored_many": "{{count}} students restored",
-  "print_teacher_name": "Teacher's name"
+  "print_group_format": "Format",
+  "print_group_sheet": "On the sheet",
+  "print_variants_short": "Variants",
+  "print_school": "School"
 }
