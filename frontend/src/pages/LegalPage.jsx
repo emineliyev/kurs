@@ -6,6 +6,7 @@ import LanguageSwitcher from '@/components/common/LanguageSwitcher'
 import PageSpinner from '@/components/common/PageSpinner'
 import SiteFooter from '@/components/common/SiteFooter'
 import Logo from '@/components/common/Logo'
+import { useCanonical } from '@/utils/seo'
 
 /**
  * Plain text from the admin → blocks. A blank line starts a new block,
@@ -41,6 +42,7 @@ export function parseLegalText(text) {
 export default function LegalPage({ slug: fixedSlug }) {
   const params = useParams()
   const slug = fixedSlug || params.slug
+  useCanonical(slug ? `/legal/${slug}` : null)
   const { t, i18n } = useTranslation('common')
   const lang = (i18n.language || 'az').slice(0, 2)
   const [state, setState] = useState({ loading: true, page: null, error: false })

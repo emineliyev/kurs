@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
 import { PasswordStrength, isStrongPassword } from '@/components/common/PasswordRules'
+import { useCanonical } from '@/utils/seo'
 
 function FieldInput({ label, error, success, children }) {
   return (
@@ -20,6 +21,7 @@ function FieldInput({ label, error, success, children }) {
 }
 
 export default function RegisterPage() {
+  useCanonical('/register')
   const { t } = useTranslation('auth')
   const { login } = useAuthStore()
   const navigate = useNavigate()

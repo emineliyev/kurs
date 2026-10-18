@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /teacher
+Disallow: /student
+Disallow: /admin
+Disallow: /api/
+Disallow: /app
+Disallow: /print/
+Disallow: /verify-email
+Disallow: /reset-password
+Disallow: /forgot-password
+
+Sitemap: https://kursum.cloud/sitemap.xml

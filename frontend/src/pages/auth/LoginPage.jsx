@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
+import { useCanonical } from '@/utils/seo'
 
 function FieldInput({ label, error, success, children }) {
   return (
@@ -18,6 +19,7 @@ function FieldInput({ label, error, success, children }) {
 }
 
 export default function LoginPage() {
+  useCanonical('/login')
   const { t } = useTranslation('auth')
   const { login } = useAuthStore()
   const navigate = useNavigate()

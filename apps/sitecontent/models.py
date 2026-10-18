@@ -4,6 +4,7 @@ from django.db import models
 
 SETTINGS_CACHE_KEY = 'site_settings_public'
 PAGE_CACHE_KEY = 'legal_page:{slug}:{lang}'
+SITEMAP_CACHE_KEY = 'site_sitemap_xml'
 
 
 class SiteSettings(models.Model):
@@ -76,5 +77,5 @@ class LegalPage(models.Model):
 
     def clear_cache(self):
         from django.conf import settings
-        cache.delete(SETTINGS_CACHE_KEY)  # the footer links are part of the settings payload
+        cache.delete_many([SETTINGS_CACHE_KEY, SITEMAP_CACHE_KEY])  # footer links and the sitemap list the pages
         cache.delete_many([PAGE_CACHE_KEY.format(slug=self.slug, lang=code) for code, _ in settings.LANGUAGES])

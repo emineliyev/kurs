@@ -6,6 +6,7 @@ import LanguageSwitcher from '@/components/common/LanguageSwitcher'
 import SiteFooter from '@/components/common/SiteFooter'
 import { useSiteSettings } from '@/api/site'
 import Logo from '@/components/common/Logo'
+import { useCanonical } from '@/utils/seo'
 
 const ANIM_STYLE = `
 @keyframes fadeInUp {
@@ -28,6 +29,7 @@ const ANIM_STYLE = `
 `
 
 export default function LandingPage() {
+  useCanonical('/')
   const { t } = useTranslation('common')
   const { isAuthenticated, user } = useAuthStore()
   const navigate = useNavigate()
