@@ -834,5 +834,6 @@
   "print_design_classic": "Классика",
   "print_design_framed": "В рамке",
   "print_accent": "Цвет",
-  "print_q_gap": "Между вопросами"
+  "print_q_gap": "Между вопросами",
+  "print_settings": "Настройки"
 }

@@ -830,5 +830,6 @@
   "print_design_classic": "Classic",
   "print_design_framed": "Framed",
   "print_accent": "Colour",
-  "print_q_gap": "Question gap"
+  "print_q_gap": "Question gap",
+  "print_settings": "Settings"
 }

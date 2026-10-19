@@ -16,10 +16,14 @@ const LAYOUT_KEY = 'print-layout'          // { design, accent, gap }
 const ACCENTS = ['#F97316', '#1D4ED8', '#15803D', '#7C3AED', '#0F172A']
 const LAYOUT_DEFAULT = { design: 'classic', accent: ACCENTS[0], gap: 5 }   // gap: mm between questions
 const SHEET_PX = 794                        // 210mm on screen
+const SIDEBAR_PX = 320                      // settings column on wide screens (lg)
 
-// Phones: shrink the A4 preview to the screen width (printing always uses the full page)
+// Shrink the A4 preview to the room left for it (printing always uses the full page)
 function usePreviewZoom() {
-  const calc = () => Math.min(1, (window.innerWidth - 16) / SHEET_PX)
+  const calc = () => {
+    const room = window.innerWidth - (window.innerWidth >= 1024 ? SIDEBAR_PX + 48 : 16)
+    return Math.min(1, room / SHEET_PX)
+  }
   const [zoom, setZoom] = useState(calc)
   useEffect(() => {
     const onResize = () => setZoom(calc())
@@ -146,6 +150,7 @@ export default function TestPrintPage() {
   const setT = (patch) => setTeacher((cur) => ({ ...cur, ...patch }))
   useEffect(() => { localStorage.setItem(TEACHER_KEY, JSON.stringify(teacher)) }, [teacher])
   const zoom = usePreviewZoom()
+  const [showSettings, setShowSettings] = useState(false)   // phones / tablets: the panel folds away
   const [layout, setLayout] = useState(() => {
     try { return { ...LAYOUT_DEFAULT, ...JSON.parse(localStorage.getItem(LAYOUT_KEY)) } } catch { return LAYOUT_DEFAULT }
   })
@@ -179,86 +184,93 @@ export default function TestPrintPage() {
 
   return (
     <div className="min-h-screen bg-slate-200 print:bg-white">
-      {/* Controls (not printed) */}
-      <div className="print:hidden sm:sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3 space-y-3">
-          <div className="flex items-center gap-3">
-            <Link to={`/teacher/tests/${id}`} className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1 shrink-0">
-              <i className="bi bi-arrow-left"></i> <span className="hidden sm:inline">{t('back')}</span>
-            </Link>
-            <h1 className="font-semibold text-slate-900 truncate flex-1 min-w-0">{test.title}</h1>
-            <button onClick={() => window.print()} className="btn-primary shrink-0 whitespace-nowrap">
-              <i className="bi bi-printer"></i> {t('print_btn', { ns: 'teacher' })}
-            </button>
-          </div>
-
-          <div className="grid md:grid-cols-[auto_minmax(0,1fr)] gap-3">
-            <Group title={t('print_group_format', { ns: 'teacher' })}>
-              <Row label={t('print_variants_short', { ns: 'teacher' })}>
-                <Seg value={variants} onChange={setVariants} options={[[1, 'A'], [2, 'A–B'], [4, 'A–D']]} />
-              </Row>
-              <Row label={t('print_columns', { ns: 'teacher' })}>
-                <Seg value={columns} onChange={setColumns} options={[[1, '1'], [2, '2']]} />
-              </Row>
-              <Row label={t('print_font', { ns: 'teacher' })}>
-                <Seg value={fontSize} onChange={setFontSize} options={[['sm', 'A−'], ['md', 'A'], ['lg', 'A+']]} />
-              </Row>
-              <Row label={t('print_design', { ns: 'teacher' })}>
-                <Seg value={layout.design} onChange={(v) => setL({ design: v })}
-                  options={[['classic', t('print_design_classic', { ns: 'teacher' })], ['framed', t('print_design_framed', { ns: 'teacher' })]]} />
-              </Row>
-              {framed && (
-                <Row label={t('print_accent', { ns: 'teacher' })}>
-                  <div className="flex items-center gap-1.5">
-                    {ACCENTS.map((c) => (
-                      <button key={c} type="button" onClick={() => setL({ accent: c })} aria-label={c} aria-pressed={layout.accent === c}
-                        className={`w-6 h-6 rounded-full transition-transform ${layout.accent === c ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-110'}`}
-                        style={{ background: c }} />
-                    ))}
-                  </div>
-                </Row>
-              )}
-              <Row label={t('print_q_gap', { ns: 'teacher' })}>
-                <div className="flex items-center gap-2">
-                  <input type="range" min={0} max={80} step={1} value={layout.gap} onChange={(e) => setL({ gap: Number(e.target.value) })}
-                    className="w-28 accent-primary-600" aria-label={t('print_q_gap', { ns: 'teacher' })} />
-                  <span className="text-xs text-slate-500 tabular-nums w-12">{layout.gap} mm</span>
-                </div>
-              </Row>
-            </Group>
-
-            <Group title={t('print_group_sheet', { ns: 'teacher' })}>
-              <div className="flex flex-wrap gap-x-5 gap-y-1.5 pb-0.5">
-                <Check checked={withHeader} onChange={setWithHeader} label={t('print_student_fields', { ns: 'teacher' })} />
-                <Check checked={withKey} onChange={setWithKey} label={t('print_answer_key', { ns: 'teacher' })} />
-              </div>
-              <div className="grid sm:grid-cols-2 gap-x-4 gap-y-2">
-                <Row label={t('print_school', { ns: 'teacher' })}>
-                  <input value={school} onChange={(e) => setSchool(e.target.value)} maxLength={120}
-                    placeholder={t('print_school_ph', { ns: 'teacher' })} className="input-field py-1.5 text-xs w-full" />
-                </Row>
-                <Row label={<Check checked={teacher.on} onChange={(v) => setT({ on: v })} label={t('print_teacher')} />}>
-                  <input value={teacher.name} onChange={(e) => setT({ name: e.target.value })} maxLength={80} disabled={!teacher.on}
-                    placeholder={teacherName} className="input-field py-1.5 text-xs w-full disabled:opacity-40" />
-                </Row>
-                <Row label={<Check checked={teacher.phoneOn} onChange={(v) => setT({ phoneOn: v })} label={t('phone', { ns: 'teacher' })} />}>
-                  <input value={teacher.phone} onChange={(e) => setT({ phone: e.target.value })} maxLength={30} disabled={!teacher.phoneOn}
-                    placeholder="+994 50 xxx xx xx" className="input-field py-1.5 text-xs w-full disabled:opacity-40" />
-                </Row>
-                <Row label={<Check checked={watermarkOn} onChange={setWatermarkOn} label={t('print_watermark', { ns: 'teacher' })} />}>
-                  <input value={watermark} onChange={(e) => setWatermark(e.target.value)} maxLength={80} disabled={!watermarkOn}
-                    placeholder={teacherName} className="input-field py-1.5 text-xs w-full disabled:opacity-40" />
-                </Row>
-              </div>
-            </Group>
-          </div>
-
-          <p className="text-xs text-slate-400">
-            <i className="bi bi-info-circle mr-1"></i>{t('print_hint', { ns: 'teacher' })}
-          </p>
+      {/* Top bar (not printed): back, title, settings toggle, print */}
+      <div className="print:hidden sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
+        <div className="px-4 h-14 flex items-center gap-3">
+          <Link to={`/teacher/tests/${id}`} className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1 shrink-0">
+            <i className="bi bi-arrow-left"></i> <span className="hidden sm:inline">{t('back')}</span>
+          </Link>
+          <h1 className="font-semibold text-slate-900 truncate flex-1 min-w-0">{test.title}</h1>
+          <button onClick={() => setShowSettings((v) => !v)} aria-expanded={showSettings}
+            className={`lg:hidden btn-secondary py-2 px-3 text-sm shrink-0 ${showSettings ? 'bg-slate-100' : ''}`}>
+            <i className="bi bi-sliders"></i><span className="hidden sm:inline">{t('print_settings', { ns: 'teacher' })}</span>
+          </button>
+          <button onClick={() => window.print()} className="btn-primary py-2 shrink-0 whitespace-nowrap">
+            <i className="bi bi-printer"></i> {t('print_btn', { ns: 'teacher' })}
+          </button>
         </div>
       </div>
 
+      <div className="lg:flex lg:items-start">
+        {/* Settings (not printed): a column on wide screens, a fold-out panel on smaller ones */}
+        <aside className={`print:hidden bg-white border-b lg:border-b-0 lg:border-r border-slate-200 lg:block lg:w-80 lg:shrink-0
+          lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto ${showSettings ? 'block' : 'hidden'}`}>
+          <div className="p-4 space-y-3">
+        <Group title={t('print_group_format', { ns: 'teacher' })}>
+          <Row label={t('print_variants_short', { ns: 'teacher' })}>
+            <Seg value={variants} onChange={setVariants} options={[[1, 'A'], [2, 'A–B'], [4, 'A–D']]} />
+          </Row>
+          <Row label={t('print_columns', { ns: 'teacher' })}>
+            <Seg value={columns} onChange={setColumns} options={[[1, '1'], [2, '2']]} />
+          </Row>
+          <Row label={t('print_font', { ns: 'teacher' })}>
+            <Seg value={fontSize} onChange={setFontSize} options={[['sm', 'A−'], ['md', 'A'], ['lg', 'A+']]} />
+          </Row>
+          <Row label={t('print_design', { ns: 'teacher' })}>
+            <Seg value={layout.design} onChange={(v) => setL({ design: v })}
+              options={[['classic', t('print_design_classic', { ns: 'teacher' })], ['framed', t('print_design_framed', { ns: 'teacher' })]]} />
+          </Row>
+          {framed && (
+            <Row label={t('print_accent', { ns: 'teacher' })}>
+              <div className="flex items-center gap-1.5">
+                {ACCENTS.map((c) => (
+                  <button key={c} type="button" onClick={() => setL({ accent: c })} aria-label={c} aria-pressed={layout.accent === c}
+                    className={`w-6 h-6 rounded-full transition-transform ${layout.accent === c ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-110'}`}
+                    style={{ background: c }} />
+                ))}
+              </div>
+            </Row>
+          )}
+          <Row label={t('print_q_gap', { ns: 'teacher' })}>
+            <div className="flex items-center gap-2">
+              <input type="range" min={0} max={80} step={1} value={layout.gap} onChange={(e) => setL({ gap: Number(e.target.value) })}
+                className="w-24 accent-primary-600" aria-label={t('print_q_gap', { ns: 'teacher' })} />
+              <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap">{layout.gap} mm</span>
+            </div>
+          </Row>
+        </Group>
+
+        <Group title={t('print_group_sheet', { ns: 'teacher' })}>
+          <div className="flex flex-wrap gap-x-5 gap-y-1.5 pb-0.5">
+            <Check checked={withHeader} onChange={setWithHeader} label={t('print_student_fields', { ns: 'teacher' })} />
+            <Check checked={withKey} onChange={setWithKey} label={t('print_answer_key', { ns: 'teacher' })} />
+          </div>
+          <div className="space-y-2">
+            <Row label={t('print_school', { ns: 'teacher' })}>
+              <input value={school} onChange={(e) => setSchool(e.target.value)} maxLength={120}
+                placeholder={t('print_school_ph', { ns: 'teacher' })} className="input-field py-1.5 text-xs w-full" />
+            </Row>
+            <Row label={<Check checked={teacher.on} onChange={(v) => setT({ on: v })} label={t('print_teacher')} />}>
+              <input value={teacher.name} onChange={(e) => setT({ name: e.target.value })} maxLength={80} disabled={!teacher.on}
+                placeholder={teacherName} className="input-field py-1.5 text-xs w-full disabled:opacity-40" />
+            </Row>
+            <Row label={<Check checked={teacher.phoneOn} onChange={(v) => setT({ phoneOn: v })} label={t('phone', { ns: 'teacher' })} />}>
+              <input value={teacher.phone} onChange={(e) => setT({ phone: e.target.value })} maxLength={30} disabled={!teacher.phoneOn}
+                placeholder="+994 50 xxx xx xx" className="input-field py-1.5 text-xs w-full disabled:opacity-40" />
+            </Row>
+            <Row label={<Check checked={watermarkOn} onChange={setWatermarkOn} label={t('print_watermark', { ns: 'teacher' })} />}>
+              <input value={watermark} onChange={(e) => setWatermark(e.target.value)} maxLength={80} disabled={!watermarkOn}
+                placeholder={teacherName} className="input-field py-1.5 text-xs w-full disabled:opacity-40" />
+            </Row>
+          </div>
+        </Group>
+            <p className="text-xs text-slate-400">
+              <i className="bi bi-info-circle mr-1"></i>{t('print_hint', { ns: 'teacher' })}
+            </p>
+          </div>
+        </aside>
+
+        <main className="flex-1 min-w-0">
       {/* Sheets */}
       <div className="print-preview py-4 sm:py-8 print:py-0 space-y-8 print:space-y-0" style={{ zoom }}>
         {built.map((v) => (
@@ -318,6 +330,8 @@ export default function TestPrintPage() {
             </table>
           </section>
         )}
+      </div>
+        </main>
       </div>
     </div>
   )
