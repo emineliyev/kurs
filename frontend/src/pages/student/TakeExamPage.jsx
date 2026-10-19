@@ -331,9 +331,9 @@ export default function TakeExamPage() {
         <div className="card p-5">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">{t('numeric_answer_header', { ns: 'student' })}</label>
           <input
-            type="number" step="any"
+            type="text" inputMode="decimal" autoComplete="off"
             value={answers[q.id]?.value ?? ''}
-            onChange={e => onNumericAnswer(q.id, e.target.value)}
+            onChange={e => onNumericAnswer(q.id, e.target.value.replace(/[^0-9.,\-\s]/g, ''))}
             placeholder={t('numeric_answer_placeholder', { ns: 'student' })}
             className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm text-center text-lg font-semibold"
           />

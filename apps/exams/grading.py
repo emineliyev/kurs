@@ -2,6 +2,10 @@
 Grading an exam result — on "Submit", when the time runs out (auto-finalize from the saved
 draft), and after a teacher grades an open answer by hand.
 """
+import math
+import re
+import unicodedata
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -18,6 +22,85 @@ def apply_manual_grade(answer, key):
     share = GRADE_SCALE[str(key)]
     answer.points_earned = round(answer.question.points * share, 4)
     answer.is_correct = share == 1  # partial credit is "not fully correct", told apart by points_earned > 0
+
+
+# ── Matching typed answers ───────────────────────────────────────────────────
+_SPACES = re.compile(r'\s+')
+_AROUND_SIGNS = re.compile(r'\s*([/:;.+\-=*×÷^()<>])\s*')
+
+
+def normalize_answer(text):
+    """A typed answer in a form where trivial differences don't count:
+    case (İ/I/ı/i alike), 2,5 = 2.5, extra spaces, and spaces around signs (2 / 2 = 2/2)."""
+    s = unicodedata.normalize('NFKC', str(text or '')).strip()
+    s = s.replace('İ', 'i').replace('I', 'i').lower().replace('ı', 'i').replace('\u0307', '')
+    s = s.replace(',', '.')
+    s = _SPACES.sub(' ', s)
+    return _AROUND_SIGNS.sub(r'\1', s)
+
+
+def parse_number(text):
+    """'2,5' / ' 2.50 ' / '1 000' → float; None if it isn't a plain number."""
+    s = normalize_answer(text).replace(' ', '')
+    if not s:
+        return None
+    try:
+        value = float(s)
+    except ValueError:
+        return None
+    return value if math.isfinite(value) else None
+
+
+def short_answer_correct(question, text):
+    key, given = normalize_answer(question.correct_answer), normalize_answer(text)
+    if not key or not given:
+        return False
+    if given == key:
+        return True
+    a, b = parse_number(given), parse_number(key)   # 0.5 = .5 = 0,50
+    return a is not None and b is not None and math.isclose(a, b, rel_tol=0, abs_tol=1e-9)
+
+
+def numeric_correct(question, text):
+    a, b = parse_number(text), parse_number(question.correct_answer)
+    if a is None or b is None:
+        return False
+    return abs(a - b) <= (question.tolerance or 0) + 1e-9
+
+
+def is_answer_correct(question, student_answer):
+    """Auto-marked types only (choice, short, numeric); None for hand-graded ones."""
+    from apps.tests_app.models import Question
+    qtype = question.question_type
+    if qtype in Question.MCQ_TYPES:
+        return bool(student_answer.selected_answer_id and student_answer.selected_answer.is_correct)
+    if qtype == 'short_answer':
+        return short_answer_correct(question, student_answer.answer_text)
+    if qtype == 'numeric':
+        return numeric_correct(question, student_answer.answer_text)
+    return None
+
+
+def regrade_question(question):
+    """The teacher fixed a question's key after students answered: re-mark every submitted
+    answer to it and recount those results (score, net-scoring penalty, pass/fail)."""
+    changed_results = set()
+    changed = 0
+    answers = (StudentAnswer.objects.select_related('selected_answer')
+               .filter(question=question, result__status=ExamResult.STATUS_SUBMITTED))
+    for sa in answers:
+        ok = is_answer_correct(question, sa)
+        if ok is None:
+            continue
+        points = question.points if ok else 0
+        if sa.is_correct != ok or sa.points_earned != points:
+            sa.is_correct, sa.points_earned = ok, points
+            sa.save(update_fields=['is_correct', 'points_earned'])
+            changed += 1
+            changed_results.add(sa.result_id)
+    for result in ExamResult.objects.select_related('exam__test').filter(pk__in=changed_results):
+        recalc_totals(result)
+    return changed, len(changed_results)
 
 
 def gradable_total(exam):
@@ -92,9 +175,7 @@ def grade(exam, result, answers_data, submitted_at=None, auto=False):
             )
 
         elif question.question_type == 'short_answer':
-            correct = (question.correct_answer or '').strip().lower()
-            student_text = (answer_text or '').strip().lower()
-            is_correct = bool(correct and student_text == correct)
+            is_correct = short_answer_correct(question, answer_text)
             points = question.points if is_correct else 0
             StudentAnswer.objects.update_or_create(
                 result=result,
@@ -110,13 +191,7 @@ def grade(exam, result, answers_data, submitted_at=None, auto=False):
             earned_points += points
 
         elif question.question_type == 'numeric':
-            try:
-                student_val = float(answer_text or '')
-                correct_val = float(question.correct_answer or '')
-                tol = question.tolerance or 0
-                is_correct = abs(student_val - correct_val) <= tol
-            except (ValueError, TypeError):
-                is_correct = False
+            is_correct = numeric_correct(question, answer_text)
             points = question.points if is_correct else 0
             StudentAnswer.objects.update_or_create(
                 result=result,

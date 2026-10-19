@@ -70,9 +70,8 @@ class Test(models.Model):
             elif q.question_type == Question.TYPE_SHORT_ANSWER and not q.correct_answer.strip():
                 errors.append(f'Sual {n}: düzgün cavab yazılmayıb.')
             elif q.question_type == Question.TYPE_NUMERIC:
-                try:
-                    float(q.correct_answer)  # same parsing as grading
-                except ValueError:
+                from apps.exams.grading import parse_number
+                if parse_number(q.correct_answer) is None:  # same parsing as grading (2,5 = 2.5)
                     errors.append(f'Sual {n}: düzgün cavab rəqəm olmalıdır.')
         return errors
 
