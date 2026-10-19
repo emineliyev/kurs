@@ -238,7 +238,24 @@
 .print-fields i { display: inline-block; width: 70mm; border-bottom: 1px solid #334155; height: 1em; vertical-align: bottom; }
 .print-fields i.short { width: 28mm; }
 .print-body { column-gap: 8mm; column-rule: 1px solid #cbd5e1; }
-.print-q { break-inside: avoid; margin-bottom: 5mm; }
+.print-q { break-inside: avoid; margin-bottom: var(--q-gap, 5mm); }
+
+/* "Framed" design: rounded box in the accent colour, the title in a pill, a matching column line */
+.print-framed .print-head { border: 1.5px solid var(--accent); border-radius: 4mm; padding: 0; margin-bottom: 6mm; overflow: hidden; }
+.print-framed .pf-pill-row { display: flex; justify-content: center; padding: 2.5mm 4mm; border-bottom: 1.5px solid var(--accent); }
+.print-framed .pf-pill {
+  background: var(--accent); color: #fff; border-radius: 999px; padding: 1.4mm 9mm; max-width: 100%;
+  font-family: Arial, Helvetica, sans-serif; font-weight: 700; font-size: 1.05em; letter-spacing: 0.03em;
+  text-transform: uppercase; text-align: center; line-height: 1.25;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.print-framed .pf-body { padding: 3mm 5mm 3.5mm; }
+.print-framed .pf-body:empty { display: none; }
+.print-framed .print-school, .print-framed .print-topic { color: #0f172a; font-weight: 700; }
+.print-framed .print-variant { border-color: var(--accent); color: var(--accent); }
+.print-framed .print-fields { margin-top: 2.5mm; }
+.print-framed .print-body { column-rule: 1.5px solid var(--accent); column-gap: 10mm; }
+.print-framed .print-key th { background: color-mix(in srgb, var(--accent) 12%, white); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .print-passage { border-left: 3px solid #94a3b8; background: #f8fafc; padding: 2mm 3mm; }
 .print-img { display: block; max-width: 100%; max-height: 95mm; margin-top: 1.5mm; object-fit: contain; }
 .print-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(38mm, 1fr)); gap: 1mm 4mm; margin-top: 1.5mm; }
@@ -310,3 +327,4 @@
 /* ── Toasts (AppToaster): the bar that runs out with the toast ───────────────── */
 @keyframes toast-progress { from { width: 100%; } to { width: 0%; } }
 .toast-progress { animation-name: toast-progress; animation-timing-function: linear; animation-fill-mode: forwards; }
+.print-framed .print-choices { grid-template-columns: repeat(auto-fill, minmax(26mm, 1fr)); }

@@ -830,5 +830,10 @@
   "fix_key_regrade_note": "Bu suala cavab vermiş bütün şagirdlərin cavabları yenidən yoxlanılacaq və nəticələri avtomatik yenilənəcək.",
   "fix_key_save": "Yadda saxla və yenidən yoxla",
   "key_fixed": "Düzgün cavab yeniləndi",
-  "key_fixed_regraded": "Düzgün cavab yeniləndi, {{count}} şagirdin nəticəsi yenidən hesablandı"
+  "key_fixed_regraded": "Düzgün cavab yeniləndi, {{count}} şagirdin nəticəsi yenidən hesablandı",
+  "print_design": "Dizayn",
+  "print_design_classic": "Klassik",
+  "print_design_framed": "Çərçivəli",
+  "print_accent": "Rəng",
+  "print_q_gap": "Suallar arası"
 }

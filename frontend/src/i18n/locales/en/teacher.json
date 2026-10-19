@@ -825,5 +825,10 @@
   "fix_key_regrade_note": "Every student's answer to this question will be re-marked and their results updated automatically.",
   "fix_key_save": "Save and re-mark",
   "key_fixed": "Answer key updated",
-  "key_fixed_regraded": "Answer key updated, {{count}} results recounted"
+  "key_fixed_regraded": "Answer key updated, {{count}} results recounted",
+  "print_design": "Design",
+  "print_design_classic": "Classic",
+  "print_design_framed": "Framed",
+  "print_accent": "Colour",
+  "print_q_gap": "Question gap"
 }

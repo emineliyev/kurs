@@ -11,6 +11,10 @@ import { useAuthStore } from '@/store/authStore'
 const FONT_SIZES = { sm: '10pt', md: '11.5pt', lg: '13pt' }
 const SCHOOL_KEY = 'print-school-name'
 const TEACHER_KEY = 'print-teacher'        // { on, name, phoneOn, phone }
+const LAYOUT_KEY = 'print-layout'          // { design, accent, gap }
+// "framed": the title in a coloured pill inside a rounded box, the column line in the same colour
+const ACCENTS = ['#F97316', '#1D4ED8', '#15803D', '#7C3AED', '#0F172A']
+const LAYOUT_DEFAULT = { design: 'classic', accent: ACCENTS[0], gap: 5 }   // gap: mm between questions
 const SHEET_PX = 794                        // 210mm on screen
 
 // Phones: shrink the A4 preview to the screen width (printing always uses the full page)
@@ -142,6 +146,11 @@ export default function TestPrintPage() {
   const setT = (patch) => setTeacher((cur) => ({ ...cur, ...patch }))
   useEffect(() => { localStorage.setItem(TEACHER_KEY, JSON.stringify(teacher)) }, [teacher])
   const zoom = usePreviewZoom()
+  const [layout, setLayout] = useState(() => {
+    try { return { ...LAYOUT_DEFAULT, ...JSON.parse(localStorage.getItem(LAYOUT_KEY)) } } catch { return LAYOUT_DEFAULT }
+  })
+  const setL = (patch) => setLayout((cur) => ({ ...cur, ...patch }))
+  useEffect(() => { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)) }, [layout])
 
   useEffect(() => {
     testsApi.get(id).then((r) => setTest(r.data)).catch(() => setError(true))
@@ -159,7 +168,9 @@ export default function TestPrintPage() {
   }
   if (!test) return <PageSpinner />
 
-  const sheetStyle = { fontSize: FONT_SIZES[fontSize] }
+  const framed = layout.design === 'framed'
+  const sheetStyle = { fontSize: FONT_SIZES[fontSize], '--accent': layout.accent, '--q-gap': `${layout.gap}mm` }
+  const sheetClass = `print-sheet ${framed ? 'print-framed' : ''}`
   const many = variants > 1
   const teacherLine = [
     teacher.on && teacher.name.trim() && `${t('print_teacher')}: ${teacher.name.trim()}`,
@@ -191,6 +202,28 @@ export default function TestPrintPage() {
               </Row>
               <Row label={t('print_font', { ns: 'teacher' })}>
                 <Seg value={fontSize} onChange={setFontSize} options={[['sm', 'A−'], ['md', 'A'], ['lg', 'A+']]} />
+              </Row>
+              <Row label={t('print_design', { ns: 'teacher' })}>
+                <Seg value={layout.design} onChange={(v) => setL({ design: v })}
+                  options={[['classic', t('print_design_classic', { ns: 'teacher' })], ['framed', t('print_design_framed', { ns: 'teacher' })]]} />
+              </Row>
+              {framed && (
+                <Row label={t('print_accent', { ns: 'teacher' })}>
+                  <div className="flex items-center gap-1.5">
+                    {ACCENTS.map((c) => (
+                      <button key={c} type="button" onClick={() => setL({ accent: c })} aria-label={c} aria-pressed={layout.accent === c}
+                        className={`w-6 h-6 rounded-full transition-transform ${layout.accent === c ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-110'}`}
+                        style={{ background: c }} />
+                    ))}
+                  </div>
+                </Row>
+              )}
+              <Row label={t('print_q_gap', { ns: 'teacher' })}>
+                <div className="flex items-center gap-2">
+                  <input type="range" min={0} max={80} step={1} value={layout.gap} onChange={(e) => setL({ gap: Number(e.target.value) })}
+                    className="w-28 accent-primary-600" aria-label={t('print_q_gap', { ns: 'teacher' })} />
+                  <span className="text-xs text-slate-500 tabular-nums w-12">{layout.gap} mm</span>
+                </div>
               </Row>
             </Group>
 
@@ -229,13 +262,15 @@ export default function TestPrintPage() {
       {/* Sheets */}
       <div className="print-preview py-4 sm:py-8 print:py-0 space-y-8 print:space-y-0" style={{ zoom }}>
         {built.map((v) => (
-          <section key={v.letter} className="print-sheet" style={sheetStyle}>
+          <section key={v.letter} className={sheetClass} style={sheetStyle}>
             {watermarkOn && <Watermark text={watermark || teacherName} />}
             <header className="print-head">
+              {framed && <div className="pf-pill-row"><span className="pf-pill">{test.title}</span></div>}
+              <div className="pf-body">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   {school && <p className="print-school">{school}</p>}
-                  <h2 className="print-title">{test.title}</h2>
+                  {!framed && <h2 className="print-title">{test.title}</h2>}
                   {test.topic && <p className="print-topic">{test.topic}</p>}
                   {teacherLine && <p className="print-teacher">{teacherLine}</p>}
                 </div>
@@ -248,6 +283,7 @@ export default function TestPrintPage() {
                   <span>{t('print_date', { ns: 'teacher' })}: <i className="short" /></span>
                 </div>
               )}
+              </div>
             </header>
             <div className="print-body" style={{ columnCount: columns }}>
               {v.items.map((item) => <Question key={item.question.id} item={item} t={t} />)}
@@ -256,10 +292,13 @@ export default function TestPrintPage() {
         ))}
 
         {withKey && built.length > 0 && (
-          <section className="print-sheet" style={sheetStyle}>
+          <section className={sheetClass} style={sheetStyle}>
             <header className="print-head">
-              <h2 className="print-title">{t('print_key_title', { ns: 'teacher' })}</h2>
-              <p className="print-topic">{test.title}</p>
+              {framed && <div className="pf-pill-row"><span className="pf-pill">{t('print_key_title', { ns: 'teacher' })}</span></div>}
+              <div className="pf-body">
+                {!framed && <h2 className="print-title">{t('print_key_title', { ns: 'teacher' })}</h2>}
+                <p className="print-topic">{test.title}</p>
+              </div>
             </header>
             <table className="print-key">
               <thead>
