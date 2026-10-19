@@ -386,7 +386,7 @@ export default function ExamsPage() {
   const examMenu = (e, test) => [
     { icon: 'bi-calendar-plus', label: t('give_to_another_class', { ns: 'teacher' }), onClick: () => setScheduling(test || { id: e.test, title: e.test_title }) },
     { icon: 'bi-clock', label: t('edit_time_class', { ns: 'teacher' }), onClick: () => setEditingExam(e) },
-    { icon: 'bi-list-ol', label: t('edit_questions', { ns: 'teacher' }), to: `/teacher/exams/${e.id}/edit` },
+    { icon: 'bi-key', label: t('edit_questions', { ns: 'teacher' }), to: `/teacher/exams/${e.id}/edit` },
     '-',
     test?.question_count > 0 && { icon: 'bi-printer', label: t('print_variants', { ns: 'teacher' }), to: `/teacher/tests/${e.test}/print` },
     { icon: 'bi-file-earmark-text', label: t('paper_btn', { ns: 'teacher' }), to: `/teacher/exams/${e.id}/paper` },
@@ -402,7 +402,7 @@ export default function ExamsPage() {
   const groupMenu = (r) => [
     { icon: 'bi-calendar-plus', label: t('give_to_another_class', { ns: 'teacher' }), onClick: () => setScheduling(r.test || { id: r.exam.test, title: r.exam.test_title }) },
     // the questions (and their answer key) are shared by every class in the group
-    { icon: 'bi-list-ol', label: t('edit_questions', { ns: 'teacher' }), to: `/teacher/exams/${r.exam.id}/edit` },
+    { icon: 'bi-key', label: t('edit_questions', { ns: 'teacher' }), to: `/teacher/exams/${r.exam.id}/edit` },
     r.test?.question_count > 0 && { icon: 'bi-printer', label: t('print_variants', { ns: 'teacher' }), to: `/teacher/tests/${r.exam.test}/print` },
     { icon: 'bi-copy', label: t('duplicate_test', { ns: 'teacher' }), onClick: () => onDuplicate(r.test || { id: r.exam.test }) },
     '-',
