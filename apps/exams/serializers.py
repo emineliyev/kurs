@@ -147,13 +147,14 @@ class StudentAnswerReviewSerializer(serializers.ModelSerializer):
     all_answers = serializers.SerializerMethodField()
     selected_answer_id = serializers.SerializerMethodField()
     criteria = serializers.SerializerMethodField()
+    correct_text = serializers.SerializerMethodField()
 
     class Meta:
         model = StudentAnswer
         fields = [
             'question', 'question_text', 'question_type', 'question_image', 'question_order',
             'question_points', 'all_answers', 'selected_answer_id',
-            'open_text', 'answer_text', 'is_correct', 'points_earned', 'criteria',
+            'open_text', 'answer_text', 'is_correct', 'points_earned', 'criteria', 'correct_text',
         ]
 
     def get_question_image(self, obj):
@@ -175,6 +176,15 @@ class StudentAnswerReviewSerializer(serializers.ModelSerializer):
 
     def get_selected_answer_id(self, obj):
         return obj.selected_answer_id
+
+    def get_correct_text(self, obj):
+        # a short / numeric question's key exactly as the teacher typed it ("2 / 2" stays "2 / 2")
+        q = obj.question
+        if q.question_type == 'short_answer':
+            return q.correct_answer
+        if q.question_type == 'numeric':
+            return f'{q.correct_answer} (±{q.tolerance:g})' if q.tolerance else q.correct_answer
+        return ''
 
     def get_criteria(self, obj):
         # the teacher's grading criteria for a hand-graded open question (the "model answer")

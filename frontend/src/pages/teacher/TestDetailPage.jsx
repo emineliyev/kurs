@@ -9,6 +9,7 @@ import { renderMath } from '@/utils/math'
 import PageSpinner from '@/components/common/PageSpinner'
 import ScheduleExamModal from '@/components/teacher/ScheduleExamModal'
 import { fmtPoints } from '@/utils/score'
+import AnswerKeyModal, { KEY_FIXABLE } from '@/components/teacher/AnswerKeyModal'
 
 const TYPE_COLORS = {
   multiple_choice: 'bg-blue-50 text-blue-700',
@@ -34,6 +35,7 @@ export default function TestDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { t } = useTranslation(['common', 'teacher'])
+  const [fixing, setFixing] = useState(null)   // question whose answer key is being corrected
   const [test, setTest] = useState(null)
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -125,6 +127,11 @@ export default function TestDetailPage() {
         />
       )}
 
+      {fixing && (
+        <AnswerKeyModal question={fixing} onClose={() => setFixing(null)}
+          onSaved={(updated) => { setFixing(null); setQuestions((qs) => qs.map((x) => (x.id === updated.id ? { ...x, ...updated } : x))) }} />
+      )}
+
       <div className="space-y-3">
         {questions.length === 0 ? (
           <div className="card p-10 text-center text-slate-400">
@@ -200,6 +207,12 @@ export default function TestDetailPage() {
                   <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
                     {fmtPoints(q.points)} {t('q_word_points', { ns: 'teacher' })}
                   </span>
+                  {KEY_FIXABLE.includes(q.question_type) && (
+                    <button onClick={() => setFixing(q)} title={t('fix_key_btn', { ns: 'teacher' })}
+                      className="text-slate-300 hover:text-amber-500 transition-colors">
+                      <i className="bi bi-key"></i>
+                    </button>
+                  )}
                   <button onClick={() => deleteQuestion(q.id)} className="text-slate-300 hover:text-red-500 transition-colors">
                     <i className="bi bi-trash"></i>
                   </button>

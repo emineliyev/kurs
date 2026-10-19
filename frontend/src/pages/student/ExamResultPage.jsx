@@ -191,6 +191,13 @@ export default function ExamResultPage() {
                     <span className="font-semibold mr-1">{t('your_answer_colon', { ns: 'student' })}</span>{ans.answer_text}
                   </div>
                 )}
+                {/* the key exactly as the teacher wrote it — shown when the student's answer wasn't it */}
+                {ans.correct_text && ans.is_correct !== true && (
+                  <div className="pl-8 mt-1 px-3 py-2 rounded-lg text-xs bg-green-50 text-green-700 border border-green-200">
+                    <span className="font-semibold mr-1">{t('correct_answer_colon', { ns: 'student' })}</span>
+                    <span className="whitespace-pre-wrap">{ans.correct_text}</span>
+                  </div>
+                )}
 
                 {ans._partial && (
                   <p className="text-xs text-amber-600 pl-8 mt-1">

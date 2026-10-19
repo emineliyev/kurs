@@ -821,5 +821,14 @@
   "delete_exam_archive_hint": "Nəticələri saxlamaq istəyirsinizsə, arxivə salın.",
   "delete_all_classes": "Hamısını sil ({{count}} sinif)",
   "exam_classes_toggle": "Sinifləri göstər",
-  "mixed_status_hint": "Siniflərin statusu fərqlidir — açıb hər birinə baxın"
+  "mixed_status_hint": "Siniflərin statusu fərqlidir — açıb hər birinə baxın",
+  "fix_key_btn": "Düzgün cavabı düzəlt",
+  "fix_key_title": "Düzgün cavabı düzəlt",
+  "fix_key_pick": "Düzgün variantı seçin (bir neçəsi də ola bilər):",
+  "fix_key_tolerance": "Tolerans (±)",
+  "fix_key_match_hint": "Vergül və nöqtə (2,5 = 2.5), böyük-kiçik hərf və artıq boşluqlar fərq etmir.",
+  "fix_key_regrade_note": "Bu suala cavab vermiş bütün şagirdlərin cavabları yenidən yoxlanılacaq və nəticələri avtomatik yenilənəcək.",
+  "fix_key_save": "Yadda saxla və yenidən yoxla",
+  "key_fixed": "Düzgün cavab yeniləndi",
+  "key_fixed_regraded": "Düzgün cavab yeniləndi, {{count}} şagirdin nəticəsi yenidən hesablandı"
 }

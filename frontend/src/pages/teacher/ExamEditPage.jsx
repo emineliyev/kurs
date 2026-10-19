@@ -9,6 +9,7 @@ import { examsApi } from '@/api/exams'
 import { testsApi } from '@/api/tests'
 import { renderMath } from '@/utils/math'
 import PageSpinner from '@/components/common/PageSpinner'
+import AnswerKeyModal, { KEY_FIXABLE } from '@/components/teacher/AnswerKeyModal'
 
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -27,7 +28,7 @@ const TYPE_LABEL_KEYS = {
   long_answer:     'type_long_answer',
 }
 
-function SortableRow({ q, index, t }) {
+function SortableRow({ q, index, t, locked = false, onFixKey }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: q.id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
   const isMCQ = ['multiple_choice', 'mcq', 'true_false', 'image_mcq'].includes(q.question_type)
@@ -38,14 +39,20 @@ function SortableRow({ q, index, t }) {
   return (
     <div ref={setNodeRef} style={style} className={`bg-white rounded-2xl border-2 border-slate-200 shadow-sm flex items-stretch gap-0 overflow-hidden ${isDragging ? 'shadow-xl border-primary-300' : ''}`}>
       {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="flex items-center justify-center w-10 bg-slate-50 border-r border-slate-100 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-colors touch-none shrink-0"
-        title={t('drag_to_reorder', { ns: 'teacher' })}
-      >
-        <i className="bi bi-grip-vertical text-lg"></i>
-      </div>
+      {locked ? (
+        <div className="flex items-center justify-center w-10 bg-slate-50 border-r border-slate-100 text-slate-300 shrink-0">
+          <i className="bi bi-lock"></i>
+        </div>
+      ) : (
+        <div
+          {...attributes}
+          {...listeners}
+          className="flex items-center justify-center w-10 bg-slate-50 border-r border-slate-100 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-colors touch-none shrink-0"
+          title={t('drag_to_reorder', { ns: 'teacher' })}
+        >
+          <i className="bi bi-grip-vertical text-lg"></i>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 p-4 min-w-0">
@@ -60,6 +67,12 @@ function SortableRow({ q, index, t }) {
                 {typeLabel}
               </span>
               <span className="text-xs text-slate-400">{q.points} {t('q_word_points', { ns: 'teacher' })}</span>
+              {onFixKey && KEY_FIXABLE.includes(q.question_type) && (
+                <button onClick={() => onFixKey(q)}
+                  className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100">
+                  <i className="bi bi-key"></i>{t('fix_key_btn', { ns: 'teacher' })}
+                </button>
+              )}
             </div>
             {q.image && (
               <img src={q.image} alt="" className="mb-2 max-h-24 max-w-xs rounded-lg object-contain border border-slate-200" />
@@ -76,6 +89,12 @@ function SortableRow({ q, index, t }) {
                   </span>
                 ))}
               </div>
+            )}
+            {['short_answer', 'numeric'].includes(q.question_type) && q.correct_answer && (
+              <p className="mt-2 text-xs text-green-700">
+                <i className="bi bi-check-circle-fill mr-1"></i>{t('q_correct_label_inline', { ns: 'teacher' })} <strong>{q.correct_answer}</strong>
+                {q.question_type === 'numeric' && q.tolerance ? <span className="ml-1 text-green-600">(±{q.tolerance})</span> : null}
+              </p>
             )}
             {q.question_type === 'image_mcq' && q.answers?.length > 0 && (
               <div className="mt-2 flex gap-1.5">
@@ -101,6 +120,7 @@ export default function ExamEditPage() {
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [fixing, setFixing] = useState(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -177,6 +197,11 @@ export default function ExamEditPage() {
         </div>
       )}
 
+      {fixing && (
+        <AnswerKeyModal question={fixing} onClose={() => setFixing(null)}
+          onSaved={(updated) => { setFixing(null); setQuestions((qs) => qs.map((x) => (x.id === updated.id ? { ...x, ...updated } : x))) }} />
+      )}
+
       {/* Questions list */}
       {questions.length === 0 ? (
         <div className="card p-12 text-center text-slate-400">
@@ -184,15 +209,15 @@ export default function ExamEditPage() {
           <p>{t('no_questions_yet', { ns: 'teacher' })}</p>
         </div>
       ) : exam?.has_results ? (
-        <div className="space-y-3 pointer-events-none">
-          {questions.map((q, i) => <SortableRow key={q.id} q={q} index={i} t={t} />)}
+        <div className="space-y-3">
+          {questions.map((q, i) => <SortableRow key={q.id} q={q} index={i} t={t} locked onFixKey={setFixing} />)}
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
               {questions.map((q, i) => (
-                <SortableRow key={q.id} q={q} index={i} t={t} />
+                <SortableRow key={q.id} q={q} index={i} t={t} onFixKey={setFixing} />
               ))}
             </div>
           </SortableContext>

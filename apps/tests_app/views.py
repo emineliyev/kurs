@@ -279,6 +279,59 @@ class QuestionViewSet(viewsets.ModelViewSet):
         instance.delete()
         test.rebalance_points()
 
+    @action(detail=True, methods=['post'])
+    def fix_key(self, request, pk=None):
+        """
+        Correct a question's answer key — allowed even after students have answered (the rest of
+        the question stays frozen). Every submitted answer to it is re-marked and the results recounted.
+        Choice questions: {correct_answer_ids: [...]}; short answer: {correct_answer};
+        numeric: {correct_answer, tolerance?}.
+        """
+        from django.db import transaction
+        from apps.exams.grading import parse_number, regrade_question
+        question = self.get_object()
+        qtype = question.question_type
+        data = request.data
+        with transaction.atomic():
+            if qtype in Question.MCQ_TYPES:
+                ids = data.get('correct_answer_ids')
+                try:
+                    ids = {int(i) for i in ids} if isinstance(ids, list) else set()
+                except (TypeError, ValueError):
+                    ids = set()
+                own = set(question.answers.values_list('id', flat=True))
+                if not ids or not ids <= own:
+                    return Response({'detail': 'Ən azı bir düzgün variant seçin.'}, status=status.HTTP_400_BAD_REQUEST)
+                question.answers.filter(id__in=ids).update(is_correct=True)
+                question.answers.exclude(id__in=ids).update(is_correct=False)
+            elif qtype == Question.TYPE_SHORT_ANSWER:
+                key = str(data.get('correct_answer') or '').strip()
+                if not key:
+                    return Response({'detail': 'Düzgün cavabı yazın.'}, status=status.HTTP_400_BAD_REQUEST)
+                question.correct_answer = key
+                question.save(update_fields=['correct_answer'])
+            elif qtype == Question.TYPE_NUMERIC:
+                key = str(data.get('correct_answer') or '').strip()
+                if parse_number(key) is None:
+                    return Response({'detail': 'Düzgün cavab rəqəm olmalıdır.'}, status=status.HTTP_400_BAD_REQUEST)
+                tolerance = data.get('tolerance', question.tolerance)
+                if tolerance in ('', None):
+                    tolerance = None
+                else:
+                    tolerance = parse_number(tolerance)
+                    if tolerance is None or tolerance < 0:
+                        return Response({'detail': 'Tolerans müsbət rəqəm olmalıdır.'}, status=status.HTTP_400_BAD_REQUEST)
+                question.correct_answer = key
+                question.tolerance = tolerance
+                question.save(update_fields=['correct_answer', 'tolerance'])
+            else:
+                return Response({'detail': 'Bu sual müəllim tərəfindən əl ilə qiymətləndirilir.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            answers_changed, results_changed = regrade_question(question)
+        question = Question.objects.prefetch_related('answers').get(pk=question.pk)
+        return Response({'question': QuestionSerializer(question, context={'request': request}).data,
+                         'answers_changed': answers_changed, 'results_changed': results_changed})
+
     @action(detail=False, methods=['post'])
     def reorder(self, request):
         ordered_ids = request.data.get('ordered_ids', [])

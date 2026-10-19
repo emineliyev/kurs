@@ -32,6 +32,7 @@ def _apply_answer_visibility(data, exam):
             for choice in review.get('all_answers') or []:
                 choice['is_correct'] = None
             review['criteria'] = ''
+            review['correct_text'] = ''
         data['answers_hidden_until'] = exam.end_time
     return data
 

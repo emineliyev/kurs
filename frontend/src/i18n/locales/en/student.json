@@ -77,5 +77,6 @@
   "answers_hidden_note": "You can see which questions you got right or wrong. The correct choices appear after the exam ends ({{time}}).",
   "review_never": "Your teacher chose to show only the score for this exam.",
   "net_score_note": "Net score: {{points}} points were taken off for wrong answers.",
-  "grading_criteria": "Grading criteria"
+  "grading_criteria": "Grading criteria",
+  "correct_answer_colon": "Correct answer:"
 }

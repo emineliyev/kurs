@@ -14,4 +14,6 @@ export const testsApi = {
   updateQuestion: (id, data) => client.patch(`/tests/questions/${id}/`, data),
   deleteQuestion: (id) => client.delete(`/tests/questions/${id}/`),
   reorderQuestions: (orderedIds) => client.post('/tests/questions/reorder/', { ordered_ids: orderedIds }),
+  // the answer key can be corrected even after students answered; the server re-marks them
+  fixKey: (id, data) => client.post(`/tests/questions/${id}/fix_key/`, data),
 }
