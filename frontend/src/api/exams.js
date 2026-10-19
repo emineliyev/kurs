@@ -6,6 +6,8 @@ export const examsApi = {
   create: (data) => client.post('/exams/', data),
   update: (id, data) => client.patch(`/exams/${id}/`, data),
   delete: (id) => client.delete(`/exams/${id}/`),
+  bulkDelete: (ids) => client.post('/exams/bulk_delete/', { exam_ids: ids }),
+  archive: (ids, archived = true) => client.post('/exams/archive/', { exam_ids: ids, archived }),
   start: (id) => client.post(`/exams/${id}/start/`),
   submit: (id, answers) => client.post(`/exams/${id}/submit/`, { answers }),
   tabSwitch: (id) => client.patch(`/exams/${id}/tab_switch/`),

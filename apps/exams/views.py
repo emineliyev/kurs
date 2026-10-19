@@ -59,7 +59,8 @@ class ExamViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsTeacher()]
-        return [IsAuthenticated()]
+        # custom actions carry their own permission_classes (IsStudent / IsTeacher); list/retrieve use the default
+        return super().get_permissions()
 
     def list(self, request, *args, **kwargs):
         if request.user.is_student:
@@ -88,13 +89,39 @@ class ExamViewSet(viewsets.ModelViewSet):
         subscription.save(update_fields=['exams_used_this_month'])
         return exam
 
-    def destroy(self, request, *args, **kwargs):
-        if self.get_object().results.filter(status=ExamResult.STATUS_SUBMITTED).exists():
-            return Response(
-                {'detail': 'Şagirdlər bu imtahanı tamamladığı üçün silinə bilməz.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        return super().destroy(request, *args, **kwargs)
+    # Deleting takes the results and answers with it — the page warns first and offers the archive instead
+    def _teacher_exams(self, request):
+        ids = request.data.get('exam_ids')
+        if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
+            return None, Response({'detail': 'exam_ids must be a non-empty list.'}, status=400)
+        exams = list(Exam.objects.filter(class_room__teacher=request.user, pk__in=ids))
+        if len(exams) != len(set(ids)):
+            return None, Response({'detail': 'İmtahan tapılmadı.'}, status=404)
+        return exams, None
+
+    @action(detail=False, methods=['post'], url_path='bulk_delete', permission_classes=[IsTeacher])
+    def bulk_delete(self, request):
+        """POST {exam_ids} — e.g. one exam given to three classes, deleted in one go."""
+        exams, error = self._teacher_exams(request)
+        if error:
+            return error
+        with transaction.atomic():
+            for exam in exams:
+                exam.delete()
+        return Response({'deleted': len(exams)})
+
+    @action(detail=False, methods=['post'], permission_classes=[IsTeacher])
+    def archive(self, request):
+        """POST {exam_ids, archived: true|false} — move exams into (or out of) the teacher's archive."""
+        exams, error = self._teacher_exams(request)
+        if error:
+            return error
+        archived = bool(request.data.get('archived', True))
+        if archived and not all(e.can_archive for e in exams):
+            return Response({'detail': 'Gedən imtahanı arxivə salmaq olmaz. Əvvəlcə onu passiv edin və ya bitməsini gözləyin.'},
+                            status=400)
+        Exam.objects.filter(pk__in=[e.pk for e in exams]).update(is_archived=archived)
+        return Response({'updated': len(exams), 'archived': archived})
 
     @action(detail=True, methods=['post'], permission_classes=[IsStudent])
     def start(self, request, pk=None):

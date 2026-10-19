@@ -36,9 +36,9 @@ class ExamSerializer(serializers.ModelSerializer):
             'randomize_questions', 'randomize_answers', 'is_active', 'show_answers',
             'is_ongoing', 'is_upcoming', 'is_finished', 'my_status',
             'participants_count', 'passed_count', 'failed_count', 'has_results',
-            'in_progress_count', 'needs_grading_count', 'created_at',
+            'in_progress_count', 'needs_grading_count', 'is_archived', 'created_at',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'is_archived', 'created_at']
 
     def get_teacher_name(self, obj):
         try:
@@ -99,6 +99,12 @@ class ExamSerializer(serializers.ModelSerializer):
                         'Şagirdlər artıq başlayıb: yalnız ad, bitmə vaxtı, müddət və aktivlik dəyişdirilə bilər.')})
             if attrs.get('is_active') and not exam.is_active and not exam.test.is_published:
                 raise serializers.ValidationError({'is_active': 'Test qaralamadadır. Əvvəlcə testi tamamlayın.'})
+            if exam.is_archived:
+                # an archived exam must not come back to life out of the teacher's sight
+                from django.utils import timezone
+                active = attrs.get('is_active', exam.is_active)
+                if active and (end or exam.end_time) >= timezone.now():
+                    raise serializers.ValidationError({'is_active': 'İmtahan arxivdədir. Əvvəlcə arxivdən çıxarın.'})
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             test = attrs.get('test')

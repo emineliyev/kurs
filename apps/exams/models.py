@@ -31,6 +31,8 @@ class Exam(models.Model):
     is_active = models.BooleanField(default=True, verbose_name='Aktiv')
     show_answers = models.CharField(max_length=20, choices=SHOW_ANSWERS_CHOICES, default=SHOW_IMMEDIATELY,
                                     verbose_name='Cavabları göstər')
+    # The teacher's archive: off their list, results untouched (students still see theirs)
+    is_archived = models.BooleanField(default=False, verbose_name='Arxivdə')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Yaradılıb')
 
     class Meta:
@@ -53,6 +55,11 @@ class Exam(models.Model):
     @property
     def is_finished(self):
         return timezone.now() > self.end_time
+
+    @property
+    def can_archive(self):
+        # a live (active, not yet over) exam would vanish from the teacher's list while students sit it
+        return not self.is_active or self.is_finished
 
     def save(self, *args, **kwargs):
         if not self.title:
