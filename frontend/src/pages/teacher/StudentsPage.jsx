@@ -437,11 +437,11 @@ export default function StudentsPage() {
             {t('class_count', { ns: 'teacher', count: classes.length })} · {t('student_count', { ns: 'teacher', count: active.length })}
           </p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setShowBulk(true)} className="btn-secondary shrink-0 whitespace-nowrap">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button onClick={() => setShowBulk(true)} className="btn-secondary whitespace-nowrap flex-1 sm:flex-none justify-center text-sm sm:text-base px-3 sm:px-4">
             <i className="bi bi-list-check"></i> {t('paste_list', { ns: 'teacher' })}
           </button>
-          <button onClick={() => setEditing('new')} className="btn-primary shrink-0 whitespace-nowrap">
+          <button onClick={() => setEditing('new')} className="btn-primary whitespace-nowrap flex-1 sm:flex-none justify-center text-sm sm:text-base px-3 sm:px-4">
             <i className="bi bi-person-plus"></i> {t('add_student', { ns: 'teacher' })}
           </button>
         </div>
@@ -469,25 +469,30 @@ export default function StudentsPage() {
       </div>
       <div className="space-y-4 min-w-0">
       {currentClass && (
-        <div className="card p-4 flex flex-wrap items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center shrink-0"><i className="bi bi-collection"></i></div>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-slate-900 truncate">{currentClass.name}</p>
-            <p className="text-xs text-slate-500">
-              {[currentClass.grade && t('grade_nth', { ns: 'teacher', grade: currentClass.grade }),
-                currentClass.group && t('group_card', { ns: 'teacher', group: currentClass.group }),
-                currentClass.subject, t('student_count', { ns: 'teacher', count: currentClass.student_count })].filter(Boolean).join(' · ')}
-            </p>
+        <div className="card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center shrink-0"><i className="bi bi-collection"></i></div>
+            <div className="min-w-0">
+              <p className="font-semibold text-slate-900 truncate">{currentClass.name}</p>
+              <p className="text-xs text-slate-500">
+                {[currentClass.grade && t('grade_nth', { ns: 'teacher', grade: currentClass.grade }),
+                  currentClass.group && t('group_card', { ns: 'teacher', group: currentClass.group }),
+                  currentClass.subject, t('student_count', { ns: 'teacher', count: currentClass.student_count })].filter(Boolean).join(' · ')}
+              </p>
+            </div>
           </div>
-          <button onClick={() => setPicking(true)} className="btn-secondary text-sm whitespace-nowrap">
-            <i className="bi bi-people"></i> {t('add_existing', { ns: 'teacher' })}
-          </button>
-          <button onClick={() => setClassForm(currentClass)} title={t('edit')} className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100">
-            <i className="bi bi-pencil"></i>
-          </button>
-          <button onClick={() => onDeleteClass(currentClass)} title={t('delete')} className="w-9 h-9 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
-            <i className="bi bi-trash"></i>
-          </button>
+          {/* phones: the buttons go under the name instead of squeezing it */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => setPicking(true)} className="btn-secondary text-sm whitespace-nowrap flex-1 sm:flex-none justify-center">
+              <i className="bi bi-people"></i> {t('add_existing', { ns: 'teacher' })}
+            </button>
+            <button onClick={() => setClassForm(currentClass)} title={t('edit')} className="w-9 h-9 shrink-0 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100">
+              <i className="bi bi-pencil"></i>
+            </button>
+            <button onClick={() => onDeleteClass(currentClass)} title={t('delete')} className="w-9 h-9 shrink-0 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
+              <i className="bi bi-trash"></i>
+            </button>
+          </div>
         </div>
       )}
       <div className="flex flex-col md:flex-row gap-3">

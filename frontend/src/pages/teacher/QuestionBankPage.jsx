@@ -368,7 +368,7 @@ export default function QuestionBankPage() {
       <BulkCropWorkspace key={bulkKey} open={showBulk} busy={bulkBusy}
         onClose={() => setShowBulk(false)} onDone={onBulkDone} />
 
-      <div className="grid md:grid-cols-[15rem_minmax(0,1fr)] gap-6 items-start">
+      <div className="grid grid-cols-[minmax(0,1fr)] md:grid-cols-[15rem_minmax(0,1fr)] gap-6 items-start">
       <aside className="card p-3 md:sticky md:top-20">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 px-2 mb-2">{t('folders', { ns: 'teacher' })}</p>
         <BankFolderTree folders={folders} questions={questions} selected={folderSel}
@@ -709,7 +709,7 @@ export default function QuestionBankPage() {
                       </span>
                     </div>
                     {q.image && (
-                      <img src={q.image} alt="" className="mt-1 mb-1.5 max-h-28 max-w-xs rounded-lg object-contain border border-slate-200" />
+                      <img src={q.image} alt="" className="mt-1 mb-1.5 max-h-28 max-w-full sm:max-w-xs rounded-lg object-contain border border-slate-200" />
                     )}
                     {q.text ? (
                       <p className="text-sm text-slate-700 leading-relaxed line-clamp-2"
