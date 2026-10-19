@@ -238,5 +238,9 @@
   "classes_and_students_short": "Classes and students",
   "landing_student_login": "Student login",
   "landing_student_hint": "A student? No need to sign up — your teacher gives you the account.",
-  "landing_stat_questions": "Questions"
+  "landing_stat_questions": "Questions",
+  "toast_success": "Done",
+  "toast_error": "Error",
+  "toast_loading": "Please wait…",
+  "toast_info": "Notice"
 }

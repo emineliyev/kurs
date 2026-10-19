@@ -236,5 +236,9 @@
   "classes_and_students_short": "Siniflər və şagirdlər",
   "landing_student_login": "Şagird girişi",
   "landing_student_hint": "Şagirdsiniz? Qeydiyyat lazım deyil, hesabı müəlliminiz verir.",
-  "landing_stat_questions": "Suallar"
+  "landing_stat_questions": "Suallar",
+  "toast_success": "Uğurlu",
+  "toast_error": "Xəta",
+  "toast_loading": "Gözləyin…",
+  "toast_info": "Bildiriş"
 }

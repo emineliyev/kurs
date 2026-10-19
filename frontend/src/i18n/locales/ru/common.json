@@ -242,5 +242,9 @@
   "classes_and_students_short": "Классы и ученики",
   "landing_student_login": "Вход для ученика",
   "landing_student_hint": "Вы ученик? Регистрация не нужна — аккаунт выдаёт учитель.",
-  "landing_stat_questions": "Вопросы"
+  "landing_stat_questions": "Вопросы",
+  "toast_success": "Готово",
+  "toast_error": "Ошибка",
+  "toast_loading": "Подождите…",
+  "toast_info": "Уведомление"
 }
