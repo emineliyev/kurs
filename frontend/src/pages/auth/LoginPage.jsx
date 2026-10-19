@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
 import { useCanonical } from '@/utils/seo'
+import { renderGoogleButton } from '@/utils/googleSignIn'
 
 function FieldInput({ label, error, success, children }) {
   return (
@@ -186,33 +187,11 @@ function GoogleLoginButton() {
 
   useEffect(() => {
     if (!clientId || clientId === 'your-google-client-id') return
-
-    const initButton = () => {
-      const container = document.getElementById('google-signin-btn')
-      if (!container || !window.google) return
-      const width = container.offsetWidth || 400
-      window.google.accounts.id.initialize({ client_id: clientId, callback: handleGoogleResponse })
-      window.google.accounts.id.renderButton(container, {
-        theme: 'outline', size: 'large', width, text: 'signin_with', locale: 'az',
-      })
-    }
-
-    const GSI_SRC = 'https://accounts.google.com/gsi/client'
-    const existing = document.querySelector(`script[src="${GSI_SRC}"]`)
-    if (existing) {
-      // Script already loaded (StrictMode double-mount), just re-render button
-      initButton()
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = GSI_SRC
-    script.async = true
-    script.defer = true
-    script.onload = initButton
-    document.body.appendChild(script)
-
-    return () => { try { document.body.removeChild(script) } catch {} }
+    const container = document.getElementById('google-signin-btn')
+    if (!container) return
+    renderGoogleButton(container, clientId, handleGoogleResponse, {
+      theme: 'outline', size: 'large', width: container.offsetWidth || 400, text: 'signin_with', locale: 'az',
+    }).catch(() => {})
   }, [clientId])
 
   if (!clientId || clientId === 'your-google-client-id') {

@@ -8,6 +8,7 @@ import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
 import { PasswordStrength, isStrongPassword } from '@/components/common/PasswordRules'
 import { useCanonical } from '@/utils/seo'
+import { renderGoogleButton } from '@/utils/googleSignIn'
 
 function FieldInput({ label, error, success, children }) {
   return (
@@ -244,19 +245,11 @@ function GoogleRegisterButton() {
 
   useEffect(() => {
     if (!clientId || clientId === 'your-google-client-id') return
-    const script = document.createElement('script')
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.async = true
-    script.defer = true
-    script.onload = () => {
-      window.google?.accounts.id.initialize({ client_id: clientId, callback: handleGoogleResponse })
-      window.google?.accounts.id.renderButton(
-        document.getElementById('google-register-btn'),
-        { theme: 'outline', size: 'large', width: '100%', text: 'signup_with', locale: 'az' }
-      )
-    }
-    document.body.appendChild(script)
-    return () => { try { document.body.removeChild(script) } catch {} }
+    const container = document.getElementById('google-register-btn')
+    if (!container) return
+    renderGoogleButton(container, clientId, handleGoogleResponse, {
+      theme: 'outline', size: 'large', width: container.offsetWidth || 400, text: 'signup_with', locale: 'az',
+    }).catch(() => {})
   }, [clientId])
 
   if (!clientId || clientId === 'your-google-client-id') {
