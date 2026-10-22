@@ -481,18 +481,14 @@ export default function ExamsPage() {
     <Link to={`/teacher/tests/${testId}/print`} title={t('pdf_open', { ns: 'teacher' })} aria-label={t('pdf_open', { ns: 'teacher' })}
       className={`${iconBtn} bg-red-50 text-red-600 hover:bg-red-100`}><i className="bi bi-file-earmark-pdf-fill text-[15px]"></i></Link>
   ) : null)
-  const spacer = <span className="w-8 shrink-0" aria-hidden="true" />
-
-  // PDF · report cards · Excel; `inGroup` = a class line under a group row (its PDF is on the group row):
-  // true keeps an empty slot so the table's icons line up, 'bare' (phone cards) leaves it out
-  // `compact` (phone cards): no empty slots — those only line icons up in the table
-  const quick = (list, key, test, inGroup = false, compact = false) => {
-    const pdf = inGroup === 'bare' ? null : inGroup ? spacer : pdfBtn(list[0].test, test?.question_count ?? 1)
-    if (!list.some((e) => e.participants_count > 0)) return inGroup === 'bare' ? null : compact ? pdf : <>{pdf}{spacer}{spacer}</>
+  // PDF · report cards · Excel, packed to the right with no gaps — Excel always sits next to "Results",
+  // so it lines up on every row. `inGroup`: a class line under a group row (its PDF is on the group row).
+  const quick = (list, key, test, inGroup = false) => {
+    const pdf = inGroup ? null : pdfBtn(list[0].test, test?.question_count ?? 1)
+    if (!list.some((e) => e.participants_count > 0)) return pdf
     return (
       <>
         {pdf}
-        {list.length > 1 && !compact && spacer}{/* keeps the group's Excel in line with its classes' */}
         {list.length === 1 && (
           <Link to={`/teacher/exams/${list[0].id}/report-cards`} title={t('rc_print_all', { ns: 'teacher' })} aria-label={t('rc_print_all', { ns: 'teacher' })}
             className={`${iconBtn} bg-indigo-50 text-indigo-600 hover:bg-indigo-100`}><i className="bi bi-person-vcard-fill text-[15px]"></i></Link>
@@ -664,7 +660,7 @@ export default function ExamsPage() {
                       </td>
                       <td className="px-4 py-3 text-center text-slate-600">{r.kind === 'exam' ? r.participants : <span className="text-slate-300">—</span>}</td>
                       <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-1">{r.kind === 'exam' ? quick(r.exams, r.key, r.test) : <>{pdfBtn(r.test.id, r.test.question_count) || spacer}{spacer}{spacer}</>}{primary(r)}<RowMenu items={menuFor(r)} /></div>
+                        <div className="flex items-center justify-end gap-1">{r.kind === 'exam' ? quick(r.exams, r.key, r.test) : pdfBtn(r.test.id, r.test.question_count)}{primary(r)}<RowMenu items={menuFor(r)} /></div>
                       </td>
                     </tr>,
                     ...(group && open.has(r.key) ? r.exams.map((e) => (
@@ -721,7 +717,7 @@ export default function ExamsPage() {
                           <span className="text-xs text-slate-400 shrink-0"><i className="bi bi-person-check mr-0.5"></i>{e.participants_count || 0}</span>
                           <div className="ml-auto flex items-center gap-1.5 shrink-0">
                             {!e.is_archived && switchFor([e], `e${e.id}`)}
-                            {quick([e], `e${e.id}`, r.test, 'bare')}
+                            {quick([e], `e${e.id}`, r.test, true)}
                             <Link to={`/teacher/exams/${e.id}/results`} title={t('results', { ns: 'teacher' })}
                               className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-700"><i className="bi bi-bar-chart"></i></Link>
                             <RowMenu items={examMenu(e, r.test)} />
@@ -733,7 +729,7 @@ export default function ExamsPage() {
                   <div className="flex items-center gap-1 pt-2 border-t border-slate-100">
                     {primary(r)}
                     <span className="flex-1" />
-                    {r.kind === 'exam' ? quick(r.exams, r.key, r.test, false, true) : pdfBtn(r.test.id, r.test.question_count)}
+                    {r.kind === 'exam' ? quick(r.exams, r.key, r.test) : pdfBtn(r.test.id, r.test.question_count)}
                     <RowMenu items={menuFor(r)} />
                   </div>
                 </div>
