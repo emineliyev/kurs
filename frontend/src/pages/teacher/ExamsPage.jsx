@@ -470,26 +470,28 @@ export default function ExamsPage() {
     </span>
   )
 
-  const btn = 'h-8 px-3 rounded-lg inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap transition-colors'
+  const btn = 'h-8 px-3 rounded-lg inline-flex items-center justify-center gap-1.5 text-xs font-semibold whitespace-nowrap transition-colors'
+  const resultsBtn = `${btn} min-w-[7.5rem]`   // same width with or without the group's chevron, so icons line up
   const resultsLink = (e) => (
-    <Link to={`/teacher/exams/${e.id}/results`} className={`${btn} bg-indigo-50 text-indigo-700 hover:bg-indigo-100`}>
+    <Link to={`/teacher/exams/${e.id}/results`} className={`${resultsBtn} bg-indigo-50 text-indigo-700 hover:bg-indigo-100`}>
       <i className="bi bi-bar-chart"></i>{t('results', { ns: 'teacher' })}
     </Link>
   )
   // quick actions next to "Results" once students have taken it: report cards, Excel
-  const iconBtn = 'w-8 h-8 rounded-lg inline-flex items-center justify-center bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors shrink-0'
+  const iconBtn = 'w-8 h-8 rounded-lg inline-flex items-center justify-center transition-colors shrink-0'
   const quick = (list, key) => {
     if (!list.some((e) => e.participants_count > 0)) return null
     return (
       <>
+        {list.length > 1 && <span className="w-8 shrink-0" aria-hidden="true" />}{/* keeps the group's Excel in line with its classes' */}
         {list.length === 1 && (
           <Link to={`/teacher/exams/${list[0].id}/report-cards`} title={t('rc_print_all', { ns: 'teacher' })} aria-label={t('rc_print_all', { ns: 'teacher' })}
-            className={iconBtn}><i className="bi bi-person-vcard"></i></Link>
+            className={`${iconBtn} bg-indigo-50 text-indigo-600 hover:bg-indigo-100`}><i className="bi bi-person-vcard-fill text-[15px]"></i></Link>
         )}
         <button onClick={() => onExcel(list, key)} disabled={exportingKey === key}
           title={list.length > 1 ? t('excel_all_classes', { ns: 'teacher' }) : t('excel_download', { ns: 'teacher' })}
-          aria-label={t('excel_download', { ns: 'teacher' })} className={`${iconBtn} text-green-600 disabled:opacity-50`}>
-          <i className={`bi ${exportingKey === key ? 'bi-arrow-repeat animate-spin' : 'bi-file-earmark-excel'}`}></i>
+          aria-label={t('excel_download', { ns: 'teacher' })} className={`${iconBtn} bg-green-50 text-green-600 hover:bg-green-100 disabled:opacity-50`}>
+          <i className={`bi ${exportingKey === key ? 'bi-arrow-repeat animate-spin' : 'bi-file-earmark-excel-fill'} text-[15px]`}></i>
         </button>
       </>
     )
@@ -505,7 +507,7 @@ export default function ExamsPage() {
     if (r.exams.length > 1) {
       const isOpen = open.has(r.key)
       return (
-        <button onClick={() => toggleOpen(r.key)} aria-expanded={isOpen} className={`${btn} bg-indigo-50 text-indigo-700 hover:bg-indigo-100`}>
+        <button onClick={() => toggleOpen(r.key)} aria-expanded={isOpen} className={`${resultsBtn} bg-indigo-50 text-indigo-700 hover:bg-indigo-100`}>
           <i className="bi bi-bar-chart"></i>{t('results', { ns: 'teacher' })}
           <i className={`bi bi-chevron-${isOpen ? 'up' : 'down'} text-[10px]`}></i>
         </button>
