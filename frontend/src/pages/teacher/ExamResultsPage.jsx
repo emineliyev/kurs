@@ -3,26 +3,9 @@ import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { examsApi } from '@/api/exams'
 import { format } from 'date-fns'
-import { exportXlsx } from '@/utils/excel'
+import { exportResultsXlsx, resultLabels } from '@/utils/examExcel'
 import PageSpinner from '@/components/common/PageSpinner'
 import { fmtPoints } from '@/utils/score'
-
-function exportToExcel(exam, results, labels) {
-  const headers = [
-    labels.fullName, labels.username, labels.score, labels.totalPoints,
-    labels.tabSwitches, labels.status, labels.submittedAt,
-  ]
-  const rows = results.map((r) => [
-    r.student_name || '',
-    r.student_username || '',
-    r.score ?? '',
-    r.total_points ?? '',
-    r.tab_switch_count ?? 0,
-    r.status === 'submitted' ? (r.passed ? labels.passed : labels.failed) : r.status,
-    r.submitted_at ? format(new Date(r.submitted_at), 'dd.MM.yyyy HH:mm') : '',
-  ])
-  exportXlsx(`${exam?.title || labels.exam}_neticeleri`, labels.results, headers, rows)
-}
 
 export default function ExamResultsPage() {
   const { id } = useParams()
@@ -60,19 +43,6 @@ export default function ExamResultsPage() {
     : 0
   const examTotal = submitted[0]?.total_points
 
-  const excelLabels = {
-    fullName: t('full_name'),
-    username: t('username_field', { ns: 'teacher' }),
-    score: t('score', { ns: 'teacher' }),
-    totalPoints: t('max_score', { ns: 'teacher' }),
-    tabSwitches: t('tab_switches', { ns: 'teacher' }),
-    status: t('status'),
-    submittedAt: t('submitted_at', { ns: 'teacher' }),
-    exam: t('exam_results_title', { ns: 'teacher' }),
-    results: t('results', { ns: 'teacher' }),
-    passed: t('passed', { ns: 'teacher' }),
-    failed: t('failed', { ns: 'teacher' }),
-  }
 
   const statCards = [
     { label: t('average_score', { ns: 'teacher' }), value: examTotal ? fmtPoints(avg) : '—', suffix: examTotal ? `/ ${fmtPoints(examTotal)}` : '',
@@ -141,7 +111,7 @@ export default function ExamResultsPage() {
             </Link>
           )}
           {results.length > 0 && (
-            <button onClick={() => exportToExcel(exam, results, excelLabels)}
+            <button onClick={() => exportResultsXlsx(exam?.title, [{ className: exam?.class_name, results }], resultLabels(t))}
               className="btn-secondary text-sm justify-center px-3 whitespace-nowrap">
               <i className="bi bi-file-earmark-excel text-green-600"></i> Excel
             </button>

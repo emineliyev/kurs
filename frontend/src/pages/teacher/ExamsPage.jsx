@@ -224,6 +224,7 @@ export default function ExamsPage() {
   const [busyKey, setBusyKey] = useState(null)
   const [duplicatingId, setDuplicatingId] = useState(null)
   const [open, setOpen] = useState(() => new Set())     // expanded group rows
+  const [exportingKey, setExportingKey] = useState(null)
 
   const load = () => Promise.all([examsApi.list(), testsApi.list()])
     .then(([e, ts]) => { setExams(e.data.results || e.data); setTests(ts.data.results || ts.data) })
@@ -353,6 +354,23 @@ export default function ExamsPage() {
     }
   }
 
+  // Results of one class, or of every class in a group (one file, with a class column)
+  const onExcel = async (list, key) => {
+    setExportingKey(key)
+    try {
+      const [{ exportResultsXlsx, resultLabels }, responses] = await Promise.all([
+        import('@/utils/examExcel'),                       // xlsx is big: load it only when asked
+        Promise.all(list.map((e) => examsApi.results(e.id))),
+      ])
+      const groups = list.map((e, i) => ({ className: e.class_name, results: responses[i].data.results || responses[i].data }))
+      exportResultsXlsx(list[0].title, groups, resultLabels(t))
+    } catch (err) {
+      toastApiError(err)
+    } finally {
+      setExportingKey(null)
+    }
+  }
+
   const onDeleteTest = async (test) => {
     const r = await Swal.fire({ titleText: t('confirm_delete'), text: test.title, icon: 'warning', showCancelButton: true,
       confirmButtonColor: '#EF4444', confirmButtonText: t('yes_delete'), cancelButtonText: t('no_cancel') })
@@ -458,6 +476,25 @@ export default function ExamsPage() {
       <i className="bi bi-bar-chart"></i>{t('results', { ns: 'teacher' })}
     </Link>
   )
+  // quick actions next to "Results" once students have taken it: report cards, Excel
+  const iconBtn = 'w-8 h-8 rounded-lg inline-flex items-center justify-center bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors shrink-0'
+  const quick = (list, key) => {
+    if (!list.some((e) => e.participants_count > 0)) return null
+    return (
+      <>
+        {list.length === 1 && (
+          <Link to={`/teacher/exams/${list[0].id}/report-cards`} title={t('rc_print_all', { ns: 'teacher' })} aria-label={t('rc_print_all', { ns: 'teacher' })}
+            className={iconBtn}><i className="bi bi-person-vcard"></i></Link>
+        )}
+        <button onClick={() => onExcel(list, key)} disabled={exportingKey === key}
+          title={list.length > 1 ? t('excel_all_classes', { ns: 'teacher' }) : t('excel_download', { ns: 'teacher' })}
+          aria-label={t('excel_download', { ns: 'teacher' })} className={`${iconBtn} text-green-600 disabled:opacity-50`}>
+          <i className={`bi ${exportingKey === key ? 'bi-arrow-repeat animate-spin' : 'bi-file-earmark-excel'}`}></i>
+        </button>
+      </>
+    )
+  }
+
   const primary = (r) => {
     if (r.status === 'draft') {
       return <Link to={`/teacher/tests/${r.test.id}/edit`} className={`${btn} bg-amber-50 text-amber-700 hover:bg-amber-100`}><i className="bi bi-pencil"></i>{t('continue_draft', { ns: 'teacher' })}</Link>
@@ -616,7 +653,7 @@ export default function ExamsPage() {
                       </td>
                       <td className="px-4 py-3 text-center text-slate-600">{r.kind === 'exam' ? r.participants : <span className="text-slate-300">—</span>}</td>
                       <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-1">{primary(r)}<RowMenu items={menuFor(r)} /></div>
+                        <div className="flex items-center justify-end gap-1">{r.kind === 'exam' && quick(r.exams, r.key)}{primary(r)}<RowMenu items={menuFor(r)} /></div>
                       </td>
                     </tr>,
                     ...(group && open.has(r.key) ? r.exams.map((e) => (
@@ -634,7 +671,7 @@ export default function ExamsPage() {
                         </td>
                         <td className="px-4 py-2.5 text-center text-slate-600">{e.participants_count || 0}</td>
                         <td className="px-5 py-2.5">
-                          <div className="flex items-center justify-end gap-1">{resultsLink(e)}<RowMenu items={examMenu(e, r.test)} /></div>
+                          <div className="flex items-center justify-end gap-1">{quick([e], `e${e.id}`)}{resultsLink(e)}<RowMenu items={examMenu(e, r.test)} /></div>
                         </td>
                       </tr>
                     )) : []),
@@ -673,6 +710,7 @@ export default function ExamsPage() {
                           <span className="text-xs text-slate-400 shrink-0"><i className="bi bi-person-check mr-0.5"></i>{e.participants_count || 0}</span>
                           <div className="ml-auto flex items-center gap-1.5 shrink-0">
                             {!e.is_archived && switchFor([e], `e${e.id}`)}
+                            {quick([e], `e${e.id}`)}
                             <Link to={`/teacher/exams/${e.id}/results`} title={t('results', { ns: 'teacher' })}
                               className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-700"><i className="bi bi-bar-chart"></i></Link>
                             <RowMenu items={examMenu(e, r.test)} />
@@ -681,8 +719,10 @@ export default function ExamsPage() {
                       ))}
                     </div>
                   )}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-1 pt-2 border-t border-slate-100">
                     {primary(r)}
+                    <span className="flex-1" />
+                    {r.kind === 'exam' && quick(r.exams, r.key)}
                     <RowMenu items={menuFor(r)} />
                   </div>
                 </div>

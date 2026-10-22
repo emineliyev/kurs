@@ -840,5 +840,7 @@
   "print_pages": "{{count}} səhifə",
   "print_page_numbers": "Səhifə nömrələri",
   "print_questions_sheet": "Suallar",
-  "print_pages_hint": "Çapda alınacaq səhifə sayı. Printer və brauzerdən asılı olaraq ±1 fərq ola bilər."
+  "print_pages_hint": "Çapda alınacaq səhifə sayı. Printer və brauzerdən asılı olaraq ±1 fərq ola bilər.",
+  "excel_download": "Nəticələri Excel-ə yüklə",
+  "excel_all_classes": "Bütün siniflərin nəticələri — bir Excel faylında"
 }
