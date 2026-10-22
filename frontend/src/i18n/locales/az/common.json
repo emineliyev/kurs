@@ -240,5 +240,6 @@
   "toast_success": "Uğurlu",
   "toast_error": "Xəta",
   "toast_loading": "Gözləyin…",
-  "toast_info": "Bildiriş"
+  "toast_info": "Bildiriş",
+  "landing_teacher_login": "Müəllim girişi"
 }

@@ -242,5 +242,6 @@
   "toast_success": "Done",
   "toast_error": "Error",
   "toast_loading": "Please wait…",
-  "toast_info": "Notice"
+  "toast_info": "Notice",
+  "landing_teacher_login": "Teacher login"
 }

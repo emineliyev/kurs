@@ -149,10 +149,15 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Mobile menu button */}
-          <button className="md:hidden text-slate-600" onClick={() => setMenuOpen(!menuOpen)}>
-            <i className={`bi ${menuOpen ? 'bi-x-lg' : 'bi-list'} text-2xl`}></i>
-          </button>
+          {/* Phones: "Log in" always in sight (many never open the menu), then the menu button */}
+          <div className="md:hidden flex items-center gap-2">
+            <Link to="/login" className="px-3.5 py-1.5 rounded-lg bg-primary-700 text-white text-sm font-semibold">
+              {t('landing_login')}
+            </Link>
+            <button className="text-slate-600 w-9 h-9 flex items-center justify-center" onClick={() => setMenuOpen(!menuOpen)} aria-label="menu">
+              <i className={`bi ${menuOpen ? 'bi-x-lg' : 'bi-list'} text-2xl`}></i>
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu */}
@@ -189,32 +194,31 @@ export default function LandingPage() {
           <p className="anim-item text-blue-100 text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed" data-delay="200">
             {t('landing_hero_desc')}
           </p>
-          <div className="anim-item flex flex-col sm:flex-row gap-4 justify-center" data-delay="300">
+          {/* New teachers sign up; everyone else finds their way in right here */}
+          <div className="anim-item max-w-md mx-auto space-y-3" data-delay="300">
             <Link
               to="/register"
-              className="bg-white text-primary-700 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition-colors text-lg shadow-lg"
+              className="flex items-center justify-center bg-white text-primary-700 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition-colors text-lg shadow-lg"
             >
               <i className="bi bi-rocket-takeoff mr-2"></i>
               {t('landing_start_free')}
             </Link>
-            {youtubeUrl && (
-              <a
-                href={youtubeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="border-2 border-white/50 text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 transition-colors text-lg"
-              >
-                <i className="bi bi-play-circle mr-2"></i>
-                {t('landing_learn_more')}
-              </a>
-            )}
+            <div className="grid grid-cols-2 gap-3">
+              <Link to="/login" className="flex items-center justify-center gap-2 border-2 border-white/60 text-white font-semibold px-3 py-3 rounded-xl hover:bg-white/10 transition-colors">
+                <i className="bi bi-person-workspace"></i>{t('landing_teacher_login')}
+              </Link>
+              <Link to="/login?as=student" className="flex items-center justify-center gap-2 bg-amber-300 hover:bg-amber-400 text-slate-900 font-semibold px-3 py-3 rounded-xl transition-colors shadow-sm">
+                <i className="bi bi-mortarboard"></i>{t('landing_student_login')}
+              </Link>
+            </div>
+            <p className="text-blue-100 text-sm">{t('landing_student_hint')}</p>
           </div>
-          <p className="anim-item mt-6 text-blue-100 text-sm" data-delay="350">
-            {t('landing_student_hint')}{' '}
-            <Link to="/login?as=student" className="text-yellow-300 font-semibold underline underline-offset-4 hover:text-yellow-200">
-              {t('landing_student_login')} →
-            </Link>
-          </p>
+          {youtubeUrl && (
+            <a href={youtubeUrl} target="_blank" rel="noopener noreferrer"
+              className="anim-item inline-flex items-center gap-1.5 mt-5 text-white/90 hover:text-white text-sm font-medium underline-offset-4 hover:underline" data-delay="350">
+              <i className="bi bi-play-circle text-lg"></i>{t('landing_learn_more')}
+            </a>
+          )}
           <p className="anim-item text-blue-200 text-sm mt-6" data-delay="400">
             <i className="bi bi-check-lg mr-1"></i>
             {trialNote}

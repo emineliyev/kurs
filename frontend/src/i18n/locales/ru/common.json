@@ -246,5 +246,6 @@
   "toast_success": "Готово",
   "toast_error": "Ошибка",
   "toast_loading": "Подождите…",
-  "toast_info": "Уведомление"
+  "toast_info": "Уведомление",
+  "landing_teacher_login": "Вход для учителя"
 }
