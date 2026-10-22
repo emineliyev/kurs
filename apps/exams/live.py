@@ -14,13 +14,21 @@ from apps.tests_app.models import Question
 from .models import ExamResult
 
 ONLINE_WINDOW = timedelta(seconds=90)
+# a sign of life newer than this needs no new write (autosave and tab switches also mark it)
+TOUCH_EVERY = timedelta(seconds=20)
+SUMMARY_CACHE_SECONDS = 5
 
 WRITING, IDLE, SUBMITTED, NOT_STARTED = 'writing', 'idle', 'submitted', 'not_started'
 
 
 def touch(result_qs):
-    """Mark a student's open exam as alive (cheap: one UPDATE, no model save)."""
-    return result_qs.filter(status=ExamResult.STATUS_IN_PROGRESS).update(last_seen_at=timezone.now())
+    """Mark a student's open exam as alive — one UPDATE, and none at all if it was marked moments ago.
+    Returns whether there is an open session."""
+    from django.db.models import Q
+    now = timezone.now()
+    open_qs = result_qs.filter(status=ExamResult.STATUS_IN_PROGRESS)
+    updated = open_qs.filter(Q(last_seen_at__isnull=True) | Q(last_seen_at__lt=now - TOUCH_EVERY)).update(last_seen_at=now)
+    return bool(updated) or open_qs.exists()
 
 
 def answered_count(draft):
@@ -52,7 +60,18 @@ def _name(user):
 
 
 def summary(teacher):
-    """Open (not timed-out) exam sessions of this teacher's exams, by exam: who is writing / idle."""
+    """Open (not timed-out) exam sessions of this teacher's exams, by exam: who is writing / idle.
+    Cached for a few seconds: every open tab of the teacher asks, one query serves them all."""
+    from django.core.cache import cache
+    key = f'live_summary:{teacher.pk}'
+    data = cache.get(key)
+    if data is None:
+        data = _summary(teacher)
+        cache.set(key, data, SUMMARY_CACHE_SECONDS)
+    return data
+
+
+def _summary(teacher):
     now = timezone.now()
     open_results = (ExamResult.objects
                     .filter(exam__class_room__teacher=teacher, status=ExamResult.STATUS_IN_PROGRESS,

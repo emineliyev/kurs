@@ -96,6 +96,10 @@ else:
             'PASSWORD': config('DB_PASSWORD', default='postgres'),
             'HOST': config('DB_HOST', default='localhost'),
             'PORT': config('DB_PORT', default='5432'),
+            # keep a worker's connection for a minute instead of reconnecting on every request
+            # (an exam keeps many small requests coming); checked before reuse so a dropped one is replaced
+            'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=60, cast=int),
+            'CONN_HEALTH_CHECKS': True,
         }
     }
 
