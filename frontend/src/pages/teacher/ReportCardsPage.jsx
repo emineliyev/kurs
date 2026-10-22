@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { examsApi } from '@/api/exams'
 import PageSpinner from '@/components/common/PageSpinner'
 import { fmtPoints, scoreText } from '@/utils/score'
+import { usePreviewZoom } from '@/utils/printPreview'
 
 const SCHOOL_KEY = 'print-school-name'
 const MARK_CLASS = { '+': 'rc-ok', '-': 'rc-bad', '½': 'rc-part', '?': 'rc-wait', '': 'rc-empty' }
@@ -121,6 +122,7 @@ export default function ReportCardsPage() {
   const [perRow, setPerRow] = useState(20)
   const [onePerPage, setOnePerPage] = useState(false)
   const [school, setSchool] = useState(() => localStorage.getItem(SCHOOL_KEY) || '')
+  const zoom = usePreviewZoom()   // phones: the A4 cards shrink to the screen; printing uses the full page
 
   useEffect(() => {
     examsApi.reportCards(id, studentId).then((r) => setData(r.data)).catch(() => setError(true))
@@ -133,36 +135,40 @@ export default function ReportCardsPage() {
 
   return (
     <div className="min-h-screen bg-slate-200 print:bg-white">
-      <div className="print:hidden sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-x-4 gap-y-2 flex-wrap">
-          <Link to={`/teacher/exams/${id}/results`} className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1">
-            <i className="bi bi-arrow-left"></i> {t('back')}
-          </Link>
-          <h1 className="font-semibold text-slate-900 truncate max-w-[16rem]">
-            {data.exam.title} · {t('rc_count', { ns: 'teacher', count: data.cards.length })}
-          </h1>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            {t('rc_per_row', { ns: 'teacher' })}
-            <Seg value={perRow} onChange={setPerRow} options={[[15, '15'], [20, '20'], [25, '25']]} />
+      <div className="print:hidden sm:sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-3 space-y-2">
+          <div className="flex items-center gap-3">
+            <Link to={`/teacher/exams/${id}/results`} className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1 shrink-0">
+              <i className="bi bi-arrow-left"></i> <span className="hidden sm:inline">{t('back')}</span>
+            </Link>
+            <h1 className="font-semibold text-slate-900 truncate flex-1 min-w-0">
+              {data.exam.title} · {t('rc_count', { ns: 'teacher', count: data.cards.length })}
+            </h1>
+            <button onClick={() => window.print()} className="btn-primary py-2 shrink-0 whitespace-nowrap" disabled={!data.cards.length}>
+              <i className="bi bi-printer"></i> {t('print_btn', { ns: 'teacher' })}
+            </button>
           </div>
-          {data.cards.length > 1 && (
-            <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={onePerPage} onChange={(e) => setOnePerPage(e.target.checked)} />
-              {t('rc_one_per_page', { ns: 'teacher' })}
-            </label>
-          )}
-          <input value={school} onChange={(e) => setSchool(e.target.value)} maxLength={120}
-            placeholder={t('print_school_ph', { ns: 'teacher' })} className="input-field py-1.5 text-xs w-56" />
-          <button onClick={() => window.print()} className="btn-primary ml-auto" disabled={!data.cards.length}>
-            <i className="bi bi-printer"></i> {t('print_btn', { ns: 'teacher' })}
-          </button>
+          <div className="flex items-center gap-x-4 gap-y-2 flex-wrap">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              {t('rc_per_row', { ns: 'teacher' })}
+              <Seg value={perRow} onChange={setPerRow} options={[[15, '15'], [20, '20'], [25, '25']]} />
+            </div>
+            {data.cards.length > 1 && (
+              <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+                <input type="checkbox" checked={onePerPage} onChange={(e) => setOnePerPage(e.target.checked)} />
+                {t('rc_one_per_page', { ns: 'teacher' })}
+              </label>
+            )}
+            <input value={school} onChange={(e) => setSchool(e.target.value)} maxLength={120}
+              placeholder={t('print_school_ph', { ns: 'teacher' })} className="input-field py-1.5 text-xs w-full sm:w-56" />
+          </div>
         </div>
       </div>
 
       {data.cards.length === 0 ? (
         <div className="p-10 text-center text-slate-500">{t('no_results_yet', { ns: 'teacher' })}</div>
       ) : (
-        <div className={`rc-sheet ${onePerPage ? 'rc-one-per-page' : ''}`}>
+        <div className={`rc-sheet print-preview ${onePerPage ? 'rc-one-per-page' : ''}`} style={{ zoom }}>
           {data.cards.map((card) => (
             <ReportCard key={card.student_id} exam={data.exam} card={card} perRow={perRow} school={school} t={t} />
           ))}

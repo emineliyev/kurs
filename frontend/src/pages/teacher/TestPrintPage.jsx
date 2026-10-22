@@ -7,6 +7,7 @@ import { buildVariants, CHOICE_LETTERS } from '@/utils/printVariants'
 import PageSpinner from '@/components/common/PageSpinner'
 import Watermark, { WATERMARK_ON_KEY, WATERMARK_TEXT_KEY } from '@/components/common/Watermark'
 import { useAuthStore } from '@/store/authStore'
+import { usePreviewZoom } from '@/utils/printPreview'
 
 const FONT_SIZES = { sm: '10pt', md: '11.5pt', lg: '13pt' }
 const SCHOOL_KEY = 'print-school-name'
@@ -15,7 +16,6 @@ const LAYOUT_KEY = 'print-layout'          // { design, accent, gap }
 // "framed": the title in a coloured pill inside a rounded box, the column line in the same colour
 const ACCENTS = ['#F97316', '#1D4ED8', '#15803D', '#7C3AED', '#0F172A']
 const LAYOUT_DEFAULT = { design: 'classic', accent: ACCENTS[0], gap: 5 }   // gap: mm between questions
-const SHEET_PX = 794                        // 210mm on screen
 const SIDEBAR_PX = 320                      // settings column on wide screens (lg)
 const PAGE_CONTENT_MM = 297 - 2 * 12        // A4 minus the @page margins: what one printed page holds
 const PAGE_NUMBERS_KEY = 'print-page-numbers'
@@ -86,20 +86,6 @@ function usePageCounts(rootRef) {
   return counts
 }
 
-// Shrink the A4 preview to the room left for it (printing always uses the full page)
-function usePreviewZoom() {
-  const calc = () => {
-    const room = window.innerWidth - (window.innerWidth >= 1024 ? SIDEBAR_PX + 48 : 16)
-    return Math.min(1, room / SHEET_PX)
-  }
-  const [zoom, setZoom] = useState(calc)
-  useEffect(() => {
-    const onResize = () => setZoom(calc())
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-  return zoom
-}
 
 function Seg({ value, options, onChange }) {
   return (
@@ -217,7 +203,8 @@ export default function TestPrintPage() {
   })
   const setT = (patch) => setTeacher((cur) => ({ ...cur, ...patch }))
   useEffect(() => { localStorage.setItem(TEACHER_KEY, JSON.stringify(teacher)) }, [teacher])
-  const zoom = usePreviewZoom()
+  // beside the settings column on wide screens
+  const zoom = usePreviewZoom((w) => (w >= 1024 ? SIDEBAR_PX + 48 : 16))
   const [showSettings, setShowSettings] = useState(false)   // phones / tablets: the panel folds away
   const sheetsRef = useRef(null)
   const pageCounts = usePageCounts(sheetsRef)
