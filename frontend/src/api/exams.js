@@ -13,6 +13,10 @@ export const examsApi = {
   tabSwitch: (id) => client.patch(`/exams/${id}/tab_switch/`),
   myResult: (id) => client.get(`/exams/${id}/my_result/`),
   saveDraft: (id, answers) => client.patch(`/exams/${id}/save_draft/`, { answers }),
+  // live view: the exam page checks in; the teacher sees who is writing
+  heartbeat: (id) => client.post(`/exams/${id}/heartbeat/`),
+  liveSummary: () => client.get('/exams/live_summary/'),
+  live: (ids) => client.get('/exams/live/', { params: { ids: ids.join(',') } }),
   results: (id) => client.get(`/exams/${id}/results/`),
   // styled .xlsx of one exam, or of the same test's exams in several classes
   resultsXlsx: (ids) => client.get('/exams/results_xlsx/', { params: { ids: ids.join(',') }, responseType: 'blob' }),

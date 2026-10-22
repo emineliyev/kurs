@@ -148,6 +148,8 @@ class ExamViewSet(viewsets.ModelViewSet):
         else:
             created = False
 
+        from .live import touch
+        touch(ExamResult.objects.filter(pk=result.pk))
         # The page restores saved answers from the draft and runs its timer to `deadline`
         data = ExamResultSerializer(result).data
         data['draft_answers'] = result.draft_answers
@@ -168,8 +170,41 @@ class ExamViewSet(viewsets.ModelViewSet):
             finalize(result)
             return Response({'detail': 'İmtahan vaxtı bitib.'}, status=status.HTTP_400_BAD_REQUEST)
         result.draft_answers = answers
-        result.save(update_fields=['draft_answers'])
+        result.last_seen_at = timezone.now()
+        result.save(update_fields=['draft_answers', 'last_seen_at'])
         return Response({'saved': True})
+
+    @action(detail=True, methods=['post'], permission_classes=[IsStudent])
+    def heartbeat(self, request, pk=None):
+        """The exam page checks in every ~30 s, so the teacher's live view knows who is still here."""
+        from .live import touch
+        exam = self.get_object()
+        alive = touch(ExamResult.objects.filter(exam=exam, student=request.user))
+        return Response({'alive': bool(alive)})
+
+    @action(detail=False, methods=['get'], permission_classes=[IsTeacher])
+    def live_summary(self, request):
+        """Who is writing which of this teacher's exams right now (names, for the list's badges)."""
+        from .live import summary
+        return Response(summary(request.user))
+
+    @action(detail=False, methods=['get'], permission_classes=[IsTeacher])
+    def live(self, request):
+        """?ids=1,2 — the live board of one exam, or of one test given to several classes."""
+        from .live import board
+        try:
+            ids = [int(i) for i in (request.query_params.get('ids') or '').split(',') if i.strip()]
+        except ValueError:
+            ids = []
+        if not ids:
+            return Response({'detail': 'ids is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        exams = list(Exam.objects.filter(pk__in=ids, class_room__teacher=request.user)
+                     .select_related('test', 'class_room').order_by('class_room__name'))
+        if len(exams) != len(set(ids)):
+            return Response({'detail': 'İmtahan tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+        for exam in exams:
+            finalize_overdue(exam.results.all())     # timed-out sessions show as handed in
+        return Response(board(exams))
 
     @action(detail=True, methods=['post'], permission_classes=[IsStudent])
     def submit(self, request, pk=None):
@@ -245,7 +280,8 @@ class ExamViewSet(viewsets.ModelViewSet):
         try:
             result = ExamResult.objects.get(exam=exam, student=request.user, status=ExamResult.STATUS_IN_PROGRESS)
             result.tab_switch_count += 1
-            result.save(update_fields=['tab_switch_count'])
+            result.last_seen_at = timezone.now()
+            result.save(update_fields=['tab_switch_count', 'last_seen_at'])
             return Response({'tab_switch_count': result.tab_switch_count})
         except ExamResult.DoesNotExist:
             return Response({'detail': 'No active session.'}, status=status.HTTP_400_BAD_REQUEST)

@@ -39,6 +39,7 @@ const StudentsPage = lazyPage(() => import('@/pages/teacher/StudentsPage'))
 const ExamsPage = lazyPage(() => import('@/pages/teacher/ExamsPage'))
 const ExamEditPage = lazyPage(() => import('@/pages/teacher/ExamEditPage'))
 const ExamResultsPage = lazyPage(() => import('@/pages/teacher/ExamResultsPage'))
+const LiveExamPage = lazyPage(() => import('@/pages/teacher/LiveExamPage'))
 const PaperResultsPage = lazyPage(() => import('@/pages/teacher/PaperResultsPage'))
 const GradingPage = lazyPage(() => import('@/pages/teacher/GradingPage'))
 const AnalyticsPage = lazyPage(() => import('@/pages/teacher/AnalyticsPage'))
@@ -117,6 +118,7 @@ export default function App() {
         <Route path="exams" element={<ExamsPage />} />
         <Route path="exams/create" element={<Navigate to="/teacher/tests/create" replace />} />
         <Route path="exams/:id/edit" element={<ExamEditPage />} />
+        <Route path="exams/live" element={<LiveExamPage />} />
         <Route path="exams/:id/results" element={<ExamResultsPage />} />
         <Route path="exams/:id/paper" element={<PaperResultsPage />} />
         <Route path="exams/:id/grade" element={<GradingPage />} />

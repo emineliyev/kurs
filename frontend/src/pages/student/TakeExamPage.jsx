@@ -87,6 +87,14 @@ export default function TakeExamPage() {
     init()
   }, [id])
 
+  // The teacher's live view: tell the server we're still here (every 30 s, and when the tab comes back)
+  useEffect(() => {
+    const ping = () => { if (document.visibilityState === 'visible') examsApi.heartbeat(id).catch(() => {}) }
+    const timer = setInterval(ping, 30000)
+    document.addEventListener('visibilitychange', ping)
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', ping) }
+  }, [id])
+
   // Keep answers safe: instantly in this browser, and on the server a few seconds after the last change
   useEffect(() => {
     if (!restored.current) return

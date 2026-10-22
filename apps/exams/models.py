@@ -96,6 +96,8 @@ class ExamResult(models.Model):
     # Taken on paper; the teacher typed the answers in. Order/letters follow the printed variant.
     is_offline = models.BooleanField(default=False, verbose_name='Kağız üzərində')
     offline_variant = models.CharField(max_length=1, blank=True, verbose_name='Çap variantı')
+    # Last sign of life from the exam page (heartbeat, autosave, tab switch) — the teacher's live view
+    last_seen_at = models.DateTimeField(null=True, blank=True, verbose_name='Son aktivlik')
 
     # Slack for a slow network between the timer hitting zero and the submit arriving
     GRACE = timedelta(minutes=2)

@@ -15,6 +15,8 @@ import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
 import { toastApiError } from '@/api/errors'
 import { downloadResultsXlsx } from '@/utils/download'
+import LiveBadge from '@/components/teacher/LiveBadge'
+import { liveFor, useLiveSummary } from '@/hooks/useLiveSummary'
 
 function toLocalDatetimeValue(iso) {
   if (!iso) return ''
@@ -226,6 +228,7 @@ export default function ExamsPage() {
   const [duplicatingId, setDuplicatingId] = useState(null)
   const [open, setOpen] = useState(() => new Set())     // expanded group rows
   const [exportingKey, setExportingKey] = useState(null)
+  const liveNow = useLiveSummary()                   // who is writing which exam, every 20 s
 
   const load = () => Promise.all([examsApi.list(), testsApi.list()])
     .then(([e, ts]) => { setExams(e.data.results || e.data); setTests(ts.data.results || ts.data) })
@@ -453,6 +456,7 @@ export default function ExamsPage() {
     draft: ['bg-amber-50 text-amber-700', t('draft', { ns: 'teacher' })],
     ready: ['bg-violet-50 text-violet-700', t('not_given_yet', { ns: 'teacher' })],
   }
+  const liveBadge = (list) => <LiveBadge live={liveFor(liveNow, list)} to={`/teacher/exams/live?ids=${list.map((e) => e.id).join(',')}`} />
   const badge = (status) => <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${STATUS[status][0]}`}>{STATUS[status][1]}</span>
   const when = (iso, short) => (iso ? format(new Date(iso), short ? 'dd.MM.yy HH:mm' : 'dd.MM.yyyy HH:mm') : '—')
   const switchFor = (list, key) => (
@@ -656,6 +660,7 @@ export default function ExamsPage() {
                         <div className="flex items-center gap-2">
                           {r.kind === 'exam' && !r.archived && switchFor(r.exams, r.key)}
                           {r.kind === 'exam' ? groupBadge(r) : badge(r.status)}
+                          {r.kind === 'exam' && liveBadge(r.exams)}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center text-slate-600">{r.kind === 'exam' ? r.participants : <span className="text-slate-300">—</span>}</td>
@@ -674,6 +679,7 @@ export default function ExamsPage() {
                           <div className="flex items-center gap-2">
                             {!e.is_archived && switchFor([e], `e${e.id}`)}
                             {badge(examStatus(e))}
+                            {liveBadge([e])}
                           </div>
                         </td>
                         <td className="px-4 py-2.5 text-center text-slate-600">{e.participants_count || 0}</td>
@@ -699,6 +705,7 @@ export default function ExamsPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       {r.kind === 'exam' && !r.archived && switchFor(r.exams, r.key)}
                       {r.kind === 'exam' ? groupBadge(r) : badge(r.status)}
+                          {r.kind === 'exam' && liveBadge(r.exams)}
                     </div>
                   </div>
                   {r.kind === 'exam' && (

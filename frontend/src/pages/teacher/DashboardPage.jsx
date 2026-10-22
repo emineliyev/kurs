@@ -6,6 +6,7 @@ import { analyticsApi } from '@/api/analytics'
 import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
 import Select from '@/components/common/Select'
+import { useLiveSummary } from '@/hooks/useLiveSummary'
 
 function StatCard({ icon, value, label, tone }) {
   return (
@@ -50,6 +51,7 @@ export default function DashboardPage() {
   const [gradeFilter, setGradeFilter] = useState('')
   const [groupFilter, setGroupFilter] = useState('')
   const [page, setPage] = useState(1)
+  const live = useLiveSummary()
 
   useEffect(() => {
     analyticsApi.dashboard()
@@ -92,6 +94,21 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-slate-900">{t('dashboard')}</h1>
         <p className="text-slate-500 text-sm mt-1">{t('welcome_stats', { ns: 'teacher' })}</p>
       </div>
+
+      {live?.students > 0 && (
+        <Link to={`/teacher/exams/live?ids=${Object.keys(live.exams).join(',')}`}
+          className="card p-4 sm:p-5 flex items-center gap-4 border-red-100 bg-gradient-to-r from-red-50 to-white hover:shadow-md transition-shadow">
+          <span className="relative flex w-3 h-3 shrink-0">
+            <span className="absolute inline-flex w-full h-full rounded-full bg-red-500 opacity-60 animate-ping" />
+            <span className="relative inline-flex w-3 h-3 rounded-full bg-red-500" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-slate-900">{t('live_now_title', { ns: 'teacher' })}</p>
+            <p className="text-sm text-slate-600">{t('live_now_desc', { ns: 'teacher', students: live.students, exams: live.exam_count })}</p>
+          </div>
+          <span className="btn-primary py-2 text-sm shrink-0"><i className="bi bi-broadcast"></i><span className="hidden sm:inline">{t('live_open', { ns: 'teacher' })}</span></span>
+        </Link>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard icon="bi-people-fill" value={data?.total_students} label={t('total_students', { ns: 'teacher' })} tone="bg-primary-50 text-primary-700" />
