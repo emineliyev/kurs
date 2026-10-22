@@ -583,8 +583,8 @@ export default function ExamsPage() {
         </Link>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
-        <div className="flex gap-1.5 overflow-x-auto pb-1 lg:pb-0 -mx-1 px-1">
+      <div className="flex flex-col lg:flex-row lg:flex-wrap gap-3 lg:items-center">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 lg:pb-0 -mx-1 px-1 lg:shrink-0">
           {filters.map(([key, label, n, icon]) => (
             <button key={key} onClick={() => setFilter(key)}
               className={`px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${filter === key ? 'bg-primary-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} ${key === 'archived' ? 'lg:ml-2' : ''}`}>
@@ -593,7 +593,7 @@ export default function ExamsPage() {
             </button>
           ))}
         </div>
-        <div className="flex gap-2 lg:ml-auto">
+        <div className="flex gap-2 lg:ml-auto lg:min-w-[22rem]">
           <div className="relative flex-1 lg:w-56">
             <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('search')}
@@ -705,11 +705,11 @@ export default function ExamsPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       {r.kind === 'exam' && !r.archived && switchFor(r.exams, r.key)}
                       {r.kind === 'exam' ? groupBadge(r) : badge(r.status)}
-                          {r.kind === 'exam' && liveBadge(r.exams)}
                     </div>
                   </div>
                   {r.kind === 'exam' && (
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                      {liveBadge(r.exams)}
                       <span className="min-w-0"><i className="bi bi-people mr-1"></i>{r.exams.map((e) => e.class_name).join(', ')}</span>
                       <span><i className="bi bi-play-circle mr-1"></i>{when(r.exam.start_time, true)}</span>
                       <span><i className="bi bi-stop-circle mr-1"></i>{when(r.exam.end_time, true)}</span>
