@@ -1,7 +1,6 @@
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { exportXlsx } from '@/utils/excel'
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 
@@ -51,7 +50,8 @@ export default function CredentialsSheet({ rows, onClose }) {
       toast.success(t('copied', { ns: 'teacher' }))
     } catch { toast.error(t('error')) }
   }
-  const excel = () => exportXlsx('sagird-girisleri', t('students'),
+  // xlsx is big — load it only when the button is pressed, not with the students page
+  const excel = async () => (await import('@/utils/excel')).exportXlsx('sagird-girisleri', t('students'),
     [t('full_name'), t('classes_label', { ns: 'teacher' }), t('username_field', { ns: 'teacher' }), t('password_field', { ns: 'teacher' })],
     rows.map((r) => [r.full_name, r.class_name || '', r.username, r.password]))
 
