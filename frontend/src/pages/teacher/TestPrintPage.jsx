@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { testsApi } from '@/api/tests'
@@ -17,6 +17,74 @@ const ACCENTS = ['#F97316', '#1D4ED8', '#15803D', '#7C3AED', '#0F172A']
 const LAYOUT_DEFAULT = { design: 'classic', accent: ACCENTS[0], gap: 5 }   // gap: mm between questions
 const SHEET_PX = 794                        // 210mm on screen
 const SIDEBAR_PX = 320                      // settings column on wide screens (lg)
+const PAGE_CONTENT_MM = 297 - 2 * 12        // A4 minus the @page margins: what one printed page holds
+const PAGE_NUMBERS_KEY = 'print-page-numbers'
+const FIT_SLACK_MM = 1                      // screen measurements round; the printer fits within ~1 mm
+
+/**
+ * How many printed pages each sheet will take. The preview has the printed page's text width
+ * (186 mm), so a question is as tall on screen as on paper. The questions are laid out the way the
+ * printer does it — down one column, then the next, then a new page — and a question that doesn't
+ * fit moves whole to the next column (they never split). Re-measured whenever the preview changes.
+ */
+function packPages(firstRoom, items, cols, gap) {
+  let pages = 1
+  let col = 0
+  let room = firstRoom
+  let empty = true
+  const nextColumn = () => {
+    col += 1
+    if (col >= cols) { col = 0; pages += 1 }
+    room = PAGE_CONTENT_MM
+    empty = true
+  }
+  for (const h of items) {
+    if (!empty && h > room + FIT_SLACK_MM) nextColumn()   // doesn't fit: whole question to the next column / page
+    if (h > room + FIT_SLACK_MM) {              // taller than a whole column: it has to split
+      let rest = h - room
+      while (rest > 0) { nextColumn(); rest -= PAGE_CONTENT_MM }
+      room = -rest
+    } else {
+      room -= h
+    }
+    room -= gap
+    empty = false
+  }
+  return pages
+}
+
+function usePageCounts(rootRef) {
+  const [counts, setCounts] = useState([])
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return undefined
+    const measure = () => {
+      const next = [...root.querySelectorAll('.print-sheet')].map((sheet) => {
+        const head = sheet.querySelector('.print-head')
+        const body = sheet.querySelector('.print-body')
+        const pxPerMm = sheet.getBoundingClientRect().width / 210   // zoom-independent: both sides scale alike
+        if (!head) return 1
+        if (!body) {                                                   // answer key: a table, rows may break
+          const last = sheet.querySelector('.print-key') || head
+          const mm = (last.getBoundingClientRect().bottom - head.getBoundingClientRect().top) / pxPerMm
+          return Math.max(1, Math.ceil(mm / PAGE_CONTENT_MM - 0.01))
+        }
+        const headMm = (body.getBoundingClientRect().top - head.getBoundingClientRect().top) / pxPerMm
+        const items = [...body.children].map((q) => q.getBoundingClientRect().height / pxPerMm)
+        const gap = parseFloat(getComputedStyle(sheet).getPropertyValue('--q-gap')) || 5   // "18mm"
+        const cols = Number(body.style.columnCount) || 1
+        return packPages(PAGE_CONTENT_MM - headMm, items, cols, gap)
+      })
+      setCounts((cur) => (cur.length === next.length && cur.every((n, i) => n === next[i]) ? cur : next))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(root)
+    root.querySelectorAll('.print-sheet').forEach((el) => ro.observe(el))
+    return () => ro.disconnect()
+  })
+  return counts
+}
 
 // Shrink the A4 preview to the room left for it (printing always uses the full page)
 function usePreviewZoom() {
@@ -151,6 +219,10 @@ export default function TestPrintPage() {
   useEffect(() => { localStorage.setItem(TEACHER_KEY, JSON.stringify(teacher)) }, [teacher])
   const zoom = usePreviewZoom()
   const [showSettings, setShowSettings] = useState(false)   // phones / tablets: the panel folds away
+  const sheetsRef = useRef(null)
+  const pageCounts = usePageCounts(sheetsRef)
+  const [pageNumbers, setPageNumbers] = useState(() => localStorage.getItem(PAGE_NUMBERS_KEY) !== '0')
+  useEffect(() => { localStorage.setItem(PAGE_NUMBERS_KEY, pageNumbers ? '1' : '0') }, [pageNumbers])
   const [layout, setLayout] = useState(() => {
     try { return { ...LAYOUT_DEFAULT, ...JSON.parse(localStorage.getItem(LAYOUT_KEY)) } } catch { return LAYOUT_DEFAULT }
   })
@@ -174,6 +246,14 @@ export default function TestPrintPage() {
   if (!test) return <PageSpinner />
 
   const framed = layout.design === 'framed'
+  const totalPages = pageCounts.reduce((a, b) => a + b, 0)
+  const pagesLabel = (n) => t('print_pages', { ns: 'teacher', count: n })
+  // above each sheet in the preview only (inside the section, so page breaks between sheets stay intact)
+  const sheetTag = (i, label) => (pageCounts[i] ? (
+    <span className="print:hidden absolute -top-6 left-0 font-sans text-xs font-medium text-slate-500">
+      {label} · {pagesLabel(pageCounts[i])}
+    </span>
+  ) : null)
   const sheetStyle = { fontSize: FONT_SIZES[fontSize], '--accent': layout.accent, '--q-gap': `${layout.gap}mm` }
   const sheetClass = `print-sheet ${framed ? 'print-framed' : ''}`
   const many = variants > 1
@@ -190,7 +270,14 @@ export default function TestPrintPage() {
           <Link to={`/teacher/tests/${id}`} className="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1 shrink-0">
             <i className="bi bi-arrow-left"></i> <span className="hidden sm:inline">{t('back')}</span>
           </Link>
-          <h1 className="font-semibold text-slate-900 truncate flex-1 min-w-0">{test.title}</h1>
+          <h1 className="font-semibold text-slate-900 truncate min-w-0">{test.title}</h1>
+          {totalPages > 0 && (
+            <span title={t('print_pages_hint', { ns: 'teacher' })}
+              className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold whitespace-nowrap">
+              <i className="bi bi-file-earmark-text"></i>{pagesLabel(totalPages)}
+            </span>
+          )}
+          <span className="flex-1" />
           <button onClick={() => setShowSettings((v) => !v)} aria-expanded={showSettings}
             className={`lg:hidden btn-secondary py-2 px-3 text-sm shrink-0 ${showSettings ? 'bg-slate-100' : ''}`}>
             <i className="bi bi-sliders"></i><span className="hidden sm:inline">{t('print_settings', { ns: 'teacher' })}</span>
@@ -244,6 +331,7 @@ export default function TestPrintPage() {
           <div className="flex flex-wrap gap-x-5 gap-y-1.5 pb-0.5">
             <Check checked={withHeader} onChange={setWithHeader} label={t('print_student_fields', { ns: 'teacher' })} />
             <Check checked={withKey} onChange={setWithKey} label={t('print_answer_key', { ns: 'teacher' })} />
+            <Check checked={pageNumbers} onChange={setPageNumbers} label={t('print_page_numbers', { ns: 'teacher' })} />
           </div>
           <div className="space-y-2">
             <Row label={t('print_school', { ns: 'teacher' })}>
@@ -272,9 +360,14 @@ export default function TestPrintPage() {
 
         <main className="flex-1 min-w-0">
       {/* Sheets */}
-      <div className="print-preview py-4 sm:py-8 print:py-0 space-y-8 print:space-y-0" style={{ zoom }}>
-        {built.map((v) => (
+      {/* "1 / 3" at the foot of every printed page (Chrome / Edge print margin boxes) */}
+      {pageNumbers && (
+        <style>{'@page { @bottom-center { content: counter(page) " / " counter(pages); font: 9pt Arial, sans-serif; color: #64748b; } }'}</style>
+      )}
+      <div ref={sheetsRef} className="print-preview py-4 sm:py-8 print:py-0 space-y-12 print:space-y-0" style={{ zoom }}>
+        {built.map((v, i) => (
           <section key={v.letter} className={sheetClass} style={sheetStyle}>
+            {sheetTag(i, many ? `${t('print_variant', { ns: 'teacher' })} ${v.letter}` : t('print_questions_sheet', { ns: 'teacher' }))}
             {watermarkOn && <Watermark text={watermark || teacherName} />}
             <header className="print-head">
               {framed && <div className="pf-pill-row"><span className="pf-pill">{test.title}</span></div>}
@@ -305,6 +398,7 @@ export default function TestPrintPage() {
 
         {withKey && built.length > 0 && (
           <section className={sheetClass} style={sheetStyle}>
+            {sheetTag(built.length, t('print_key_title', { ns: 'teacher' }))}
             <header className="print-head">
               {framed && <div className="pf-pill-row"><span className="pf-pill">{t('print_key_title', { ns: 'teacher' })}</span></div>}
               <div className="pf-body">

@@ -831,5 +831,9 @@
   "print_design_framed": "Framed",
   "print_accent": "Colour",
   "print_q_gap": "Question gap",
-  "print_settings": "Settings"
+  "print_settings": "Settings",
+  "print_pages": "{{count}} pages",
+  "print_page_numbers": "Page numbers",
+  "print_questions_sheet": "Questions",
+  "print_pages_hint": "How many pages it will print on. It can differ by ±1 depending on the printer and browser."
 }
