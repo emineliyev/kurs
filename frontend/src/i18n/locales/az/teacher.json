@@ -864,5 +864,10 @@
   "live_now_title": "İndi imtahan yazırlar",
   "live_now_desc": "{{students}} şagird · {{exams}} imtahan",
   "live_open": "Canlı izlə",
-  "no_students": "Bu sinifdə şagird yoxdur"
+  "no_students": "Bu sinifdə şagird yoxdur",
+  "q_answer_format_label": "Cavab nümunəsi (şagirdə göstərilir, istəyə görə)",
+  "q_answer_format_ph": "məs. 1A2B3C və ya 2,5",
+  "q_answer_format_shown": "Şagird görəcək:",
+  "q_answer_format_auto": "Boş qalsa, şagirdə avtomatik bu nümunə göstəriləcək:",
+  "q_answer_format_none": "Boş qalsa, şagirdə nümunə göstərilməyəcək."
 }

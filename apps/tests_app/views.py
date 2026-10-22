@@ -189,6 +189,7 @@ class TestViewSet(viewsets.ModelViewSet):
                 model_answer=question.model_answer,
                 correct_answer=question.correct_answer,
                 tolerance=question.tolerance,
+                answer_format=question.answer_format,
                 hide_choices=question.hide_choices,
                 source_bank_question_id=question.source_bank_question_id,
             )
@@ -447,6 +448,7 @@ def _copy_bank_question(bank_q, test):
         model_answer=bank_q.model_answer,
         correct_answer=bank_q.correct_answer,
         tolerance=bank_q.tolerance,
+        answer_format=bank_q.answer_format,
         points=bank_q.points,
         order=test.questions.count(),
         source_bank_question=bank_q,

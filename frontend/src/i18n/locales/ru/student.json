@@ -78,5 +78,6 @@
   "review_never": "Учитель решил показывать в этом экзамене только балл.",
   "net_score_note": "Чистый балл: за неверные ответы снято {{points}} балл.",
   "grading_criteria": "Критерии оценивания",
-  "correct_answer_colon": "Правильный ответ:"
+  "correct_answer_colon": "Правильный ответ:",
+  "answer_format_hint": "Пишите ответ в таком виде:"
 }

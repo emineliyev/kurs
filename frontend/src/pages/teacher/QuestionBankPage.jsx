@@ -11,6 +11,7 @@ import Select from '@/components/common/Select'
 import { toastApiError } from '@/api/errors'
 import BulkCropWorkspace from '@/components/teacher/BulkCropWorkspace'
 import BankFolderTree, { flattenFolders, inSelection } from '@/components/teacher/BankFolderTree'
+import { autoAnswerHint } from '@/utils/answerHint'
 
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -42,6 +43,20 @@ const COLOR_ACTIVE = {
 }
 const COLOR_IDLE = 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
 
+
+/** What the student will see under the answer box: the teacher's sample, or the automatic one. */
+function AnswerHintPreview({ format, answerKey, t }) {
+  const own = (format || '').trim()
+  const auto = own ? '' : autoAnswerHint(answerKey)
+  if (!own && !auto) return <p className="text-xs text-green-600 mt-1.5">{t('q_answer_format_none', { ns: 'teacher' })}</p>
+  return (
+    <p className="text-xs text-green-700 mt-1.5">
+      {own ? t('q_answer_format_shown', { ns: 'teacher' }) : t('q_answer_format_auto', { ns: 'teacher' })}{' '}
+      <b className="font-mono">{own || auto}</b>
+    </p>
+  )
+}
+
 function defaultAnswers() {
   return [
     { text: '', is_correct: false, order: 0 },
@@ -58,6 +73,7 @@ function emptyForm(type = 'multiple_choice') {
     math_formula: '',
     model_answer: '',
     correct_answer: '',
+    answer_format: '',
     tolerance: '',
     points: 1,
     answers: type === 'multiple_choice' ? defaultAnswers() : [],
@@ -111,6 +127,7 @@ export default function QuestionBankPage() {
       question_type: type,
       answers: type === 'multiple_choice' ? defaultAnswers() : [],
       correct_answer: '',
+      answer_format: '',
       tolerance: '',
       _choiceCount: type === 'image_mcq' ? 4 : undefined,
       _correctIndex: type === 'image_mcq' ? -1 : undefined,
@@ -129,6 +146,7 @@ export default function QuestionBankPage() {
       math_formula: q.math_formula || '',
       model_answer: q.model_answer || '',
       correct_answer: q.correct_answer || '',
+      answer_format: q.answer_format || '',
       tolerance: q.tolerance ?? '',
       points: q.points || 1,
       folder: q.folder ?? null,
@@ -218,6 +236,7 @@ export default function QuestionBankPage() {
           math_formula: form.math_formula || '',
           model_answer: form.model_answer || '',
           correct_answer: form.correct_answer || '',
+          answer_format: qType === 'short_answer' ? (form.answer_format || '').trim() : '',
           tolerance: form.tolerance !== '' && form.tolerance != null
             ? parseFloat(form.tolerance) : null,
           points: qType === 'passage' ? 0 : (form.points || 1),
@@ -569,6 +588,15 @@ export default function QuestionBankPage() {
                 <input value={form.correct_answer || ''} onChange={e => upForm({ correct_answer: e.target.value })}
                   placeholder={t('q_enter_correct_ph', { ns: 'teacher' })}
                   className="w-full px-4 py-3 bg-white border border-green-200 rounded-xl focus:outline-none text-sm" />
+                <div className="mt-3 pt-3 border-t border-green-200">
+                  <label className="text-xs font-semibold text-green-700 block mb-1">
+                    <i className="bi bi-lightbulb mr-1"></i>{t('q_answer_format_label', { ns: 'teacher' })}
+                  </label>
+                  <input value={form.answer_format || ''} onChange={e => upForm({ answer_format: e.target.value })} maxLength={60}
+                    placeholder={t('q_answer_format_ph', { ns: 'teacher' })}
+                    className="w-full px-4 py-2.5 bg-white border border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-sm" />
+                  <AnswerHintPreview format={form.answer_format} answerKey={form.correct_answer} t={t} />
+                </div>
               </div>
             )}
 

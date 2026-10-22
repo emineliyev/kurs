@@ -78,5 +78,6 @@
   "review_never": "Your teacher chose to show only the score for this exam.",
   "net_score_note": "Net score: {{points}} points were taken off for wrong answers.",
   "grading_criteria": "Grading criteria",
-  "correct_answer_colon": "Correct answer:"
+  "correct_answer_colon": "Correct answer:",
+  "answer_format_hint": "Write your answer like this:"
 }

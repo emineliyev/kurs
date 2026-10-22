@@ -19,6 +19,7 @@ import { toastApiError } from '@/api/errors'
 import { fmtPoints } from '@/utils/score'
 import Select from '@/components/common/Select'
 import BankFolderTree, { inSelection } from '@/components/teacher/BankFolderTree'
+import { autoAnswerHint } from '@/utils/answerHint'
 
 let _dndIdCounter = 0
 const newDndId = () => ++_dndIdCounter
@@ -26,6 +27,20 @@ const newDndId = () => ++_dndIdCounter
 const LABELS = ['A', 'B', 'C', 'D', 'E', 'F']
 
 // Rich-text editors leave markup like "<br>" or "<div><br></div>" after clearing.
+
+/** What the student will see under the answer box: the teacher's sample, or the automatic one. */
+function AnswerHintPreview({ format, answerKey, t }) {
+  const own = (format || '').trim()
+  const auto = own ? '' : autoAnswerHint(answerKey)
+  if (!own && !auto) return <p className="text-xs text-green-600 mt-1.5">{t('q_answer_format_none', { ns: 'teacher' })}</p>
+  return (
+    <p className="text-xs text-green-700 mt-1.5">
+      {own ? t('q_answer_format_shown', { ns: 'teacher' }) : t('q_answer_format_auto', { ns: 'teacher' })}{' '}
+      <b className="font-mono">{own || auto}</b>
+    </p>
+  )
+}
+
 function isBlankHtml(html) {
   if (!html) return true
   if (/<img/i.test(html)) return false
@@ -73,7 +88,7 @@ function defaultQuestion(type) {
   return {
     question_type: type,
     text: '', points: 1, math_formula: '', model_answer: '',
-    correct_answer: '', tolerance: '',
+    correct_answer: '', tolerance: '', answer_format: '',
     answers: type === 'multiple_choice' ? defaultAnswers() : [],
     _saved: false, _id: null, _imageFile: null, _imagePreview: null,
     _choiceCount: type === 'image_mcq' ? 4 : undefined,
@@ -124,7 +139,7 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
     onUpdate(index, {
       ...question, question_type: newType,
       answers: newType === 'multiple_choice' ? defaultAnswers() : [],
-      correct_answer: '', tolerance: '',
+      correct_answer: '', tolerance: '', answer_format: '',
       _choiceCount: newType === 'image_mcq' ? 4 : undefined,
       _correctIndex: newType === 'image_mcq' ? -1 : undefined,
       _saved: false,
@@ -216,6 +231,7 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
         math_formula: question.math_formula || '',
         model_answer: question.model_answer || '',
         correct_answer: question.correct_answer || '',
+        answer_format: qType === 'short_answer' ? (question.answer_format || '').trim() : '',
         tolerance: question.tolerance !== '' && question.tolerance != null
           ? parseFloat(question.tolerance) : null,
         hide_choices: question._hideChoices || false,
@@ -387,6 +403,15 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
           placeholder={t('q_enter_correct_ph', { ns: 'teacher' })}
           className="w-full px-4 py-3 bg-white border border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-sm" />
         <p className="text-xs text-green-600 mt-2"><i className="bi bi-info-circle mr-1"></i>{t('q_case_insensitive', { ns: 'teacher' })}</p>
+        <div className="mt-3 pt-3 border-t border-green-200">
+          <label className="text-xs font-semibold text-green-700 block mb-1">
+            <i className="bi bi-lightbulb mr-1"></i>{t('q_answer_format_label', { ns: 'teacher' })}
+          </label>
+          <input value={question.answer_format || ''} onChange={e => up('answer_format', e.target.value)} maxLength={60}
+            placeholder={t('q_answer_format_ph', { ns: 'teacher' })}
+            className="w-full px-4 py-2.5 bg-white border border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400 text-sm" />
+          <AnswerHintPreview format={question.answer_format} answerKey={question.correct_answer} t={t} />
+        </div>
       </div>
       <button type="button" onClick={() => setShowModelAnswer(!showModelAnswer)} className="text-xs text-slate-400 hover:text-violet-600 flex items-center gap-1">
         <i className={`bi ${showModelAnswer ? 'bi-chevron-down' : 'bi-chevron-right'}`}></i> {t('q_model_answer_toggle', { ns: 'teacher' })}
@@ -628,6 +653,7 @@ export default function TestCreatePage() {
         math_formula: q.math_formula || '',
         model_answer: q.model_answer || '',
         correct_answer: q.correct_answer || '',
+        answer_format: q.answer_format || '',
         tolerance: q.tolerance ?? '',
         answers: q.answers || [],
         image: q.image || null,
@@ -807,6 +833,7 @@ export default function TestCreatePage() {
         math_formula: q.math_formula || '',
         model_answer: q.model_answer || '',
         correct_answer: q.correct_answer || '',
+        answer_format: q.answer_format || '',
         tolerance: q.tolerance ?? '',
         answers: q.answers || [],
         image: q.image || null,
@@ -845,6 +872,7 @@ export default function TestCreatePage() {
         math_formula: q.math_formula || '',
         model_answer: q.model_answer || '',
         correct_answer: q.correct_answer || '',
+        answer_format: q.answer_format || '',
         tolerance: q.tolerance ?? '',
         answers: q.answers || [],
         image: q.image || null,

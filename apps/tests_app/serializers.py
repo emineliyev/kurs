@@ -31,7 +31,7 @@ class QuestionSerializer(serializers.ModelSerializer):
         model = Question
         fields = [
             'id', 'question_type', 'text', 'image', 'math_formula',
-            'model_answer', 'correct_answer', 'tolerance',
+            'model_answer', 'correct_answer', 'tolerance', 'answer_format',
             'points', 'order', 'hide_choices', 'answers', 'source_bank_question',
         ]
         read_only_fields = ['id', 'source_bank_question']
@@ -64,6 +64,14 @@ class QuestionSerializer(serializers.ModelSerializer):
 class QuestionPublicSerializer(serializers.ModelSerializer):
     """For students - no correct answer info"""
     answers = serializers.SerializerMethodField()
+    answer_hint = serializers.SerializerMethodField()
+
+    def get_answer_hint(self, obj):
+        # the teacher's sample, or one made from the key's shape — never the key itself
+        if obj.question_type != Question.TYPE_SHORT_ANSWER:
+            return ''
+        from .hints import answer_hint
+        return answer_hint(obj)
 
     def get_answers(self, obj):
         # Per-student shuffled order when the exam asks for it
@@ -73,7 +81,7 @@ class QuestionPublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         # correct_answer, tolerance, model_answer intentionally excluded (teacher reference only)
-        fields = ['id', 'question_type', 'text', 'image', 'math_formula', 'points', 'order', 'answers']
+        fields = ['id', 'question_type', 'text', 'image', 'math_formula', 'points', 'order', 'answers', 'answer_hint']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -208,7 +216,7 @@ class BankQuestionSerializer(serializers.ModelSerializer):
         model = BankQuestion
         fields = [
             'id', 'folder', 'question_type', 'text', 'image', 'math_formula',
-            'model_answer', 'correct_answer', 'tolerance',
+            'model_answer', 'correct_answer', 'tolerance', 'answer_format',
             'points', 'answers', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

@@ -78,5 +78,6 @@
   "review_never": "Müəllim bu imtahanda yalnız balı göstərməyi seçib.",
   "net_score_note": "Xalis bal: səhv cavablara görə {{points}} bal çıxılıb.",
   "grading_criteria": "Qiymətləndirmə meyarı",
-  "correct_answer_colon": "Düzgün cavab:"
+  "correct_answer_colon": "Düzgün cavab:",
+  "answer_format_hint": "Cavabı bu formada yazın:"
 }

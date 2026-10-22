@@ -121,6 +121,8 @@ class Question(models.Model):
     math_formula = models.TextField(blank=True, help_text='LaTeX formatında', verbose_name='Formul (LaTeX)')
     model_answer = models.TextField(blank=True, help_text='Açıq və uzun cavab sualları üçün müəllimin nümunə cavabı', verbose_name='Nümunə cavab')
     correct_answer = models.TextField(blank=True, help_text='Qısa cavab və rəqəm suallarının avtomatik yoxlanması üçün', verbose_name='Düzgün cavab')
+    # Shown to the student under the answer box ("write it like 1A2B3C"); empty = an automatic one if the key allows
+    answer_format = models.CharField(max_length=60, blank=True, verbose_name='Cavab nümunəsi')
     tolerance = models.FloatField(null=True, blank=True, help_text='Rəqəm sualları üçün icazə verilən fərq', verbose_name='Tolerans')
     points = models.FloatField(default=1, verbose_name='Bal')
     order = models.PositiveSmallIntegerField(default=0, verbose_name='Sıra')
@@ -190,6 +192,8 @@ class BankQuestion(models.Model):
     math_formula = models.TextField(blank=True, verbose_name='Formul (LaTeX)')
     model_answer = models.TextField(blank=True, verbose_name='Nümunə cavab')
     correct_answer = models.TextField(blank=True, verbose_name='Düzgün cavab')
+    # Shown to the student under the answer box ("write it like 1A2B3C"); empty = an automatic one if the key allows
+    answer_format = models.CharField(max_length=60, blank=True, verbose_name='Cavab nümunəsi')
     tolerance = models.FloatField(null=True, blank=True, verbose_name='Tolerans')
     points = models.PositiveSmallIntegerField(default=1, verbose_name='Bal')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Yaradılıb')

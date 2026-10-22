@@ -326,6 +326,12 @@ export default function TakeExamPage() {
             }`}
           />
 
+          {qType === 'short_answer' && q.answer_hint && (
+            <p className="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 flex items-center gap-2">
+              <i className="bi bi-lightbulb-fill text-amber-500"></i>
+              <span>{t('answer_format_hint', { ns: 'student' })} <b className="font-mono tracking-wide">{q.answer_hint}</b></span>
+            </p>
+          )}
           {answers[q.id]?.text?.trim() && (
             <p className="text-xs text-green-500 mt-2 flex items-center gap-1">
               <i className="bi bi-check-circle"></i> {t('answer_written', { ns: 'student' })}
