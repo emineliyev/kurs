@@ -57,6 +57,8 @@ def short_answer_correct(question, text):
         return False
     if given == key:
         return True
+    if given.replace(' ', '') == key.replace(' ', ''):   # spaces don't count: "1b 2e 3d" = "1B2E3D"
+        return True
     a, b = parse_number(given), parse_number(key)   # 0.5 = .5 = 0,50
     return a is not None and b is not None and math.isclose(a, b, rel_tol=0, abs_tol=1e-9)
 
