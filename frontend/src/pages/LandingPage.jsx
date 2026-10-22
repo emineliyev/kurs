@@ -149,15 +149,10 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Phones: "Log in" always in sight (many never open the menu), then the menu button */}
-          <div className="md:hidden flex items-center gap-2">
-            <Link to="/login" className="px-3.5 py-1.5 rounded-lg bg-primary-700 text-white text-sm font-semibold">
-              {t('landing_login')}
-            </Link>
-            <button className="text-slate-600 w-9 h-9 flex items-center justify-center" onClick={() => setMenuOpen(!menuOpen)} aria-label="menu">
-              <i className={`bi ${menuOpen ? 'bi-x-lg' : 'bi-list'} text-2xl`}></i>
-            </button>
-          </div>
+          {/* Mobile menu button (the hero's teacher / student login buttons are right below) */}
+          <button className="md:hidden text-slate-600 w-9 h-9 flex items-center justify-center" onClick={() => setMenuOpen(!menuOpen)} aria-label="menu">
+            <i className={`bi ${menuOpen ? 'bi-x-lg' : 'bi-list'} text-2xl`}></i>
+          </button>
         </div>
 
         {/* Mobile menu */}
