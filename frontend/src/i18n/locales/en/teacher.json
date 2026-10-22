@@ -837,5 +837,6 @@
   "print_questions_sheet": "Questions",
   "print_pages_hint": "How many pages it will print on. It can differ by ±1 depending on the printer and browser.",
   "excel_download": "Download results as Excel",
-  "excel_all_classes": "Results of every class — one Excel file"
+  "excel_all_classes": "Results of every class — one Excel file",
+  "pdf_open": "Exam PDF (print)"
 }

@@ -472,6 +472,7 @@ export default function ExamsPage() {
 
   const btn = 'h-8 px-3 rounded-lg inline-flex items-center justify-center gap-1.5 text-xs font-semibold whitespace-nowrap transition-colors'
   const resultsBtn = `${btn} min-w-[7.5rem]`   // same width with or without the group's chevron, so icons line up
+  const mainBtn = resultsBtn                     // the draft / ready buttons take the same slot
   const resultsLink = (e) => (
     <Link to={`/teacher/exams/${e.id}/results`} className={`${resultsBtn} bg-indigo-50 text-indigo-700 hover:bg-indigo-100`}>
       <i className="bi bi-bar-chart"></i>{t('results', { ns: 'teacher' })}
@@ -479,11 +480,23 @@ export default function ExamsPage() {
   )
   // quick actions next to "Results" once students have taken it: report cards, Excel
   const iconBtn = 'w-8 h-8 rounded-lg inline-flex items-center justify-center transition-colors shrink-0'
-  const quick = (list, key) => {
-    if (!list.some((e) => e.participants_count > 0)) return null
+  // the questions as a PDF — one per test (a group's classes share it)
+  const pdfBtn = (testId, count) => (count > 0 ? (
+    <Link to={`/teacher/tests/${testId}/print`} title={t('pdf_open', { ns: 'teacher' })} aria-label={t('pdf_open', { ns: 'teacher' })}
+      className={`${iconBtn} bg-red-50 text-red-600 hover:bg-red-100`}><i className="bi bi-file-earmark-pdf-fill text-[15px]"></i></Link>
+  ) : null)
+  const spacer = <span className="w-8 shrink-0" aria-hidden="true" />
+
+  // PDF · report cards · Excel; `inGroup` = a class line under a group row (its PDF is on the group row):
+  // true keeps an empty slot so the table's icons line up, 'bare' (phone cards) leaves it out
+  // `compact` (phone cards): no empty slots — those only line icons up in the table
+  const quick = (list, key, test, inGroup = false, compact = false) => {
+    const pdf = inGroup === 'bare' ? null : inGroup ? spacer : pdfBtn(list[0].test, test?.question_count ?? 1)
+    if (!list.some((e) => e.participants_count > 0)) return inGroup === 'bare' ? null : compact ? pdf : <>{pdf}{spacer}{spacer}</>
     return (
       <>
-        {list.length > 1 && <span className="w-8 shrink-0" aria-hidden="true" />}{/* keeps the group's Excel in line with its classes' */}
+        {pdf}
+        {list.length > 1 && !compact && spacer}{/* keeps the group's Excel in line with its classes' */}
         {list.length === 1 && (
           <Link to={`/teacher/exams/${list[0].id}/report-cards`} title={t('rc_print_all', { ns: 'teacher' })} aria-label={t('rc_print_all', { ns: 'teacher' })}
             className={`${iconBtn} bg-indigo-50 text-indigo-600 hover:bg-indigo-100`}><i className="bi bi-person-vcard-fill text-[15px]"></i></Link>
@@ -499,10 +512,10 @@ export default function ExamsPage() {
 
   const primary = (r) => {
     if (r.status === 'draft') {
-      return <Link to={`/teacher/tests/${r.test.id}/edit`} className={`${btn} bg-amber-50 text-amber-700 hover:bg-amber-100`}><i className="bi bi-pencil"></i>{t('continue_draft', { ns: 'teacher' })}</Link>
+      return <Link to={`/teacher/tests/${r.test.id}/edit`} className={`${mainBtn} bg-amber-50 text-amber-700 hover:bg-amber-100`}><i className="bi bi-pencil"></i>{t('continue_draft', { ns: 'teacher' })}</Link>
     }
     if (r.status === 'ready') {
-      return <button onClick={() => setScheduling(r.test)} className={`${btn} bg-primary-50 text-primary-700 hover:bg-primary-100`}><i className="bi bi-calendar-plus"></i>{t('give_to_class', { ns: 'teacher' })}</button>
+      return <button onClick={() => setScheduling(r.test)} className={`${mainBtn} bg-primary-50 text-primary-700 hover:bg-primary-100`}><i className="bi bi-calendar-plus"></i>{t('give_to_class', { ns: 'teacher' })}</button>
     }
     if (r.exams.length > 1) {
       const isOpen = open.has(r.key)
@@ -655,7 +668,7 @@ export default function ExamsPage() {
                       </td>
                       <td className="px-4 py-3 text-center text-slate-600">{r.kind === 'exam' ? r.participants : <span className="text-slate-300">—</span>}</td>
                       <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-1">{r.kind === 'exam' && quick(r.exams, r.key)}{primary(r)}<RowMenu items={menuFor(r)} /></div>
+                        <div className="flex items-center justify-end gap-1">{r.kind === 'exam' ? quick(r.exams, r.key, r.test) : <>{pdfBtn(r.test.id, r.test.question_count) || spacer}{spacer}{spacer}</>}{primary(r)}<RowMenu items={menuFor(r)} /></div>
                       </td>
                     </tr>,
                     ...(group && open.has(r.key) ? r.exams.map((e) => (
@@ -673,7 +686,7 @@ export default function ExamsPage() {
                         </td>
                         <td className="px-4 py-2.5 text-center text-slate-600">{e.participants_count || 0}</td>
                         <td className="px-5 py-2.5">
-                          <div className="flex items-center justify-end gap-1">{quick([e], `e${e.id}`)}{resultsLink(e)}<RowMenu items={examMenu(e, r.test)} /></div>
+                          <div className="flex items-center justify-end gap-1">{quick([e], `e${e.id}`, r.test, true)}{resultsLink(e)}<RowMenu items={examMenu(e, r.test)} /></div>
                         </td>
                       </tr>
                     )) : []),
@@ -712,7 +725,7 @@ export default function ExamsPage() {
                           <span className="text-xs text-slate-400 shrink-0"><i className="bi bi-person-check mr-0.5"></i>{e.participants_count || 0}</span>
                           <div className="ml-auto flex items-center gap-1.5 shrink-0">
                             {!e.is_archived && switchFor([e], `e${e.id}`)}
-                            {quick([e], `e${e.id}`)}
+                            {quick([e], `e${e.id}`, r.test, 'bare')}
                             <Link to={`/teacher/exams/${e.id}/results`} title={t('results', { ns: 'teacher' })}
                               className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-50 text-indigo-700"><i className="bi bi-bar-chart"></i></Link>
                             <RowMenu items={examMenu(e, r.test)} />
@@ -724,7 +737,7 @@ export default function ExamsPage() {
                   <div className="flex items-center gap-1 pt-2 border-t border-slate-100">
                     {primary(r)}
                     <span className="flex-1" />
-                    {r.kind === 'exam' && quick(r.exams, r.key)}
+                    {r.kind === 'exam' ? quick(r.exams, r.key, r.test, false, true) : pdfBtn(r.test.id, r.test.question_count)}
                     <RowMenu items={menuFor(r)} />
                   </div>
                 </div>
