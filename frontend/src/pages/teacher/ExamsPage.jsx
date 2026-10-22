@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -126,41 +126,60 @@ function ActiveSwitch({ exam, onToggle, busy }) {
   )
 }
 
-/** "⋯" menu; drawn in a portal so the table's overflow doesn't clip it. */
+/**
+ * "⋯" menu; drawn in a portal so the table's overflow doesn't clip it. It opens below the button
+ * if it fits, else above; if neither side has room it stays inside the screen and scrolls.
+ */
 function RowMenu({ items }) {
-  const [pos, setPos] = useState(null)
+  const [anchor, setAnchor] = useState(null)   // the button's box when open
+  const [pos, setPos] = useState(null)         // where the menu goes, once measured
   const btnRef = useRef(null)
+  const menuRef = useRef(null)
   useEffect(() => {
-    if (!pos) return
-    const close = () => setPos(null)
-    window.addEventListener('scroll', close, true)
+    if (!anchor) return
+    const close = () => { setAnchor(null); setPos(null) }
+    // the page scrolling moves the button away; scrolling inside the (tall) menu itself is fine
+    const onScroll = (e) => { if (!menuRef.current?.contains(e.target)) close() }
+    window.addEventListener('scroll', onScroll, true)
     window.addEventListener('resize', close)
-    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close) }
-  }, [pos])
-  const open = () => {
-    const r = btnRef.current.getBoundingClientRect()
-    const below = window.innerHeight - r.bottom > 300
-    setPos({ right: window.innerWidth - r.right, ...(below ? { top: r.bottom + 6 } : { bottom: window.innerHeight - r.top + 6 }) })
-  }
+    return () => { window.removeEventListener('scroll', onScroll, true); window.removeEventListener('resize', close) }
+  }, [anchor])
+  useLayoutEffect(() => {
+    if (!anchor || !menuRef.current) return
+    const GAP = 6
+    const EDGE = 8
+    const vh = window.innerHeight
+    const h = menuRef.current.scrollHeight
+    const below = vh - anchor.bottom - GAP - EDGE
+    const above = anchor.top - GAP - EDGE
+    let top
+    if (h <= below) top = anchor.bottom + GAP
+    else if (h <= above) top = anchor.top - GAP - h
+    else top = Math.max(EDGE, Math.min(anchor.bottom + GAP, vh - h - EDGE))   // squeeze in, scroll if still too tall
+    setPos({ top, right: window.innerWidth - anchor.right, maxHeight: vh - 2 * EDGE })
+  }, [anchor])
+  const open = () => setAnchor(btnRef.current.getBoundingClientRect())
+  const closeMenu = () => { setAnchor(null); setPos(null) }
   const shown = items.filter(Boolean)
   return (
     <>
-      <button ref={btnRef} onClick={() => (pos ? setPos(null) : open())} aria-haspopup="menu"
+      <button ref={btnRef} onClick={() => (anchor ? closeMenu() : open())} aria-haspopup="menu"
         className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100">
         <i className="bi bi-three-dots-vertical"></i>
       </button>
-      {pos && createPortal(
-        <div className="fixed inset-0 z-50" onMouseDown={() => setPos(null)}>
-          <div role="menu" className="fixed w-60 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5" style={pos}
+      {anchor && createPortal(
+        <div className="fixed inset-0 z-50" onMouseDown={closeMenu}>
+          <div ref={menuRef} role="menu" className="fixed w-60 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 overflow-y-auto"
+            style={pos || { top: 0, right: 0, visibility: 'hidden' }}
             onMouseDown={(e) => e.stopPropagation()}>
             {shown.map((it, i) => it === '-' ? <div key={i} className="my-1 border-t border-slate-100" /> : (
               it.to ? (
-                <Link key={i} to={it.to} target={it.newTab ? '_blank' : undefined} onClick={() => setPos(null)}
+                <Link key={i} to={it.to} target={it.newTab ? '_blank' : undefined} onClick={closeMenu}
                   className={`flex items-center gap-2.5 px-4 py-2 text-sm hover:bg-slate-50 ${it.danger ? 'text-red-600' : 'text-slate-700'}`}>
                   <i className={`bi ${it.icon} w-4 text-center ${it.danger ? '' : 'text-slate-400'}`}></i>{it.label}
                 </Link>
               ) : (
-                <button key={i} onClick={() => { setPos(null); it.onClick() }} disabled={it.disabled} title={it.title}
+                <button key={i} onClick={() => { closeMenu(); it.onClick() }} disabled={it.disabled} title={it.title}
                   className={`w-full text-left flex items-center gap-2.5 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed ${it.danger ? 'text-red-600' : 'text-slate-700'}`}>
                   <i className={`bi ${it.icon} w-4 text-center ${it.danger ? '' : 'text-slate-400'}`}></i>{it.label}
                 </button>
