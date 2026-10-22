@@ -3,7 +3,8 @@ import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { examsApi } from '@/api/exams'
 import { format } from 'date-fns'
-import { exportResultsXlsx, resultLabels } from '@/utils/examExcel'
+import { downloadResultsXlsx } from '@/utils/download'
+import { toastApiError } from '@/api/errors'
 import PageSpinner from '@/components/common/PageSpinner'
 import { fmtPoints } from '@/utils/score'
 
@@ -14,6 +15,7 @@ export default function ExamResultsPage() {
   const [exam, setExam] = useState(null)
   const [absent, setAbsent] = useState([])
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     Promise.all([examsApi.get(id), examsApi.results(id), examsApi.absent(id).catch(() => ({ data: [] }))])
@@ -111,9 +113,13 @@ export default function ExamResultsPage() {
             </Link>
           )}
           {results.length > 0 && (
-            <button onClick={() => exportResultsXlsx(exam?.title, [{ className: exam?.class_name, results }], resultLabels(t))}
-              className="btn-secondary text-sm justify-center px-3 whitespace-nowrap">
-              <i className="bi bi-file-earmark-excel text-green-600"></i> Excel
+            <button disabled={exporting}
+              onClick={async () => {
+                setExporting(true)
+                try { await downloadResultsXlsx([exam]) } catch (err) { toastApiError(err) } finally { setExporting(false) }
+              }}
+              className="btn-secondary text-sm justify-center px-3 whitespace-nowrap disabled:opacity-60">
+              <i className={`bi ${exporting ? 'bi-arrow-repeat animate-spin' : 'bi-file-earmark-excel'} text-green-600`}></i> Excel
             </button>
           )}
         </div>

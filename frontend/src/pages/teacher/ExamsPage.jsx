@@ -14,6 +14,7 @@ import ShowAnswersSelect from '@/components/teacher/ShowAnswersSelect'
 import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
 import { toastApiError } from '@/api/errors'
+import { downloadResultsXlsx } from '@/utils/download'
 
 function toLocalDatetimeValue(iso) {
   if (!iso) return ''
@@ -358,12 +359,7 @@ export default function ExamsPage() {
   const onExcel = async (list, key) => {
     setExportingKey(key)
     try {
-      const [{ exportResultsXlsx, resultLabels }, responses] = await Promise.all([
-        import('@/utils/examExcel'),                       // xlsx is big: load it only when asked
-        Promise.all(list.map((e) => examsApi.results(e.id))),
-      ])
-      const groups = list.map((e, i) => ({ className: e.class_name, results: responses[i].data.results || responses[i].data }))
-      exportResultsXlsx(list[0].title, groups, resultLabels(t))
+      await downloadResultsXlsx(list)                      // built on the server: three styled sheets
     } catch (err) {
       toastApiError(err)
     } finally {

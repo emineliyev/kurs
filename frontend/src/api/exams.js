@@ -14,6 +14,8 @@ export const examsApi = {
   myResult: (id) => client.get(`/exams/${id}/my_result/`),
   saveDraft: (id, answers) => client.patch(`/exams/${id}/save_draft/`, { answers }),
   results: (id) => client.get(`/exams/${id}/results/`),
+  // styled .xlsx of one exam, or of the same test's exams in several classes
+  resultsXlsx: (ids) => client.get('/exams/results_xlsx/', { params: { ids: ids.join(',') }, responseType: 'blob' }),
   absent: (id) => client.get(`/exams/${id}/absent/`),
   saveOffline: (id, data) => client.post(`/exams/${id}/offline_result/`, data),
   deleteOffline: (id, studentId) => client.delete(`/exams/${id}/offline_result/`, { params: { student_id: studentId } }),

@@ -283,6 +283,34 @@ class ExamViewSet(viewsets.ModelViewSet):
         serializer = ExamResultSerializer(results, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='results_xlsx', permission_classes=[IsTeacher])
+    def results_xlsx(self, request):
+        """?ids=1,2,3 — the results workbook of one exam, or of one test given to several classes."""
+        from urllib.parse import quote
+        from django.http import HttpResponse
+        from .excel_export import build_results_workbook
+        try:
+            ids = [int(i) for i in (request.query_params.get('ids') or '').split(',') if i.strip()]
+        except ValueError:
+            ids = []
+        if not ids:
+            return Response({'detail': 'ids is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        exams = list(Exam.objects.filter(pk__in=ids, class_room__teacher=request.user)
+                     .select_related('test', 'class_room').order_by('class_room__name'))
+        if len(exams) != len(set(ids)):
+            return Response({'detail': 'İmtahan tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+        if len({e.test_id for e in exams}) != 1:
+            return Response({'detail': 'Bir faylda yalnız eyni imtahanın sinifləri ola bilər.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        for exam in exams:
+            finalize_overdue(exam.results.all())
+        data = build_results_workbook(exams)
+        name = f'{exams[0].title or exams[0].test.title} - nəticələr.xlsx'
+        response = HttpResponse(
+            data, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f"attachment; filename=\"results.xlsx\"; filename*=UTF-8''{quote(name)}"
+        return response
+
     @action(detail=True, methods=['get'], permission_classes=[IsTeacher])
     def report_cards(self, request, pk=None):
         """Printable report cards of every submitted result (?student_id= for one student)."""

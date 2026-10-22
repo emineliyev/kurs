@@ -23,6 +23,7 @@ Django==6.0.3
 djangorestframework==3.17.0
 djangorestframework_simplejwt==5.5.1
 drf-spectacular==0.29.0
+et_xmlfile==2.0.0
 gunicorn==23.0.0
 idna==3.11
 inflection==0.5.1
@@ -30,8 +31,9 @@ jmespath==1.1.0
 jsonschema-specifications==2025.9.1
 jsonschema==4.26.0
 kombu==5.6.2
-packaging==26.0
 nh3==0.3.7
+openpyxl==3.1.5
+packaging==26.0
 pillow==12.1.1
 prompt_toolkit==3.0.52
 psycopg2-binary==2.9.11
