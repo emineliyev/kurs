@@ -67,7 +67,7 @@ class Test(models.Model):
                     errors.append(f'Sual {n}: ən azı 2 cavab variantı olmalıdır.')
                 elif not any(a.is_correct for a in answers):
                     errors.append(f'Sual {n}: düzgün cavab işarələnməyib.')
-            elif q.question_type == Question.TYPE_SHORT_ANSWER and not q.correct_answer.strip():
+            elif q.question_type == Question.TYPE_SHORT_ANSWER and not q.correct_answer.replace('|', '').strip():
                 errors.append(f'Sual {n}: düzgün cavab yazılmayıb.')
             elif q.question_type == Question.TYPE_NUMERIC:
                 from apps.exams.grading import parse_number

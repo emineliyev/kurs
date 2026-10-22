@@ -40,4 +40,6 @@ def auto_hint(key):
 
 
 def answer_hint(question):
-    return (question.answer_format or '').strip() or auto_hint(question.correct_answer)
+    # several accepted answers ("1B2E3D | 1-B 2-E 3-D"): the sample follows the first
+    first = (question.correct_answer or '').split('|')[0]
+    return (question.answer_format or '').strip() or auto_hint(first)

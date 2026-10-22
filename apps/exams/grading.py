@@ -26,21 +26,36 @@ def apply_manual_grade(answer, key):
 
 # ── Matching typed answers ───────────────────────────────────────────────────
 _SPACES = re.compile(r'\s+')
-_AROUND_SIGNS = re.compile(r'\s*([/:;.+\-=*×÷^()<>])\s*')
+_AROUND_SIGNS = re.compile(r'\s*([/:;.+\-=*^()<>])\s*')
+# Cyrillic letters that look exactly like Latin ones (a Russian keyboard layout): а→a, в→b, е→e …
+_LOOKALIKES = str.maketrans('авсенкмортхуіј', 'abcehkmopтxyij'.replace('т', 't'))
+# other ways of writing the same sign
+_SIGNS = str.maketrans({'−': '-', '–': '-', '—': '-', '÷': '/', '×': '*', '·': '*'})
+# wrapping that doesn't change the answer: «Bakı», "Bakı", Bakı. — quotes on both ends, punctuation only
+# at the end (a leading dot is part of a number: .5)
+_QUOTES = ' "\'«»“”„‘’`'
+_TRAILING = _QUOTES + '.;:!?'
+# matching answers: number + letter pairs, any separators ("1B2E3D", "1-b, 2-e", "1)B 2)E")
+_PAIR = re.compile(r'(\d+)\s*[-.:)=>]*\s*([a-z])')
+_MATCHING = re.compile(r'^(\s*\d+\s*[-.:)=>]*\s*[a-z]\s*[.;]?\s*){2,}$')
+ALTERNATIVES = '|'   # the teacher's key "0,5 | 1/2": any of them is right
 
 
 def normalize_answer(text):
-    """A typed answer in a form where trivial differences don't count:
-    case (İ/I/ı/i alike), 2,5 = 2.5, extra spaces, and spaces around signs (2 / 2 = 2/2)."""
+    """A typed answer in a form where trivial differences don't count: case (İ/I/ı/i alike),
+    look-alike Cyrillic letters, 2,5 = 2.5, −/–/— = -, ÷ = /, extra spaces, spaces around signs
+    (2 / 2 = 2/2), and quotes or a full stop around the whole answer."""
     s = unicodedata.normalize('NFKC', str(text or '')).strip()
     s = s.replace('İ', 'i').replace('I', 'i').lower().replace('ı', 'i').replace('\u0307', '')
+    s = s.translate(_LOOKALIKES).translate(_SIGNS)
     s = s.replace(',', '.')
     s = _SPACES.sub(' ', s)
-    return _AROUND_SIGNS.sub(r'\1', s)
+    s = _AROUND_SIGNS.sub(r'\1', s)
+    return s.strip(_QUOTES).rstrip(_TRAILING).strip(_QUOTES)
 
 
 def parse_number(text):
-    """'2,5' / ' 2.50 ' / '1 000' → float; None if it isn't a plain number."""
+    """'2,5' / ' 2.50 ' / '1 000' / '−5' → float; None if it isn't a plain number."""
     s = normalize_answer(text).replace(' ', '')
     if not s:
         return None
@@ -51,16 +66,35 @@ def parse_number(text):
     return value if math.isfinite(value) else None
 
 
-def short_answer_correct(question, text):
-    key, given = normalize_answer(question.correct_answer), normalize_answer(text)
-    if not key or not given:
+def _matching_pairs(s):
+    """{number: letter} of a matching answer ("1b2e3d" / "1-b.2-e" …); None if it isn't one."""
+    if not _MATCHING.match(s):
+        return None
+    return {n.lstrip('0') or '0': letter for n, letter in _PAIR.findall(s)}
+
+
+def _one_key_matches(key, given):
+    if not key:
         return False
-    if given == key:
+    if given == key or given.replace(' ', '') == key.replace(' ', ''):   # "1b 2e 3d" = "1B2E3D"
         return True
-    if given.replace(' ', '') == key.replace(' ', ''):   # spaces don't count: "1b 2e 3d" = "1B2E3D"
-        return True
-    a, b = parse_number(given), parse_number(key)   # 0.5 = .5 = 0,50
-    return a is not None and b is not None and math.isclose(a, b, rel_tol=0, abs_tol=1e-9)
+    a, b = parse_number(given), parse_number(key)                       # 0.5 = .5 = 0,50
+    if a is not None and b is not None:
+        return math.isclose(a, b, rel_tol=0, abs_tol=1e-9)
+    pk, pg = _matching_pairs(key), _matching_pairs(given)               # "1-B, 2-E" = "1B2E", any order
+    return pk is not None and pk == pg
+
+
+def answer_keys(question):
+    """The accepted answers: the key, split on | when the teacher listed several."""
+    return [k for k in (question.correct_answer or '').split(ALTERNATIVES) if k.strip()]
+
+
+def short_answer_correct(question, text):
+    given = normalize_answer(text)
+    if not given:
+        return False
+    return any(_one_key_matches(normalize_answer(k), given) for k in answer_keys(question))
 
 
 def numeric_correct(question, text):

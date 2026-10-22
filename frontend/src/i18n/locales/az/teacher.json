@@ -293,7 +293,7 @@
   "q_choices_hidden_pdf": "PDF-də cavab variantları gizlədilir",
   "q_correct_answer_label": "Düzgün cavab",
   "q_enter_correct_ph": "Düzgün cavabı yazın (hərf hərfinə uyğunluq)",
-  "q_case_insensitive": "Böyük/kiçik hərflərə görə fərqləndirilmir",
+  "q_case_insensitive": "Böyük/kiçik hərf, boşluq, vergül/nöqtə və rus klaviaturasının oxşar hərfləri fərq etmir. Bir neçə düzgün cavab varsa, | ilə ayırın: 0,5 | 1/2",
   "q_model_answer_toggle": "Nümunə izah (ixtiyari)",
   "q_explanation_ph": "İzah...",
   "q_numeric_correct_label": "Düzgün rəqəmli cavab",
@@ -826,7 +826,7 @@
   "fix_key_title": "Düzgün cavabı düzəlt",
   "fix_key_pick": "Düzgün variantı seçin (bir neçəsi də ola bilər):",
   "fix_key_tolerance": "Tolerans (±)",
-  "fix_key_match_hint": "Vergül və nöqtə (2,5 = 2.5), böyük-kiçik hərf və artıq boşluqlar fərq etmir.",
+  "fix_key_match_hint": "Vergül və nöqtə (2,5 = 2.5), böyük-kiçik hərf və boşluqlar fərq etmir. Bir neçə düzgün cavab varsa, | ilə ayırın: 0,5 | 1/2",
   "fix_key_regrade_note": "Bu suala cavab vermiş bütün şagirdlərin cavabları yenidən yoxlanılacaq və nəticələri avtomatik yenilənəcək.",
   "fix_key_save": "Yadda saxla və yenidən yoxla",
   "key_fixed": "Düzgün cavab yeniləndi",
@@ -869,5 +869,6 @@
   "q_answer_format_ph": "məs. 1A2B3C və ya 2,5",
   "q_answer_format_shown": "Şagird görəcək:",
   "q_answer_format_auto": "Boş qalsa, şagirdə avtomatik bu nümunə göstəriləcək:",
-  "q_answer_format_none": "Boş qalsa, şagirdə nümunə göstərilməyəcək."
+  "q_answer_format_none": "Boş qalsa, şagirdə nümunə göstərilməyəcək.",
+  "live_open_all": "Canlı izləmə səhifəsində hamısı ({{count}})"
 }
