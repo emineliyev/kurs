@@ -9,7 +9,7 @@ class PlanSerializer(serializers.ModelSerializer):
         model = Plan
         fields = [
             'id', 'name', 'display_name', 'price', 'tier',
-            'max_tests_per_month', 'max_exams_per_month',
+            'max_exams_per_month',
             'max_classes', 'max_students',
             'duration_days', 'description', 'is_active',
         ]
@@ -19,7 +19,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     plan_details         = PlanSerializer(source='plan', read_only=True)
     pending_plan_details = PlanSerializer(source='pending_plan', read_only=True)
     is_active            = serializers.BooleanField(read_only=True)
-    can_create_test      = serializers.BooleanField(read_only=True)
     can_create_exam      = serializers.BooleanField(read_only=True)
     days_remaining       = serializers.IntegerField(read_only=True)
     has_pending_downgrade       = serializers.BooleanField(read_only=True)
@@ -34,8 +33,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'pending_plan', 'pending_plan_details', 'pending_change_date',
             'status', 'start_date', 'end_date',
             'cancelled_at', 'days_remaining',
-            'tests_used_this_month', 'exams_used_this_month',
-            'is_active', 'can_create_test', 'can_create_exam',
+            'exams_used_this_month',
+            'is_active', 'can_create_exam',
             'has_pending_downgrade', 'is_cancellation_scheduled',
             'classes_used', 'students_used',
             'created_at',

@@ -140,13 +140,19 @@ class PaymentRequestAdmin(admin.ModelAdmin):
                 sub.payment_reference = f'manual:{payment_request.id}'
                 sub.save(update_fields=['payment_reference'])
             else:
+                # paying again for the same plan before it runs out: the new period follows the
+                # current one, so the days already paid for aren't lost
+                current = Subscription.objects.filter(teacher=payment_request.teacher).first()
+                start = now
+                if current is not None and current.plan_id == plan.id and current.is_active and current.end_date > now:
+                    start = current.end_date
                 Subscription.objects.update_or_create(
                     teacher=payment_request.teacher,
                     defaults={
                         'plan':                  plan,
                         'status':                Subscription.STATUS_ACTIVE,
-                        'start_date':            now,
-                        'end_date':              now + timedelta(days=plan.duration_days),
+                        'start_date':            now if start == now else current.start_date,
+                        'end_date':              start + timedelta(days=plan.duration_days),
                         'payment_reference':     f'manual:{payment_request.id}',
                         'tests_used_this_month': 0,
                         'exams_used_this_month': 0,

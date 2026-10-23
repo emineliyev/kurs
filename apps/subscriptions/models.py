@@ -109,13 +109,6 @@ class Subscription(models.Model):
 
     # ── Usage helpers ──────────────────────────────────────────────────────────
 
-    def can_create_test(self):
-        if not self.is_active:
-            return False
-        if self.plan.max_tests_per_month == -1:
-            return True
-        return self.tests_used_this_month < self.plan.max_tests_per_month
-
     def can_create_exam(self):
         if not self.is_active:
             return False
@@ -168,14 +161,13 @@ class Subscription(models.Model):
         self.save(update_fields=['pending_plan', 'pending_change_date'])
 
     def apply_pending_downgrade(self):
-        """Called by management command when billing period ends."""
+        """Called by the daily command when the billing period ends: the subscription moves to the
+        chosen smaller plan but stays expired until that plan is paid for (a renewal payment) —
+        the new period is never given for free."""
         if not self.pending_plan:
             return
-        now = timezone.now()
         self.plan        = self.pending_plan
-        self.start_date  = now
-        self.end_date    = now + __import__('datetime').timedelta(days=self.pending_plan.duration_days)
-        self.status      = self.STATUS_ACTIVE
+        self.status      = self.STATUS_EXPIRED
         self.pending_plan        = None
         self.pending_change_date = None
         self.cancelled_at        = None

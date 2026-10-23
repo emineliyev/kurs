@@ -15,6 +15,22 @@ from .models import Exam, ExamResult, StudentAnswer
 from .serializers import ExamSerializer, ExamResultSerializer, ExamResultDetailSerializer, SubmitExamSerializer
 
 
+def _over_plan_limits(teacher, plan):
+    """Message if the teacher has more active students / classes than the plan allows, else None."""
+    from apps.accounts.students import active_student_count
+    if plan.max_students != -1:
+        n = active_student_count(teacher)
+        if n > plan.max_students:
+            return (f'Aktiv şagird sayınız ({n}) planınızın limitini ({plan.max_students}) aşır. '
+                    'Yeni imtahan üçün artıq şagirdləri arxivə salın və ya planı yüksəldin.')
+    if plan.max_classes != -1:
+        n = teacher.classes.filter(is_active=True).count()
+        if n > plan.max_classes:
+            return (f'Aktiv sinif sayınız ({n}) planınızın limitini ({plan.max_classes}) aşır. '
+                    'Yeni imtahan üçün artıq sinifləri silin və ya planı yüksəldin.')
+    return None
+
+
 def _apply_answer_visibility(data, exam):
     """Trim a student's own result review to what the exam's show_answers setting allows."""
     mode = exam.show_answers
@@ -80,15 +96,32 @@ class ExamViewSet(viewsets.ModelViewSet):
             raise PermissionDenied(Subscription.MISSING_MESSAGE)
         if not subscription.is_active:
             raise PermissionDenied(Subscription.EXPIRED_MESSAGE)
+        # more students / classes than the plan allows (e.g. added before a move to a smaller plan)
+        over = _over_plan_limits(user, subscription.plan)
+        if over:
+            raise PermissionDenied(over)
         subscription.reset_monthly_count_if_needed()
-        if not subscription.can_create_exam():
-            raise PermissionDenied(
-                f'Aylıq imtahan limitinə çatmısınız ({subscription.plan.max_exams_per_month}). Abunəliyinizi yeniləyin.'
-            )
-        exam = serializer.save()
-        subscription.exams_used_this_month += 1
-        subscription.save(update_fields=['exams_used_this_month'])
+        # lock the row: many requests at once must not slip past the monthly limit together
+        with transaction.atomic():
+            locked = Subscription.objects.select_for_update().select_related('plan').get(pk=subscription.pk)
+            if not locked.can_create_exam():
+                raise PermissionDenied(
+                    f'Aylıq imtahan limitinə çatmısınız ({locked.plan.max_exams_per_month}). Abunəliyinizi yeniləyin.'
+                )
+            exam = serializer.save()
+            locked.exams_used_this_month += 1
+            locked.save(update_fields=['exams_used_this_month'])
         return exam
+
+    def update(self, request, *args, **kwargs):
+        # Plan ran out: an exam can still be renamed or switched off, not switched on or given more time
+        from apps.subscriptions.permissions import subscription_error
+        error = subscription_error(request.user)
+        if error:
+            allowed = set(request.data.keys()) <= {'title', 'is_active'}
+            if not allowed or request.data.get('is_active') in (True, 'true', 'True', '1', 1):
+                return Response({'detail': error}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
 
     # Deleting takes the results and answers with it — the page warns first and offers the archive instead
     def _teacher_exams(self, request):
@@ -383,6 +416,11 @@ class ExamViewSet(viewsets.ModelViewSet):
         exam = self.get_object()
         if exam.class_room.teacher != request.user:
             return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        if request.method == 'POST':
+            from apps.subscriptions.permissions import subscription_error
+            error = subscription_error(request.user)
+            if error:
+                return Response({'detail': error}, status=status.HTTP_403_FORBIDDEN)
         data = request.data if request.method == 'POST' else request.query_params
         student_id = data.get('student_id')
         if not ClassEnrollment.objects.filter(class_room=exam.class_room, student_id=student_id,

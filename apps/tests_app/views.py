@@ -5,6 +5,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from apps.accounts.permissions import IsTeacher
+from apps.subscriptions.permissions import ActiveSubscriptionFor
 from .models import Test, Question, Answer, TestVersion, BankQuestion, BankAnswer, BankFolder
 from .serializers import (
     BankFolderSerializer,
@@ -63,6 +64,8 @@ def shuffled_for_student(questions, exam, student):
 
 class TestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    # once the plan runs out: tests can still be opened, exported and deleted, not built or printed
+    subscription_actions = ('create', 'update', 'partial_update', 'duplicate')
 
     def get_serializer_class(self):
         # Questions (with correct answers) are for the owning teacher only.
@@ -93,8 +96,8 @@ class TestViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy', 'duplicate', 'versions']:
-            return [IsTeacher()]
-        return [IsAuthenticated()]
+            return [IsTeacher(), ActiveSubscriptionFor()]
+        return [IsAuthenticated(), ActiveSubscriptionFor()]
 
     def perform_create(self, serializer):
         # Publishing goes through update(), where email, quota and content are checked.
@@ -242,7 +245,9 @@ class TestViewSet(viewsets.ModelViewSet):
 
 class QuestionViewSet(viewsets.ModelViewSet):
     serializer_class = QuestionSerializer
-    permission_classes = [IsTeacher]
+    permission_classes = [IsTeacher, ActiveSubscriptionFor]
+    # fixing an answer key stays open: it corrects results of exams already given
+    subscription_actions = ('create', 'update', 'partial_update', 'destroy', 'reorder')
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
@@ -354,7 +359,8 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
 class BankQuestionViewSet(viewsets.ModelViewSet):
     serializer_class = BankQuestionSerializer
-    permission_classes = [IsTeacher]
+    permission_classes = [IsTeacher, ActiveSubscriptionFor]
+    subscription_actions = ('create', 'update', 'partial_update', 'copy_to_test', 'add_to_test')
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
