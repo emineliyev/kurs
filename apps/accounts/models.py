@@ -27,6 +27,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_email_verified = models.BooleanField(default=False, verbose_name='E-poçt təsdiqlənib')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Qeydiyyat tarixi')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Yenilənmə tarixi')
+    # Where a teacher signed up from — the admin spots many free trials from one place
+    signup_ip = models.GenericIPAddressField(null=True, blank=True, verbose_name='Qeydiyyat IP-si')
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']

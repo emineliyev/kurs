@@ -124,6 +124,7 @@ class TeacherRegisterView(APIView):
         serializer = TeacherRegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            _remember_signup_ip(user, request)
             self._create_free_subscription(user)
             send_verification_email_task.delay(user.pk)
             refresh = RefreshToken.for_user(user)
@@ -448,6 +449,13 @@ class GoogleAuthError(Exception):
     pass
 
 
+def _remember_signup_ip(user, request):
+    from .login_guard import client_ip
+    ip = client_ip(request)
+    if ip and ip != 'unknown':
+        User.objects.filter(pk=user.pk).update(signup_ip=ip)
+
+
 def _create_free_subscription(user):
     try:
         from apps.subscriptions.models import Plan, Subscription
@@ -534,6 +542,8 @@ class GoogleAuthView(APIView):
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
             return Response({'detail': _('Google authentication failed.')}, status=status.HTTP_400_BAD_REQUEST)
+        if created:
+            _remember_signup_ip(user, request)
         return Response(_login_payload(user, created))
 
 
@@ -568,6 +578,8 @@ class GoogleRedirectView(APIView):
             user, created = google_sign_in(request.data.get('credential'))
         except Exception:
             return self._back('/login?google_error=1')
+        if created:
+            _remember_signup_ip(user, request)
         code = signing.dumps({'uid': user.pk, 'created': created, 'n': secrets.token_urlsafe(12)},
                              salt=GOOGLE_CODE_SALT)
         return self._back(f'/auth/google#code={code}')

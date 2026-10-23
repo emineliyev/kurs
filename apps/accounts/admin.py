@@ -70,21 +70,40 @@ class SubscriptionStateFilter(admin.SimpleListFilter):
         return queryset
 
 
+class SharedSignupIPFilter(admin.SimpleListFilter):
+    """Teachers who signed up from an address that 3+ teacher accounts came from — the usual sign of
+    someone opening new accounts for new free trials. Click an IP in the list to see all of them."""
+    title = 'Eyni IP-dən qeydiyyat'
+    parameter_name = 'shared_ip'
+
+    def lookups(self, request, model_admin):
+        return [('3', '3+ müəllim hesabı'), ('5', '5+ müəllim hesabı')]
+
+    def queryset(self, request, queryset):
+        if not self.value():
+            return queryset
+        from django.db.models import Count
+        busy = (User.objects.filter(role=User.ROLE_TEACHER, signup_ip__isnull=False)
+                .values('signup_ip').annotate(n=Count('id')).filter(n__gte=int(self.value()))
+                .values('signup_ip'))
+        return queryset.filter(role=User.ROLE_TEACHER, signup_ip__in=busy)
+
+
 # ── Users ─────────────────────────────────────────────────────────────────────
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ['email', 'full_name', 'role', 'plan_info', 'is_active', 'is_email_verified', 'created_at']
-    list_filter = ['role', SubscriptionStateFilter, 'is_active', 'is_email_verified', 'is_staff']
+    list_display = ['email', 'full_name', 'role', 'plan_info', 'is_active', 'is_email_verified', 'signup_ip_link', 'created_at']
+    list_filter = ['role', SubscriptionStateFilter, SharedSignupIPFilter, 'is_active', 'is_email_verified', 'is_staff']
     list_editable = ['is_email_verified']
-    search_fields = ['email', 'username', 'first_name', 'last_name']
+    search_fields = ['email', 'username', 'first_name', 'last_name', 'signup_ip']
     ordering = ['-created_at']
     list_select_related = ['subscription__plan', 'created_by']
     autocomplete_fields = ['created_by']
     actions = ['activate_users', 'block_users', 'mark_email_verified', 'mark_email_unverified']
     fieldsets = (
         (None, {'fields': ('email', 'username', 'password')}),
-        ('Şəxsi məlumat', {'fields': ('first_name', 'last_name', 'role', 'created_by')}),
+        ('Şəxsi məlumat', {'fields': ('first_name', 'last_name', 'role', 'created_by', 'signup_ip')}),
         ('İcazələr', {
             'fields': ('is_active', 'is_email_verified', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
             'classes': ('collapse',),
@@ -96,6 +115,14 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'username', 'first_name', 'last_name', 'role', 'password1', 'password2'),
         }),
     )
+
+    @admin.display(description='Qeydiyyat IP', ordering='signup_ip')
+    def signup_ip_link(self, obj):
+        # click: every account that signed up from the same address
+        if not obj.signup_ip:
+            return '—'
+        from django.utils.html import format_html
+        return format_html('<a href="?q={}">{}</a>', obj.signup_ip, obj.signup_ip)
 
     def get_inlines(self, request, obj):
         if obj is None:
