@@ -444,96 +444,154 @@ def _free_username(base):
     return candidate
 
 
+class GoogleAuthError(Exception):
+    pass
+
+
+def _create_free_subscription(user):
+    try:
+        from apps.subscriptions.models import Plan, Subscription
+        from django.utils import timezone
+        from datetime import timedelta
+        plan = Plan.objects.filter(name=Plan.PLAN_FREE, is_active=True).first()
+        if plan:
+            Subscription.objects.get_or_create(
+                teacher=user,
+                defaults={
+                    'plan': plan,
+                    'status': Subscription.STATUS_TRIAL,
+                    'start_date': timezone.now(),
+                    'end_date': timezone.now() + timedelta(days=plan.duration_days),
+                }
+            )
+    except Exception:
+        pass
+
+
+def google_sign_in(token):
+    """Check a Google ID token and return (user, created) — a new teacher on first sign-in.
+    Raises GoogleAuthError with the message to show."""
+    if not token:
+        raise GoogleAuthError(_('Google token is required.'))
+    try:
+        google_response = http_requests.get(f'https://oauth2.googleapis.com/tokeninfo?id_token={token}', timeout=10)
+    except Exception:
+        raise GoogleAuthError(_('Google authentication failed.'))
+    if google_response.status_code != 200:
+        raise GoogleAuthError(_('Invalid Google token.'))
+    google_data = google_response.json()
+    email = google_data.get('email')
+    if not email:
+        raise GoogleAuthError(_('Could not get email from Google.'))
+    # The token must be issued for *our* app (otherwise any site's Google token would log in)
+    # and Google must have verified the address
+    client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '')
+    if not client_id or google_data.get('aud') != client_id:
+        raise GoogleAuthError(_('Invalid Google token.'))
+    if str(google_data.get('email_verified')).lower() != 'true':
+        raise GoogleAuthError(_('Invalid Google token.'))
+
+    existing = User.objects.filter(email__iexact=email).first()
+    if existing is not None and not existing.is_active:
+        raise GoogleAuthError(_('Account is disabled.'))
+    user, created = User.objects.get_or_create(
+        email=existing.email if existing else email,
+        defaults={
+            'username': _free_username(email.split('@')[0]),
+            'first_name': google_data.get('given_name', ''),
+            'last_name': google_data.get('family_name', ''),
+            'role': User.ROLE_TEACHER,
+            'is_active': True,
+            'is_email_verified': True,  # Google already verified the email
+        }
+    )
+    if created:
+        user.set_unusable_password()
+        _create_free_subscription(user)
+        user.save()
+    elif not user.is_email_verified:
+        user.is_email_verified = True
+        user.save(update_fields=['is_email_verified'])
+    return user, created
+
+
+def _login_payload(user, created):
+    refresh = RefreshToken.for_user(user)
+    return {'user': UserSerializer(user).data, 'access': str(refresh.access_token),
+            'refresh': str(refresh), 'created': created}
+
+
 class GoogleAuthView(APIView):
+    """Popup sign-in (desktop): the page posts the Google credential here and gets the tokens back."""
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'google_auth'
     permission_classes = [AllowAny]
 
-    def _create_free_subscription(self, user):
+    def post(self, request):
         try:
-            from apps.subscriptions.models import Plan, Subscription
-            from django.utils import timezone
-            from datetime import timedelta
-            plan = Plan.objects.filter(name=Plan.PLAN_FREE, is_active=True).first()
-            if plan:
-                Subscription.objects.get_or_create(
-                    teacher=user,
-                    defaults={
-                        'plan': plan,
-                        'status': Subscription.STATUS_TRIAL,
-                        'start_date': timezone.now(),
-                        'end_date': timezone.now() + timedelta(days=plan.duration_days),
-                    }
-                )
+            user, created = google_sign_in(request.data.get('credential'))
+        except GoogleAuthError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
-            pass
+            return Response({'detail': _('Google authentication failed.')}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(_login_payload(user, created))
+
+
+GOOGLE_CODE_SALT = 'google-redirect'
+GOOGLE_CODE_MAX_AGE = 60   # seconds for the page to swap the code for tokens
+
+
+class GoogleRedirectView(APIView):
+    """
+    Redirect sign-in (phones): Google posts the credential straight here — no popup that a phone
+    can reload ("confirm form resubmission"). We check Google's double-submit CSRF token, sign the
+    user in, and send the browser back to the site with a one-time, 60-second code in the URL
+    fragment (never reaches a server log); the page swaps it for tokens at /google/exchange/.
+    """
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'google_auth'
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def _back(self, path):
+        from django.http import HttpResponseRedirect
+        response = HttpResponseRedirect(settings.FRONTEND_URL.rstrip('/') + path)
+        response.status_code = 303   # back with a GET, never a re-POST
+        return response
 
     def post(self, request):
-        token = request.data.get('credential')
-        if not token:
-            return Response({'detail': _('Google token is required.')}, status=status.HTTP_400_BAD_REQUEST)
-
+        import secrets
+        cookie_token = request.COOKIES.get('g_csrf_token')
+        if not cookie_token or cookie_token != request.data.get('g_csrf_token'):
+            return self._back('/login?google_error=1')
         try:
-            # Verify token with Google
-            google_response = http_requests.get(
-                f'https://oauth2.googleapis.com/tokeninfo?id_token={token}',
-                timeout=10
-            )
-            if google_response.status_code != 200:
-                return Response({'detail': _('Invalid Google token.')}, status=status.HTTP_400_BAD_REQUEST)
+            user, created = google_sign_in(request.data.get('credential'))
+        except Exception:
+            return self._back('/login?google_error=1')
+        code = signing.dumps({'uid': user.pk, 'created': created, 'n': secrets.token_urlsafe(12)},
+                             salt=GOOGLE_CODE_SALT)
+        return self._back(f'/auth/google#code={code}')
 
-            google_data = google_response.json()
-            email = google_data.get('email')
-            first_name = google_data.get('given_name', '')
-            last_name = google_data.get('family_name', '')
 
-            if not email:
-                return Response({'detail': _('Could not get email from Google.')}, status=status.HTTP_400_BAD_REQUEST)
+class GoogleExchangeView(APIView):
+    """POST {code} from the redirect sign-in → the same tokens the popup sign-in returns (once)."""
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'google_auth'
+    permission_classes = [AllowAny]
 
-            # The token must be issued for *our* app (otherwise any site's Google token would log in)
-            # and Google must have verified the address
-            client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '')
-            if not client_id or google_data.get('aud') != client_id:
-                return Response({'detail': _('Invalid Google token.')}, status=status.HTTP_400_BAD_REQUEST)
-            if str(google_data.get('email_verified')).lower() != 'true':
-                return Response({'detail': _('Invalid Google token.')}, status=status.HTTP_400_BAD_REQUEST)
-
-            existing = User.objects.filter(email__iexact=email).first()
-            if existing is not None and not existing.is_active:
-                return Response({'detail': _('Account is disabled.')}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Get or create user
-            user, created = User.objects.get_or_create(
-                email=existing.email if existing else email,
-                defaults={
-                    'username': _free_username(email.split('@')[0]),
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'role': User.ROLE_TEACHER,
-                    'is_active': True,
-                    'is_email_verified': True,  # Google already verified the email
-                }
-            )
-
-            if created:
-                user.set_unusable_password()
-                self._create_free_subscription(user)
-                user.save()
-            elif not user.is_email_verified:
-                # Existing user - mark email as verified via Google
-                user.is_email_verified = True
-                user.save(update_fields=['is_email_verified'])
-
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'user': UserSerializer(user).data,
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-                'created': created,
-            })
-
-        except Exception as e:
+    def post(self, request):
+        from django.core.cache import cache
+        try:
+            data = signing.loads(request.data.get('code') or '', salt=GOOGLE_CODE_SALT, max_age=GOOGLE_CODE_MAX_AGE)
+        except signing.BadSignature:
             return Response({'detail': _('Google authentication failed.')}, status=status.HTTP_400_BAD_REQUEST)
+        # each code works once
+        if not cache.add(f'google_code_used:{data["n"]}', 1, GOOGLE_CODE_MAX_AGE * 2):
+            return Response({'detail': _('Google authentication failed.')}, status=status.HTTP_400_BAD_REQUEST)
+        user = User.objects.filter(pk=data['uid'], is_active=True).first()
+        if user is None:
+            return Response({'detail': _('Account is disabled.')}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(_login_payload(user, bool(data.get('created'))))
 
 
 class VerifyEmailView(APIView):

@@ -8,6 +8,8 @@ export const authApi = {
   updateProfile: (data) => client.patch('/auth/profile/', data),
   changePassword: (data) => client.post('/auth/password/change/', data),
   googleAuth: (credential) => client.post('/auth/google/', { credential }),
+  // redirect sign-in (phones): the one-time code the server put in /auth/google#code=…
+  googleExchange: (code) => client.post('/auth/google/exchange/', { code }),
   students: (archived = false) => client.get('/auth/students/', { params: archived ? { archived: 1 } : {} }),
   createStudent: (data) => client.post('/auth/students/', data),
   updateStudent: (id, data) => client.patch(`/auth/students/${id}/`, data),

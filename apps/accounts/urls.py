@@ -5,7 +5,7 @@ from .views import (
     ProfileView, PasswordChangeView, StudentListCreateView, StudentDetailView, StudentRestoreView,
     StudentBulkCreateView, StudentUsernameCheckView, StudentAssignView, StudentResetPasswordsView,
     StudentPurgeView,
-    GoogleAuthView, FeedbackCreateView, VerifyEmailView, ResendVerificationView,
+    GoogleAuthView, GoogleRedirectView, GoogleExchangeView, FeedbackCreateView, VerifyEmailView, ResendVerificationView,
     PasswordResetRequestView, PasswordResetConfirmView,
 )
 
@@ -25,6 +25,8 @@ urlpatterns = [
     path('students/<int:student_id>/', StudentDetailView.as_view(), name='student-update'),
     path('students/<int:student_id>/restore/', StudentRestoreView.as_view(), name='student-restore'),
     path('google/', GoogleAuthView.as_view(), name='google-auth'),
+    path('google/redirect/', GoogleRedirectView.as_view(), name='google-redirect'),
+    path('google/exchange/', GoogleExchangeView.as_view(), name='google-exchange'),
     path('feedback/', FeedbackCreateView.as_view(), name='feedback'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
     path('resend-verification/', ResendVerificationView.as_view(), name='resend-verification'),

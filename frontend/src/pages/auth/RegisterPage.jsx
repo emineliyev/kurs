@@ -249,7 +249,7 @@ function GoogleRegisterButton() {
     if (!container) return
     renderGoogleButton(container, clientId, handleGoogleResponse, {
       theme: 'outline', size: 'large', width: container.offsetWidth || 400, text: 'signup_with', locale: 'az',
-    }).catch(() => {})
+    }, 'register').catch(() => {})
   }, [clientId])
 
   if (!clientId || clientId === 'your-google-client-id') {

@@ -19,6 +19,7 @@ const ExamPrintPage = lazyPage(() => import('@/pages/print/ExamPrintPage'))
 const LoginPage = lazyPage(() => import('@/pages/auth/LoginPage'))
 const RegisterPage = lazyPage(() => import('@/pages/auth/RegisterPage'))
 const VerifyEmailPage = lazyPage(() => import('@/pages/auth/VerifyEmailPage'))
+const GoogleCallbackPage = lazyPage(() => import('@/pages/auth/GoogleCallbackPage'))
 const ForgotPasswordPage = lazyPage(() => import('@/pages/auth/ForgotPasswordPage'))
 const ResetPasswordPage = lazyPage(() => import('@/pages/auth/ResetPasswordPage'))
 
@@ -85,6 +86,7 @@ export default function App() {
 
       {/* Standalone pages (no layout) */}
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/auth/google" element={<GoogleCallbackPage />} />
       <Route path="/403" element={<ErrorPage code={403} />} />
       <Route path="/500" element={<ErrorPage code={500} />} />
 

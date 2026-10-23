@@ -26,6 +26,9 @@ export default function LoginPage() {
   const navigate = useNavigate()
   // ?as=student — the landing's "student login": no sign-up or Google here, the teacher gave them the account
   const asStudent = useSearchParams()[0].get('as') === 'student'
+  // back from a failed redirect sign-in with Google (phones)
+  const googleError = useSearchParams()[0].get('google_error')
+  useEffect(() => { if (googleError) toast.error(t('google_login_failed'), { id: 'google-error' }) }, [googleError])
   const [loading, setLoading] = useState(false)
   const { register, handleSubmit, watch, formState: { touchedFields } } = useForm({ mode: 'onChange' })
 
