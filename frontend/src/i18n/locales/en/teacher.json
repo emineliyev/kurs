@@ -139,7 +139,7 @@
   "sub_access_until": "Your access continues until {{date}}.",
   "restore": "Restore",
   "plan_change_scheduled": "Plan change scheduled",
-  "plan_change_from_to": "From {{date}}, plan will change to {{plan}}.",
+  "plan_change_from_to": "Your current plan ends on {{date}}. The {{plan}} plan starts once its payment is approved.",
   "select_plan": "Select",
   "current_plan_cancelling": "Current plan (cancellation pending)",
   "current_plan": "Current plan",
@@ -865,5 +865,8 @@
   "q_answer_format_shown": "The student will see:",
   "q_answer_format_auto": "If left empty, the student sees this sample:",
   "q_answer_format_none": "If left empty, no sample is shown.",
-  "live_open_all": "All on the live page ({{count}})"
+  "live_open_all": "All on the live page ({{count}})",
+  "sub_locked_title": "Printing needs an active subscription",
+  "sub_locked_text": "Your trial or plan has ended. You can still view your tests and results; renew to print and create new tests.",
+  "sub_locked_renew": "Renew subscription"
 }

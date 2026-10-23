@@ -3,11 +3,14 @@ import client from './client'
 export const testsApi = {
   list: () => client.get('/tests/'),
   get: (id) => client.get(`/tests/${id}/`),
+  // print pages ask with ?print=1: printing needs a live subscription
+  getForPrint: (id) => client.get(`/tests/${id}/`, { params: { print: 1 } }),
   create: (data) => client.post('/tests/', data),
   update: (id, data) => client.patch(`/tests/${id}/`, data),
   delete: (id) => client.delete(`/tests/${id}/`),
   duplicate: (id) => client.post(`/tests/${id}/duplicate/`),
   questions: (id) => client.get(`/tests/${id}/questions/`),
+  questionsForPrint: (id) => client.get(`/tests/${id}/questions/`, { params: { print: 1 } }),
   versions: (id) => client.get(`/tests/${id}/versions/`),
 
   createQuestion: (data) => client.post('/tests/questions/', data),

@@ -24,6 +24,7 @@ import { testsApi } from '@/api/tests'
 import { renderMath } from '@/utils/math'
 import { LABELS, MCQ_TYPES } from '@/utils/examConstants'
 import { WATERMARK_ON_KEY, WATERMARK_TEXT_KEY, watermarkTile } from '@/components/common/Watermark'
+import SubscriptionLocked from '@/components/teacher/SubscriptionLocked'
 
 function PassageBlock({ q }) {
   return (
@@ -90,17 +91,21 @@ export default function ExamPrintPage() {
   const [exam, setExam]           = useState(null)
   const [questions, setQuestions] = useState([])
   const [loading, setLoading]     = useState(true)
+  const [locked, setLocked]       = useState(null)   // plan ran out: no printing
 
   useEffect(() => {
     examsApi.get(id)
       .then(examRes =>
-        Promise.all([examRes, testsApi.questions(examRes.data.test)])
+        Promise.all([examRes, testsApi.questionsForPrint(examRes.data.test)])
       )
       .then(([examRes, qRes]) => {
         setExam(examRes.data)
         setQuestions(qRes.data)
       })
-      .catch((err) => console.error('Print page load error:', err))
+      .catch((err) => {
+        if (err.response?.status === 403) setLocked(err.response.data?.detail || '')
+        else console.error('Print page load error:', err)
+      })
       .finally(() => setLoading(false))
   }, [id])
 
@@ -112,6 +117,8 @@ export default function ExamPrintPage() {
     }
   }, [loading, exam])
 
+
+  if (locked !== null) return <SubscriptionLocked message={locked} />
 
   if (loading) {
     return (

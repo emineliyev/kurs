@@ -157,7 +157,7 @@
   "sub_access_until": "{{date}} tarixinədək girişiniz davam edir.",
   "restore": "Geri al",
   "plan_change_scheduled": "Plan dəyişikliyi planlaşdırılıb",
-  "plan_change_from_to": "{{date}} tarixindən {{plan}} planına keçid olacaq.",
+  "plan_change_from_to": "{{date}} tarixində cari planınız bitəcək. {{plan}} planı ödəniş təsdiqləndikdən sonra aktivləşəcək.",
   "select_plan": "Seç",
   "current_plan_cancelling": "Cari plan (ləğv gözlənilir)",
   "current_plan": "Cari plan",
@@ -870,5 +870,8 @@
   "q_answer_format_shown": "Şagird görəcək:",
   "q_answer_format_auto": "Boş qalsa, şagirdə avtomatik bu nümunə göstəriləcək:",
   "q_answer_format_none": "Boş qalsa, şagirdə nümunə göstərilməyəcək.",
-  "live_open_all": "Canlı izləmə səhifəsində hamısı ({{count}})"
+  "live_open_all": "Canlı izləmə səhifəsində hamısı ({{count}})",
+  "sub_locked_title": "Çap üçün aktiv abunəlik lazımdır",
+  "sub_locked_text": "Sınaq müddətiniz və ya abunəliyiniz bitib. Testlərinizə və nəticələrə baxmaq açıqdır, çap və yeni test yaratmaq üçün abunəliyi yeniləyin.",
+  "sub_locked_renew": "Abunəliyi yenilə"
 }

@@ -8,6 +8,7 @@ import PageSpinner from '@/components/common/PageSpinner'
 import Watermark, { WATERMARK_ON_KEY, WATERMARK_TEXT_KEY } from '@/components/common/Watermark'
 import { useAuthStore } from '@/store/authStore'
 import { usePreviewZoom } from '@/utils/printPreview'
+import SubscriptionLocked from '@/components/teacher/SubscriptionLocked'
 
 const FONT_SIZES = { sm: '10pt', md: '11.5pt', lg: '13pt' }
 const SCHOOL_KEY = 'print-school-name'
@@ -217,7 +218,8 @@ export default function TestPrintPage() {
   useEffect(() => { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)) }, [layout])
 
   useEffect(() => {
-    testsApi.get(id).then((r) => setTest(r.data)).catch(() => setError(true))
+    testsApi.getForPrint(id).then((r) => setTest(r.data))
+      .catch((err) => setError(err.response?.status === 403 ? { locked: err.response.data?.detail } : true))
   }, [id])
 
   useEffect(() => { localStorage.setItem(SCHOOL_KEY, school) }, [school])
@@ -227,6 +229,7 @@ export default function TestPrintPage() {
     [test, variants],
   )
 
+  if (error?.locked !== undefined) return <SubscriptionLocked message={error.locked} />
   if (error) {
     return <div className="p-10 text-center text-slate-500">{t('data_load_failed', { ns: 'teacher' })}</div>
   }
