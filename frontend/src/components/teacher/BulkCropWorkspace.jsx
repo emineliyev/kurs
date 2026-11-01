@@ -53,10 +53,12 @@ async function openPdf(file) {
 // A page keeps its first render (`orig`) so turning / straightening always starts from it
 const pageOf = (url, w, h, extra) => ({ url, w, h, orig: url, q: 0, fine: 0, ...extra })
 
-// Renders the given page numbers (1-based); labels keep the real page numbers
-async function renderPdf(pdf, name, docKey, nums, onPage) {
+// Renders the given page numbers (1-based); labels keep the real page numbers.
+// Stops quietly once `alive()` is false (the PDF was removed or the workspace closed meanwhile).
+async function renderPdf(pdf, name, docKey, nums, onPage, alive = () => true) {
   const total = nums.length
   for (const [k, i] of nums.entries()) {
+    if (!alive()) return
     const page = await pdf.getPage(i)
     const base = page.getViewport({ scale: 1 })
     const viewport = page.getViewport({ scale: PAGE_TARGET_W / base.width })
@@ -67,6 +69,7 @@ async function renderPdf(pdf, name, docKey, nums, onPage) {
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     await page.render({ canvasContext: ctx, viewport }).promise
+    if (!alive()) return
     const { url } = await blobUrl(canvas)
     onPage(pageOf(url, canvas.width, canvas.height, { label: `${name} · ${i}`, doc: docKey, num: i, total, index: k + 1 }))
     canvas.width = canvas.height = 0
@@ -122,6 +125,9 @@ async function cropFromPage(pageUrl, rect, look, sized = false) {
   const { blob, url } = await blobUrl(c)
   return { file: new File([blob], 'question.jpg', { type: 'image/jpeg' }), url }
 }
+
+// pdf.js rejects in-flight work with these when its document is destroyed
+const isCancelled = (e) => e?.name === 'RenderingCancelledException' || /destroyed/i.test(e?.message || '')
 
 const range = (from, to) => Array.from({ length: to - from + 1 }, (_, k) => from + k)
 
@@ -313,15 +319,18 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
           await renderPdf(pdf, f.name, key, range(picked.from, picked.to), (pg) => {
             setPages((prev) => [...prev, pg])
             setLoading({ done: pg.index, total: pg.total })
-          })
+          }, () => docsRef.current.get(key) === pdf)
         } else {
           const pg = await renderImage(f)
           setPages((prev) => [...prev, pg])
         }
       }
     } catch (e) {
-      console.error(e)
-      toast.error(t('error_occurred'))
+      // closing the workspace or removing the PDF mid-way cancels pdf.js' work — not an error
+      if (!isCancelled(e)) {
+        console.error(e)
+        toast.error(t('error_occurred'))
+      }
     } finally {
       setLoading(null)
       setRangeAsk(null)
@@ -367,17 +376,22 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
     const missing = [...wanted].filter((n) => !have.has(n)).sort((a, b) => a - b)
     setPending(null); setDraft(null); setActiveId(null); setSel(null); setStraight(null)
     setLoading({ done: 0, total: missing.length })
+    const pdf = docsRef.current.get(doc.key)
+    const alive = () => docsRef.current.get(doc.key) === pdf
     try {
-      await renderPdf(docsRef.current.get(doc.key), doc.name, doc.key, missing, (pg) => {
+      await renderPdf(pdf, doc.name, doc.key, missing, (pg) => {
         have.set(pg.num, pg)
         setLoading({ done: pg.index, total: pg.total })
-      })
+      }, alive)
     } catch (e) {
-      console.error(e)
-      toast.error(t('error_occurred'))
+      if (!isCancelled(e)) {
+        console.error(e)
+        toast.error(t('error_occurred'))
+      }
       setLoading(null)
       return
     }
+    if (!alive()) { setLoading(null); return }   // the PDF was closed while its pages were drawn
     const block = [...wanted].sort((a, b) => a - b).map((n) => have.get(n))
     // The PDF's pages go where its first page was; other files keep their place
     const at = pages.findIndex((p) => p.doc === doc.key)
