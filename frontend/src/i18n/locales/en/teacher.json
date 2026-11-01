@@ -868,5 +868,7 @@
   "live_open_all": "All on the live page ({{count}})",
   "sub_locked_title": "Printing needs an active subscription",
   "sub_locked_text": "Your trial or plan has ended. You can still view your tests and results; renew to print and create new tests.",
-  "sub_locked_renew": "Renew subscription"
+  "sub_locked_renew": "Renew subscription",
+  "print_settings_hide": "Hide settings",
+  "print_settings_show": "Show settings"
 }

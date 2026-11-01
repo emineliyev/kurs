@@ -873,5 +873,7 @@
   "live_open_all": "Canlı izləmə səhifəsində hamısı ({{count}})",
   "sub_locked_title": "Çap üçün aktiv abunəlik lazımdır",
   "sub_locked_text": "Sınaq müddətiniz və ya abunəliyiniz bitib. Testlərinizə və nəticələrə baxmaq açıqdır, çap və yeni test yaratmaq üçün abunəliyi yeniləyin.",
-  "sub_locked_renew": "Abunəliyi yenilə"
+  "sub_locked_renew": "Abunəliyi yenilə",
+  "print_settings_hide": "Ayarları gizlət",
+  "print_settings_show": "Ayarları göstər"
 }

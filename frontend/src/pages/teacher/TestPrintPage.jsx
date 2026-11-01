@@ -18,6 +18,7 @@ const LAYOUT_KEY = 'print-layout'          // { design, accent, gap }
 const ACCENTS = ['#F97316', '#1D4ED8', '#15803D', '#7C3AED', '#0F172A']
 const LAYOUT_DEFAULT = { design: 'classic', accent: ACCENTS[0], gap: 5 }   // gap: mm between questions
 const SIDEBAR_PX = 320                      // settings column on wide screens (lg)
+const SIDEBAR_HIDDEN_KEY = 'print_sidebar_hidden'
 const PAGE_CONTENT_MM = 297 - 2 * 12        // A4 minus the @page margins: what one printed page holds
 const PAGE_NUMBERS_KEY = 'print-page-numbers'
 const FIT_SLACK_MM = 1                      // screen measurements round; the printer fits within ~1 mm
@@ -204,8 +205,10 @@ export default function TestPrintPage() {
   })
   const setT = (patch) => setTeacher((cur) => ({ ...cur, ...patch }))
   useEffect(() => { localStorage.setItem(TEACHER_KEY, JSON.stringify(teacher)) }, [teacher])
-  // beside the settings column on wide screens
-  const zoom = usePreviewZoom((w) => (w >= 1024 ? SIDEBAR_PX + 48 : 16))
+  // wide screens: the settings column can be hidden to give the sheet the whole width (remembered)
+  const [sidebarHidden, setSidebarHidden] = useState(() => localStorage.getItem(SIDEBAR_HIDDEN_KEY) === '1')
+  useEffect(() => { localStorage.setItem(SIDEBAR_HIDDEN_KEY, sidebarHidden ? '1' : '0') }, [sidebarHidden])
+  const zoom = usePreviewZoom((w) => (w >= 1024 && !sidebarHidden ? SIDEBAR_PX + 48 : 16), [sidebarHidden])
   const [showSettings, setShowSettings] = useState(false)   // phones / tablets: the panel folds away
   const sheetsRef = useRef(null)
   const pageCounts = usePageCounts(sheetsRef)
@@ -272,6 +275,11 @@ export default function TestPrintPage() {
             className={`lg:hidden btn-secondary py-2 px-3 text-sm shrink-0 ${showSettings ? 'bg-slate-100' : ''}`}>
             <i className="bi bi-sliders"></i><span className="hidden sm:inline">{t('print_settings', { ns: 'teacher' })}</span>
           </button>
+          <button onClick={() => setSidebarHidden((v) => !v)} aria-pressed={!sidebarHidden}
+            title={t(sidebarHidden ? 'print_settings_show' : 'print_settings_hide', { ns: 'teacher' })}
+            className={`hidden lg:inline-flex btn-secondary py-2 px-3 text-sm shrink-0 ${sidebarHidden ? '' : 'bg-slate-100'}`}>
+            <i className={`bi ${sidebarHidden ? 'bi-layout-sidebar' : 'bi-layout-sidebar-inset'}`}></i>{t('print_settings', { ns: 'teacher' })}
+          </button>
           <button onClick={() => window.print()} className="btn-primary py-2 shrink-0 whitespace-nowrap">
             <i className="bi bi-printer"></i> {t('print_btn', { ns: 'teacher' })}
           </button>
@@ -280,7 +288,7 @@ export default function TestPrintPage() {
 
       <div className="lg:flex lg:items-start">
         {/* Settings (not printed): a column on wide screens, a fold-out panel on smaller ones */}
-        <aside className={`print:hidden bg-white border-b lg:border-b-0 lg:border-r border-slate-200 lg:block lg:w-80 lg:shrink-0
+        <aside className={`print:hidden bg-white border-b lg:border-b-0 lg:border-r border-slate-200 ${sidebarHidden ? 'lg:hidden' : 'lg:block'} lg:w-80 lg:shrink-0
           lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto ${showSettings ? 'block' : 'hidden'}`}>
           <div className="p-4 space-y-3">
         <Group title={t('print_group_format', { ns: 'teacher' })}>
