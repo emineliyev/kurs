@@ -3,6 +3,7 @@ Management command: process_subscriptions
 Run daily (e.g. via cron or Celery beat) to:
   1. Apply scheduled downgrades whose billing period has ended.
   2. Expire subscriptions whose end_date has passed.
+  3. E-mail teachers whose plan ends in 7 days / tomorrow.
 
 Usage:
     python manage.py process_subscriptions
@@ -49,6 +50,10 @@ class Command(BaseCommand):
         count2 = cancelled_expired.update(status=Subscription.STATUS_EXPIRED)
         processed += count2
 
+        # 4. "Your plan ends soon" e-mails
+        from apps.subscriptions.reminders import send_due_reminders
+        reminded = send_due_reminders(now)
+
         self.stdout.write(
-            self.style.SUCCESS(f'process_subscriptions: {processed} record(s) processed.')
+            self.style.SUCCESS(f'process_subscriptions: {processed} record(s) processed, {reminded} reminder(s) sent.')
         )

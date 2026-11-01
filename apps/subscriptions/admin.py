@@ -4,7 +4,25 @@ from django.contrib import admin
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import Plan, Subscription
+from .models import Plan, SignupGift, Subscription
+
+
+def gift_action(teachers_of):
+    """Admin action: give the gift plan (the campaign's plan and days, else Pro · 60 days) to the
+    teachers behind the selected rows. Paid days are kept — the gift is added after them."""
+    @admin.action(description='🎁 Hədiyyə ver (kampaniya ayarına görə, yoxdursa Pro · 60 gün)')
+    def action(modeladmin, request, queryset):
+        from apps.subscriptions.gifts import gift_settings, grant_gift
+        plan, days = gift_settings()
+        if plan is None:
+            modeladmin.message_user(request, 'Hədiyyə planı tapılmadı (Pro planı yoxdur).', level='error')
+            return
+        teachers = [t for t in teachers_of(queryset) if t.is_teacher]
+        for t in teachers:
+            grant_gift(t, plan, days)
+        modeladmin.message_user(request, f'{len(teachers)} müəllimə {plan.display_name} · {days} gün hədiyyə edildi.')
+    action.__name__ = 'gift_plan'
+    return action
 
 
 def _limit(value):
@@ -67,14 +85,15 @@ def _switch_plan_action(plan_name, label):
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ['teacher', 'plan', 'status_badge', 'end_date', 'days_left', 'exams_used_this_month']
-    list_filter = ['status', 'plan']
+    list_display = ['teacher', 'plan', 'status_badge', 'is_gift', 'end_date', 'days_left', 'exams_used_this_month']
+    list_filter = ['status', 'plan', 'is_gift']
     search_fields = ['teacher__email', 'teacher__first_name', 'teacher__last_name']
     list_select_related = ['teacher', 'plan']
     autocomplete_fields = ['teacher']
     readonly_fields = ['created_at', 'updated_at']
     ordering = ['end_date']
-    actions = ['extend_30_days', _switch_plan_action('standard', 'Standard'), _switch_plan_action('pro', 'Pro')]
+    actions = ['extend_30_days', _switch_plan_action('standard', 'Standard'), _switch_plan_action('pro', 'Pro'),
+               gift_action(lambda qs: [s.teacher for s in qs.select_related('teacher')])]
 
     @admin.display(description='Status', ordering='status')
     def status_badge(self, obj):
@@ -98,3 +117,16 @@ class SubscriptionAdmin(admin.ModelAdmin):
                 sub.cancelled_at = None
             sub.save(update_fields=['end_date', 'status', 'cancelled_at'])
         self.message_user(request, f'{queryset.count()} abunəlik 30 gün uzadıldı.')
+
+
+@admin.register(SignupGift)
+class SignupGiftAdmin(admin.ModelAdmin):
+    """The sign-up campaign: switch it on, pick the plan and days, optionally a last day."""
+    list_display = ['__str__', 'is_active', 'running', 'ends_on', 'created_at']
+    list_editable = ['is_active']
+    fields = ['is_active', 'plan', 'days', 'ends_on']
+
+    @admin.display(description='İndi işləyir', boolean=True)
+    def running(self, obj):
+        current = SignupGift.current()
+        return current is not None and current.pk == obj.pk

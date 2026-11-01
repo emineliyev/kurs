@@ -154,6 +154,7 @@ class PaymentRequestAdmin(admin.ModelAdmin):
                         'start_date':            now if start == now else current.start_date,
                         'end_date':              start + timedelta(days=plan.duration_days),
                         'payment_reference':     f'manual:{payment_request.id}',
+                        'is_gift':               False,
                         'tests_used_this_month': 0,
                         'exams_used_this_month': 0,
                         'pending_plan':          None,

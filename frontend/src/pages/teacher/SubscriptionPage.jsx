@@ -51,6 +51,8 @@ function StatusBadge({ sub }) {
     return <span className="badge bg-orange-100 text-orange-700"><i className="bi bi-clock mr-1"></i>{t('cancellation_pending', { ns: 'teacher' })}</span>
   if (sub.has_pending_downgrade)
     return <span className="badge bg-amber-100 text-amber-700"><i className="bi bi-arrow-down-circle mr-1"></i>{t('downgrade_pending', { ns: 'teacher' })}</span>
+  if (sub.is_active && sub.is_gift)
+    return <span className="badge bg-amber-100 text-amber-800"><span className="mr-1" aria-hidden>🎁</span>{t('gift_plan', { ns: 'teacher' })}</span>
   if (sub.is_active)
     return <span className="badge bg-green-100 text-green-700"><i className="bi bi-check-circle mr-1"></i>{t('active')}</span>
   return <span className="badge bg-red-100 text-red-700"><i className="bi bi-x-circle mr-1"></i>{t('inactive')}</span>
@@ -115,6 +117,8 @@ function PlanCard({ plan, sub, onAction, loadingPlan }) {
       return { label: t('trial_used', { ns: 'teacher' }), type: null, color: 'ghost' }
     if (!sub || !sub.is_active) return { label: t('select_plan', { ns: 'teacher' }), type: 'subscribe', color: 'primary' }
     if (isCurrent) {
+      // a gift isn't paid for: the teacher can pay now, the paid month starts when the gift ends
+      if (sub.is_gift && Number(plan.price) > 0) return { label: t('gift_continue', { ns: 'teacher' }), type: 'subscribe', color: 'primary' }
       if (sub.is_cancellation_scheduled) return { label: t('current_plan_cancelling', { ns: 'teacher' }), type: null, color: 'ghost' }
       if (sub.has_pending_downgrade) return { label: t('current_plan', { ns: 'teacher' }), type: null, color: 'ghost' }
       return { label: t('current_plan', { ns: 'teacher' }), type: null, color: 'ghost' }
@@ -460,7 +464,7 @@ export default function SubscriptionPage() {
           <h1 className="text-2xl font-bold text-slate-900">{t('subscription')}</h1>
           <p className="text-sm text-slate-500 mt-0.5">{t('manage_plan', { ns: 'teacher' })}</p>
         </div>
-        {sub?.is_active && !sub.is_cancellation_scheduled && (
+        {sub?.is_active && !sub.is_cancellation_scheduled && !sub.is_gift && (   // nothing to cancel on a gift
           <button
             onClick={doCancel}
             disabled={actionLoading}
@@ -492,7 +496,7 @@ export default function SubscriptionPage() {
               { label: t('exam_start', { ns: 'teacher' }), val: fmtDate(sub.start_date) },
               { label: t('exam_end', { ns: 'teacher' }),   val: fmtDate(sub.end_date) },
               { label: t('days_remaining_label', { ns: 'teacher' }), val: `${sub.days_remaining} ${t('days', { ns: 'teacher' })}` },
-              { label: t('monthly_payment_label', { ns: 'teacher' }), val: fmtAZN(sub.plan_details?.price ?? 0, t('free', { ns: 'teacher' })) },
+              { label: t('monthly_payment_label', { ns: 'teacher' }), val: sub.is_gift ? `🎁 ${t('gift_plan', { ns: 'teacher' })}` : fmtAZN(sub.plan_details?.price ?? 0, t('free', { ns: 'teacher' })) },
             ].map(({ label, val }) => (
               <div key={label} className="bg-slate-50 rounded-xl p-3">
                 <p className="text-xs text-slate-400">{label}</p>

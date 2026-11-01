@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore'
 import { PasswordStrength, isStrongPassword } from '@/components/common/PasswordRules'
 import { useCanonical } from '@/utils/seo'
 import { renderGoogleButton } from '@/utils/googleSignIn'
+import { useSignupGift, giftPeriod, giftDate } from '@/utils/gift'
 
 function FieldInput({ label, error, success, children }) {
   return (
@@ -31,6 +32,7 @@ export default function RegisterPage() {
   const selectedPlanId = searchParams.get('plan')
   // Students keep landing here instead of their login: ask first. Coming from a plan = a teacher.
   const [role, setRole] = useState(selectedPlanId || searchParams.get('as') === 'teacher' ? 'teacher' : null)
+  const gift = useSignupGift()
   const recaptchaRef = useRef(null)
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY
 
@@ -93,6 +95,15 @@ export default function RegisterPage() {
   return (
     <div>
       <h2 className="text-2xl font-bold text-slate-900 mb-2">{t('teacher_register')}</h2>
+
+      {gift && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900 flex items-start gap-2">
+          <span aria-hidden>🎁</span>
+          <span>{gift.ends_on
+            ? t('gift_banner_until', { ns: 'common', date: giftDate(gift.ends_on), period: giftPeriod(t, gift.days), plan: gift.plan })
+            : t('gift_banner', { ns: 'common', period: giftPeriod(t, gift.days), plan: gift.plan })}</span>
+        </div>
+      )}
 
       {selectedPlanId && (
         <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-lg text-sm text-primary-700 flex items-center gap-2">

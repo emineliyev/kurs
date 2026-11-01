@@ -873,5 +873,12 @@
   "print_settings_show": "Show settings",
   "mixed_times": "Different times",
   "mixed_times_hint": "Given to the classes at different times — open to see each class",
-  "slip_login_at": "Log in at:"
+  "slip_login_at": "Log in at:",
+  "gift_plan": "Gift",
+  "gift_continue": "Continue after the gift",
+  "gift_dash_title": "You've been given the {{plan}} plan",
+  "gift_dash_left_one": "Use every feature — {{count}} day left",
+  "gift_dash_left_other": "Use every feature — {{count}} days left",
+  "gift_dash_soon_one": "Your gift ends in {{count}} day — renew to keep going",
+  "gift_dash_soon_other": "Your gift ends in {{count}} days — renew to keep going"
 }

@@ -71,6 +71,11 @@ class Subscription(models.Model):
     cancelled_at         = models.DateTimeField(null=True, blank=True, verbose_name='Ləğv tarixi')
 
     payment_reference       = models.CharField(max_length=200, blank=True, verbose_name='Ödəniş istinadı')
+    # Given for free (sign-up campaign or the admin's gift) — no paid credit, shown as a gift
+    is_gift                 = models.BooleanField(default=False, verbose_name='Hədiyyə')
+    # "Your plan ends soon" e-mails: which end date was reminded and at which step (7 → 1 day left)
+    reminder_end            = models.DateTimeField(null=True, blank=True, editable=False)
+    reminder_stage          = models.PositiveSmallIntegerField(default=0, editable=False)
     tests_used_this_month   = models.PositiveIntegerField(default=0, verbose_name='Bu ay testlər')
     exams_used_this_month   = models.PositiveIntegerField(default=0, verbose_name='Bu ay imtahanlar')
     last_reset_date         = models.DateField(auto_now_add=True, verbose_name='Son sıfırlama')
@@ -134,7 +139,7 @@ class Subscription(models.Model):
         now = timezone.now()
         total_secs     = (self.end_date - self.start_date).total_seconds()
         remaining_secs = (self.end_date - now).total_seconds()
-        if total_secs <= 0 or remaining_secs <= 0:
+        if total_secs <= 0 or remaining_secs <= 0 or self.is_gift:   # a gift was never paid for
             return float(new_plan.price)
         fraction   = remaining_secs / total_secs
         credit     = float(self.plan.price) * fraction
@@ -146,6 +151,7 @@ class Subscription(models.Model):
         now = timezone.now()
         self.plan       = new_plan
         self.status     = self.STATUS_ACTIVE
+        self.is_gift    = False
         self.start_date = now
         self.end_date   = now + __import__('datetime').timedelta(days=new_plan.duration_days)
         # Clear any pending changes
@@ -189,3 +195,30 @@ class Subscription(models.Model):
         self.pending_plan        = None
         self.pending_change_date = None
         self.save(update_fields=['status', 'cancelled_at', 'pending_plan', 'pending_change_date'])
+
+
+class SignupGift(models.Model):
+    """Sign-up campaign: while it runs, a new teacher gets this plan for free instead of the plain
+    trial (e.g. 2 months of Pro). The admin's "gift" action uses the same plan and days."""
+    is_active  = models.BooleanField(default=True, verbose_name='Aktiv')
+    plan       = models.ForeignKey(Plan, on_delete=models.PROTECT, related_name='+', verbose_name='Plan')
+    days       = models.PositiveSmallIntegerField(default=60, verbose_name='Müddət (gün)')
+    ends_on    = models.DateField(null=True, blank=True, verbose_name='Kampaniyanın son günü',
+                                  help_text='Bu gündən sonra qeydiyyatdan keçənlər adi sınaq alır. Boş = özünüz söndürənə qədər.')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Qeydiyyat hədiyyəsi (kampaniya)'
+        verbose_name_plural = 'Qeydiyyat hədiyyəsi (kampaniya)'
+
+    def __str__(self):
+        until = f' · {self.ends_on:%d.%m.%Y}-dək' if self.ends_on else ''
+        return f'{self.plan.display_name} · {self.days} gün{until}'
+
+    @classmethod
+    def current(cls):
+        """The campaign new sign-ups get today, or None."""
+        today = timezone.localdate()
+        return (cls.objects.filter(is_active=True)
+                .filter(models.Q(ends_on__isnull=True) | models.Q(ends_on__gte=today))
+                .select_related('plan').order_by('-id').first())

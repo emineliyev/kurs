@@ -878,5 +878,10 @@
   "print_settings_show": "Ayarları göstər",
   "mixed_times": "Müxtəlif vaxtlar",
   "mixed_times_hint": "Siniflərə müxtəlif vaxtlarda verilib — açıb hər sinfin vaxtına baxın",
-  "slip_login_at": "Giriş:"
+  "slip_login_at": "Giriş:",
+  "gift_plan": "Hədiyyə",
+  "gift_continue": "Hədiyyədən sonra davam et",
+  "gift_dash_title": "Sizə {{plan}} planı hədiyyə edilib",
+  "gift_dash_left": "Bütün imkanlardan istifadə edin — {{count}} gün qalıb",
+  "gift_dash_soon": "Hədiyyə {{count}} gün sonra bitir — davam etmək üçün abunəliyi yeniləyin"
 }

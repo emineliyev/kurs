@@ -7,6 +7,7 @@ import SiteFooter from '@/components/common/SiteFooter'
 import { useSiteSettings } from '@/api/site'
 import Logo from '@/components/common/Logo'
 import { useCanonical } from '@/utils/seo'
+import { useSignupGift, giftPeriod, giftDate } from '@/utils/gift'
 
 const ANIM_STYLE = `
 @keyframes fadeInUp {
@@ -56,9 +57,16 @@ export default function LandingPage() {
     ? t('landing_period_months', { count: days / 30 })
     : t('landing_period_days', { count: days }))
   const trialPlan = plans.find((p) => Number(p.price) === 0)
-  const trialNote = trialPlan?.duration_days
-    ? `${t('landing_no_card')} · ${t('landing_trial', { period: period(trialPlan.duration_days) })}`
-    : t('landing_no_card')
+  // a running sign-up campaign (e.g. 2 months of Pro) replaces the plain trial in the hero
+  const gift = useSignupGift()
+  const giftText = gift && (gift.ends_on
+    ? t('gift_banner_until', { date: giftDate(gift.ends_on), period: giftPeriod(t, gift.days), plan: gift.plan })
+    : t('gift_banner', { period: giftPeriod(t, gift.days), plan: gift.plan }))
+  const trialNote = gift
+    ? `${t('landing_no_card')} · ${t('gift_note', { period: giftPeriod(t, gift.days), plan: gift.plan })}`
+    : trialPlan?.duration_days
+      ? `${t('landing_no_card')} · ${t('landing_trial', { period: period(trialPlan.duration_days) })}`
+      : t('landing_no_card')
 
   const HOW_IT_WORKS = [
     { id: 'register', step: '01', icon: 'bi-person-plus', title: t('landing_how_register_title'), desc: t('landing_how_register_desc') },
@@ -178,10 +186,16 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="pt-32 pb-20 bg-gradient-to-br from-primary-700 via-primary-600 to-blue-500 text-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="anim-fade inline-flex items-center gap-2 bg-white/20 backdrop-blur text-white text-sm font-medium px-4 py-1.5 rounded-full mb-6">
-            <i className="bi bi-stars"></i>
-            {t('landing_hero_badge')}
-          </div>
+          {gift ? (
+            <Link to="/register?as=teacher" className="anim-fade inline-flex items-center gap-2 bg-yellow-300 text-slate-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6 shadow-lg hover:bg-yellow-200 transition-colors">
+              <span aria-hidden>🎁</span>{giftText}
+            </Link>
+          ) : (
+            <div className="anim-fade inline-flex items-center gap-2 bg-white/20 backdrop-blur text-white text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+              <i className="bi bi-stars"></i>
+              {t('landing_hero_badge')}
+            </div>
+          )}
           <h1 className="anim-item text-4xl md:text-6xl font-bold leading-tight mb-6" data-delay="100">
             {t('landing_hero_title_1')}<br />
             <span className="text-yellow-300">{t('landing_hero_title_2')}</span>

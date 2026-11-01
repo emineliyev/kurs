@@ -100,7 +100,7 @@ class UserAdmin(BaseUserAdmin):
     ordering = ['-created_at']
     list_select_related = ['subscription__plan', 'created_by']
     autocomplete_fields = ['created_by']
-    actions = ['activate_users', 'block_users', 'mark_email_verified', 'mark_email_unverified']
+    actions = ['activate_users', 'block_users', 'mark_email_verified', 'mark_email_unverified', 'gift_plan']
     fieldsets = (
         (None, {'fields': ('email', 'username', 'password')}),
         ('Şəxsi məlumat', {'fields': ('first_name', 'last_name', 'role', 'created_by', 'signup_ip')}),
@@ -147,8 +147,13 @@ class UserAdmin(BaseUserAdmin):
         if sub is None:
             return format_html('<span style="color:{}">{}</span>', '#d97706', 'Abunəlik yoxdur')
         color = '#16a34a' if sub.is_active else '#dc2626'
-        return format_html('{} <span style="color:{}">· {}</span>',
+        return format_html('{}{} <span style="color:{}">· {}</span>', '🎁 ' if sub.is_gift else '',
                            sub.plan.display_name, color, sub.end_date.strftime('%d.%m.%Y'))
+
+    def gift_plan(self, request, queryset):
+        from apps.subscriptions.admin import gift_action
+        return gift_action(lambda qs: list(qs))(self, request, queryset)
+    gift_plan.short_description = '🎁 Hədiyyə ver (kampaniya ayarına görə, yoxdursa Pro · 60 gün)'
 
     @admin.action(description='✅ Aktivləşdir')
     def activate_users(self, request, queryset):

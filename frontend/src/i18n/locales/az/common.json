@@ -241,5 +241,8 @@
   "toast_error": "Xəta",
   "toast_loading": "Gözləyin…",
   "toast_info": "Bildiriş",
-  "landing_teacher_login": "Müəllim girişi"
+  "landing_teacher_login": "Müəllim girişi",
+  "gift_banner": "Yeni müəllimlərə {{period}} {{plan}} hədiyyə",
+  "gift_banner_until": "{{date}} tarixinədək qeydiyyatdan keçən müəllimlərə {{period}} {{plan}} hədiyyə",
+  "gift_note": "{{period}} {{plan}} pulsuz"
 }

@@ -5,8 +5,21 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from apps.accounts.permissions import IsTeacher
-from .models import Plan, Subscription
+from .models import Plan, SignupGift, Subscription
 from .serializers import PlanSerializer, SubscriptionSerializer
+
+
+class SignupGiftView(APIView):
+    """The sign-up campaign running today (home page and sign-up banner), or null."""
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        gift = SignupGift.current()
+        if gift is None:
+            return Response(None)
+        return Response({'plan': gift.plan.display_name, 'days': gift.days,
+                         'ends_on': gift.ends_on.isoformat() if gift.ends_on else None})
 
 
 class PlanListView(APIView):

@@ -7,6 +7,29 @@ import { format } from 'date-fns'
 import PageSpinner from '@/components/common/PageSpinner'
 import Select from '@/components/common/Select'
 import { useLiveSummary } from '@/hooks/useLiveSummary'
+import { subscriptionsApi } from '@/api/subscriptions'
+
+/** A teacher on a free gift plan sees what they have and how long; amber in the last week. */
+function GiftBanner() {
+  const { t } = useTranslation(['common', 'teacher'])
+  const [sub, setSub] = useState(null)
+  useEffect(() => { subscriptionsApi.mySubscription().then((r) => setSub(r.data)).catch(() => {}) }, [])
+  if (!sub?.is_gift || !sub.is_active) return null
+  const soon = sub.days_remaining <= 7
+  return (
+    <Link to="/teacher/subscription"
+      className={`card p-4 flex items-center gap-3 hover:shadow-md transition-shadow ${soon ? 'border-amber-200 bg-amber-50' : 'border-violet-100 bg-gradient-to-r from-violet-50 to-white'}`}>
+      <span className="text-2xl shrink-0" aria-hidden>🎁</span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-slate-900">{t('gift_dash_title', { ns: 'teacher', plan: sub.plan_details?.display_name })}</span>
+        <span className="block text-sm text-slate-600">
+          {soon ? t('gift_dash_soon', { ns: 'teacher', count: sub.days_remaining }) : t('gift_dash_left', { ns: 'teacher', count: sub.days_remaining })}
+        </span>
+      </span>
+      <i className="bi bi-chevron-right text-slate-400 shrink-0"></i>
+    </Link>
+  )
+}
 
 function StatCard({ icon, value, label, tone }) {
   return (
@@ -94,6 +117,8 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-slate-900">{t('dashboard')}</h1>
         <p className="text-slate-500 text-sm mt-1">{t('welcome_stats', { ns: 'teacher' })}</p>
       </div>
+
+      <GiftBanner />
 
       {live?.students > 0 && (
         <Link to={`/teacher/exams/live?ids=${Object.keys(live.exams).join(',')}`}

@@ -6,10 +6,12 @@ from .views import (
     CancelSubscriptionView,
     ResumeSubscriptionView,
     UpgradeProrationPreviewView,
+    SignupGiftView,
 )
 
 urlpatterns = [
     path('plans/',                 PlanListView.as_view()),
+    path('signup-gift/',           SignupGiftView.as_view()),
     path('my/',                    SubscriptionView.as_view()),
     path('downgrade/',             DowngradeSubscriptionView.as_view()),
     path('cancel/',                CancelSubscriptionView.as_view()),

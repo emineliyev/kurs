@@ -31,7 +31,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'plan', 'plan_details',
             'pending_plan', 'pending_plan_details', 'pending_change_date',
-            'status', 'start_date', 'end_date',
+            'status', 'is_gift', 'start_date', 'end_date',
             'cancelled_at', 'days_remaining',
             'exams_used_this_month',
             'is_active', 'can_create_exam',
@@ -39,7 +39,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'classes_used', 'students_used',
             'created_at',
         ]
-        read_only_fields = ['id', 'start_date', 'created_at']
+        read_only_fields = ['id', 'is_gift', 'start_date', 'created_at']
 
     def get_classes_used(self, obj):
         return obj.teacher.classes.filter(is_active=True).count()

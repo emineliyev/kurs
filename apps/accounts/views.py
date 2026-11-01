@@ -136,23 +136,7 @@ class TeacherRegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def _create_free_subscription(self, user):
-        try:
-            from apps.subscriptions.models import Plan, Subscription
-            from django.utils import timezone
-            from datetime import timedelta
-            plan = Plan.objects.filter(name=Plan.PLAN_FREE, is_active=True).first()
-            if plan:
-                Subscription.objects.get_or_create(
-                    teacher=user,
-                    defaults={
-                        'plan': plan,
-                        'status': Subscription.STATUS_TRIAL,
-                        'start_date': timezone.now(),
-                        'end_date': timezone.now() + timedelta(days=plan.duration_days),
-                    }
-                )
-        except Exception:
-            pass
+        _create_free_subscription(user)
 
 
 class LoginView(APIView):
@@ -457,23 +441,13 @@ def _remember_signup_ip(user, request):
 
 
 def _create_free_subscription(user):
+    # the sign-up campaign's gift while it runs, otherwise the free trial
     try:
-        from apps.subscriptions.models import Plan, Subscription
-        from django.utils import timezone
-        from datetime import timedelta
-        plan = Plan.objects.filter(name=Plan.PLAN_FREE, is_active=True).first()
-        if plan:
-            Subscription.objects.get_or_create(
-                teacher=user,
-                defaults={
-                    'plan': plan,
-                    'status': Subscription.STATUS_TRIAL,
-                    'start_date': timezone.now(),
-                    'end_date': timezone.now() + timedelta(days=plan.duration_days),
-                }
-            )
+        from apps.subscriptions.gifts import start_new_teacher
+        start_new_teacher(user)
     except Exception:
-        pass
+        import logging
+        logging.getLogger(__name__).exception('First subscription failed for user %s', user.pk)
 
 
 def google_sign_in(token):
