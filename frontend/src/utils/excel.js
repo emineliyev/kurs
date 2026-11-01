@@ -1,4 +1,5 @@
-import * as XLSX from 'xlsx'
+// the styled SheetJS build already used by Analytics — one Excel library, not two
+import XLSX from 'xlsx-js-style'
 
 export function exportXlsx(filename, sheetName, headers, rows) {
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
