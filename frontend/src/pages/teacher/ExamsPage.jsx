@@ -243,20 +243,26 @@ export default function ExamsPage() {
   const testById = new Map(tests.map((x) => [x.id, x]))
   const examsPerTest = exams.reduce((m, e) => m.set(e.test, (m.get(e.test) || 0) + 1), new Map())
 
-  // group: same test, same window, same name, same side of the archive
+  // group: same test, same name, same side of the archive — a class given it later joins the same row,
+  // each class keeps its own time. A retake meant to stand apart gets another name.
   const groups = new Map()
   for (const e of exams) {
-    const k = [e.test, e.start_time, e.end_time, e.title, e.is_archived ? 1 : 0].join('|')
+    const k = [e.test, (e.title || '').trim().toLowerCase(), e.is_archived ? 1 : 0].join('|')
     if (!groups.has(k)) groups.set(k, [])
     groups.get(k).push(e)
   }
   const examRows = [...groups.entries()].map(([k, list]) => {
     list.sort(byClassName)
     const statuses = list.map(examStatus)
+    const starts = list.map((e) => e.start_time).sort()
+    const ends = list.map((e) => e.end_time).sort()
     return {
       kind: 'exam', key: `g${k}`, exams: list, exam: list[0], title: list[0].title, archived: list[0].is_archived,
       statuses, status: statuses.reduce((best, s) => (RANK[s] < RANK[best] ? s : best)),
-      test: testById.get(list[0].test), when: list[0].start_time,
+      test: testById.get(list[0].test),
+      when: starts[starts.length - 1],                      // sorted by the latest class it was given to
+      from: starts[0], to: ends[ends.length - 1],           // the time cell shows the whole span
+      mixedTimes: new Set(list.map((e) => `${e.start_time}|${e.end_time}`)).size > 1,
       participants: list.reduce((n, e) => n + (e.participants_count || 0), 0),
     }
   })
@@ -654,7 +660,12 @@ export default function ExamsPage() {
                       <td className="px-5 py-3">{titleCell(r)}</td>
                       <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{r.kind === 'exam' ? classCell(r) : <span className="text-slate-300">—</span>}</td>
                       <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
-                        {r.kind === 'exam' ? <>{when(r.exam.start_time)}<span className="block text-slate-400">→ {when(r.exam.end_time)}</span></> : <span className="text-slate-300">—</span>}
+                        {r.kind === 'exam' ? (
+                          <span title={r.mixedTimes ? t('mixed_times_hint', { ns: 'teacher' }) : undefined}>
+                            {when(r.from)}<span className="block text-slate-400">→ {when(r.to)}</span>
+                            {r.mixedTimes && <span className="block text-[11px] text-amber-600"><i className="bi bi-clock-history mr-1"></i>{t('mixed_times', { ns: 'teacher' })}</span>}
+                          </span>
+                        ) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -674,7 +685,9 @@ export default function ExamsPage() {
                         <td className="px-4 py-2.5 font-medium text-slate-700 whitespace-nowrap">
                           {e.class_name}{e.needs_grading_count > 0 && <span className="ml-2">{gradingBadge([e])}</span>}
                         </td>
-                        <td className="px-4 py-2.5"></td>
+                        <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap">
+                          {r.mixedTimes && <>{when(e.start_time)}<span className="block text-slate-400">→ {when(e.end_time)}</span></>}
+                        </td>
                         <td className="px-4 py-2.5">
                           <div className="flex items-center gap-2">
                             {!e.is_archived && switchFor([e], `e${e.id}`)}
@@ -711,8 +724,9 @@ export default function ExamsPage() {
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                       {liveBadge(r.exams)}
                       <span className="min-w-0"><i className="bi bi-people mr-1"></i>{r.exams.map((e) => e.class_name).join(', ')}</span>
-                      <span><i className="bi bi-play-circle mr-1"></i>{when(r.exam.start_time, true)}</span>
-                      <span><i className="bi bi-stop-circle mr-1"></i>{when(r.exam.end_time, true)}</span>
+                      <span><i className="bi bi-play-circle mr-1"></i>{when(r.from, true)}</span>
+                      <span><i className="bi bi-stop-circle mr-1"></i>{when(r.to, true)}</span>
+                      {r.mixedTimes && <span className="text-amber-600"><i className="bi bi-clock-history mr-1"></i>{t('mixed_times', { ns: 'teacher' })}</span>}
                       <span><i className="bi bi-person-check mr-1"></i>{r.participants}</span>
                     </div>
                   )}
@@ -720,8 +734,13 @@ export default function ExamsPage() {
                     <div className="rounded-xl border border-slate-100 divide-y divide-slate-100">
                       {r.exams.map((e) => (
                         <div key={e.id} className="flex items-center gap-2 px-3 py-2">
-                          <span className="font-medium text-sm text-slate-700 min-w-0 truncate">{e.class_name}</span>
-                          <span className="text-xs text-slate-400 shrink-0"><i className="bi bi-person-check mr-0.5"></i>{e.participants_count || 0}</span>
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-2">
+                              <span className="font-medium text-sm text-slate-700 truncate">{e.class_name}</span>
+                              <span className="text-xs text-slate-400 shrink-0"><i className="bi bi-person-check mr-0.5"></i>{e.participants_count || 0}</span>
+                            </span>
+                            {r.mixedTimes && <span className="block text-[11px] text-slate-400 truncate">{when(e.start_time, true)} → {when(e.end_time, true)}</span>}
+                          </span>
                           <div className="ml-auto flex items-center gap-1.5 shrink-0">
                             {!e.is_archived && switchFor([e], `e${e.id}`)}
                             {quick([e], `e${e.id}`, r.test, true)}

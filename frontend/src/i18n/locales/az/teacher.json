@@ -875,5 +875,7 @@
   "sub_locked_text": "Sınaq müddətiniz və ya abunəliyiniz bitib. Testlərinizə və nəticələrə baxmaq açıqdır, çap və yeni test yaratmaq üçün abunəliyi yeniləyin.",
   "sub_locked_renew": "Abunəliyi yenilə",
   "print_settings_hide": "Ayarları gizlət",
-  "print_settings_show": "Ayarları göstər"
+  "print_settings_show": "Ayarları göstər",
+  "mixed_times": "Müxtəlif vaxtlar",
+  "mixed_times_hint": "Siniflərə müxtəlif vaxtlarda verilib — açıb hər sinfin vaxtına baxın"
 }

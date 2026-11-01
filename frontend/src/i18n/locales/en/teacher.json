@@ -870,5 +870,7 @@
   "sub_locked_text": "Your trial or plan has ended. You can still view your tests and results; renew to print and create new tests.",
   "sub_locked_renew": "Renew subscription",
   "print_settings_hide": "Hide settings",
-  "print_settings_show": "Show settings"
+  "print_settings_show": "Show settings",
+  "mixed_times": "Different times",
+  "mixed_times_hint": "Given to the classes at different times — open to see each class"
 }
