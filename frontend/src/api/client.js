@@ -8,8 +8,48 @@ const client = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-client.interceptors.request.use((config) => {
-  const { accessToken } = useAuthStore.getState()
+// Seconds left on a JWT (from its `exp`); 0 if it can't be read
+const secondsLeft = (token) => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload.exp - Date.now() / 1000
+  } catch {
+    return 0
+  }
+}
+
+const signOut = () => {
+  useAuthStore.getState().logout()
+  localStorage.removeItem('auth-storage')
+  window.location.href = '/'
+}
+
+// One refresh at a time: every request that needs a new token waits on the same promise
+let refreshing = null
+const refreshAccess = () => {
+  if (!refreshing) {
+    const { refreshToken, setTokens } = useAuthStore.getState()
+    refreshing = axios.post('/api/auth/token/refresh/', { refresh: refreshToken })
+      .then((res) => {
+        setTokens(res.data.access, res.data.refresh || refreshToken)
+        return res.data.access
+      })
+      .finally(() => { refreshing = null })
+  }
+  return refreshing
+}
+
+client.interceptors.request.use(async (config) => {
+  let { accessToken, refreshToken } = useAuthStore.getState()
+  // Renew a little before it runs out, so the server never has to answer 401 (red lines in the console)
+  if (accessToken && refreshToken && secondsLeft(accessToken) < 30) {
+    try {
+      accessToken = await refreshAccess()
+    } catch {
+      signOut()
+      throw new axios.Cancel('session expired')
+    }
+  }
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
   }
@@ -21,59 +61,25 @@ client.interceptors.request.use((config) => {
   return config
 })
 
-// Queue of requests waiting for token refresh to complete
-let isRefreshing = false
-let waitingQueue = []
-
-const processQueue = (error, token = null) => {
-  waitingQueue.forEach(({ resolve, reject }) => {
-    if (error) reject(error)
-    else resolve(token)
-  })
-  waitingQueue = []
-}
-
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (axios.isCancel(error)) return Promise.reject(error)
     const original = error.config
+    // Still possible (clock skew, token revoked): refresh once and retry
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true
-      const { refreshToken, setTokens, logout } = useAuthStore.getState()
-
-      if (!refreshToken) {
-        logout()
-        localStorage.removeItem('auth-storage')
-        window.location.href = '/'
+      if (!useAuthStore.getState().refreshToken) {
+        signOut()
         return Promise.reject(error)
       }
-
-      if (isRefreshing) {
-        // Another request is already refreshing — wait in queue
-        return new Promise((resolve, reject) => {
-          waitingQueue.push({ resolve, reject })
-        }).then((newToken) => {
-          original.headers.Authorization = `Bearer ${newToken}`
-          return client(original)
-        })
-      }
-
-      isRefreshing = true
       try {
-        const res = await axios.post('/api/auth/token/refresh/', { refresh: refreshToken })
-        const newAccess = res.data.access
-        setTokens(newAccess, res.data.refresh || refreshToken)
+        const newAccess = await refreshAccess()
         original.headers.Authorization = `Bearer ${newAccess}`
-        processQueue(null, newAccess)
         return client(original)
       } catch (refreshError) {
-        processQueue(refreshError, null)
-        logout()
-        localStorage.removeItem('auth-storage')
-        window.location.href = '/'
+        signOut()
         return Promise.reject(refreshError)
-      } finally {
-        isRefreshing = false
       }
     }
 
