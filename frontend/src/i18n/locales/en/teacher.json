@@ -872,5 +872,6 @@
   "print_settings_hide": "Hide settings",
   "print_settings_show": "Show settings",
   "mixed_times": "Different times",
-  "mixed_times_hint": "Given to the classes at different times — open to see each class"
+  "mixed_times_hint": "Given to the classes at different times — open to see each class",
+  "slip_login_at": "Log in at:"
 }

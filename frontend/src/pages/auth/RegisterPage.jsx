@@ -29,6 +29,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [searchParams] = useSearchParams()
   const selectedPlanId = searchParams.get('plan')
+  // Students keep landing here instead of their login: ask first. Coming from a plan = a teacher.
+  const [role, setRole] = useState(selectedPlanId || searchParams.get('as') === 'teacher' ? 'teacher' : null)
   const recaptchaRef = useRef(null)
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY
 
@@ -84,6 +86,9 @@ export default function RegisterPage() {
       setLoading(false)
     }
   }
+
+  if (role === null) return <RoleChoice onTeacher={() => setRole('teacher')} onStudent={() => setRole('student')} />
+  if (role === 'student') return <StudentNoRegister onBack={() => setRole(null)} />
 
   return (
     <div>
@@ -205,6 +210,58 @@ export default function RegisterPage() {
         {t('have_account')}{' '}
         <Link to="/login" className="text-primary-700 font-semibold hover:underline">{t('login')}</Link>
       </p>
+    </div>
+  )
+}
+
+function RoleChoice({ onTeacher, onStudent }) {
+  const { t } = useTranslation('auth')
+  const card = 'w-full text-left flex items-center gap-4 p-4 rounded-2xl border-2 transition-colors'
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-slate-900 mb-1">{t('who_are_you')}</h2>
+      <p className="text-slate-500 text-sm mb-6">{t('who_are_you_hint')}</p>
+      <div className="space-y-3">
+        <button type="button" onClick={onStudent} className={`${card} border-amber-300 bg-amber-50 hover:bg-amber-100`}>
+          <span className="w-12 h-12 rounded-xl bg-amber-300 text-slate-900 flex items-center justify-center shrink-0"><i className="bi bi-mortarboard text-2xl"></i></span>
+          <span className="min-w-0">
+            <span className="block font-bold text-slate-900">{t('role_student')}</span>
+            <span className="block text-sm text-slate-600">{t('role_student_desc')}</span>
+          </span>
+          <i className="bi bi-chevron-right ml-auto text-slate-400"></i>
+        </button>
+        <button type="button" onClick={onTeacher} className={`${card} border-slate-200 bg-white hover:border-primary-300 hover:bg-primary-50`}>
+          <span className="w-12 h-12 rounded-xl bg-primary-700 text-white flex items-center justify-center shrink-0"><i className="bi bi-person-workspace text-2xl"></i></span>
+          <span className="min-w-0">
+            <span className="block font-bold text-slate-900">{t('role_teacher')}</span>
+            <span className="block text-sm text-slate-600">{t('role_teacher_desc')}</span>
+          </span>
+          <i className="bi bi-chevron-right ml-auto text-slate-400"></i>
+        </button>
+      </div>
+      <p className="text-center text-sm text-slate-500 mt-6">
+        {t('have_account')}{' '}
+        <Link to="/login" className="text-primary-700 font-semibold hover:underline">{t('login')}</Link>
+      </p>
+    </div>
+  )
+}
+
+function StudentNoRegister({ onBack }) {
+  const { t } = useTranslation('auth')
+  return (
+    <div className="text-center">
+      <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mb-4">
+        <i className="bi bi-mortarboard text-3xl"></i>
+      </div>
+      <h2 className="text-2xl font-bold text-slate-900 mb-2">{t('student_no_register_title')}</h2>
+      <p className="text-slate-600 text-sm mb-6">{t('student_no_register_text')}</p>
+      <Link to="/login?as=student" className="btn-primary w-full justify-center py-3 text-base">
+        <i className="bi bi-box-arrow-in-right"></i>{t('student_login')}
+      </Link>
+      <button type="button" onClick={onBack} className="mt-4 text-sm text-slate-500 hover:text-slate-800">
+        <i className="bi bi-arrow-left mr-1"></i>{t('back_to_choice')}
+      </button>
     </div>
   )
 }

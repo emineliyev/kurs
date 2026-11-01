@@ -877,5 +877,6 @@
   "print_settings_hide": "Ayarları gizlət",
   "print_settings_show": "Ayarları göstər",
   "mixed_times": "Müxtəlif vaxtlar",
-  "mixed_times_hint": "Siniflərə müxtəlif vaxtlarda verilib — açıb hər sinfin vaxtına baxın"
+  "mixed_times_hint": "Siniflərə müxtəlif vaxtlarda verilib — açıb hər sinfin vaxtına baxın",
+  "slip_login_at": "Giriş:"
 }

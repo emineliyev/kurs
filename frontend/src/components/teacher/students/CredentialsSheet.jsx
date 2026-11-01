@@ -4,27 +4,44 @@ import toast from 'react-hot-toast'
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 
-/** Login slips: cut out and hand to the students (A4, 2 per row). */
-function printSlips(rows, t) {
-  const site = window.location.host
-  const w = window.open('', '_blank')
+// Students' own way in — straight to their login, never past the sign-up button
+const studentAddress = () => `${window.location.host}/sagird`
+
+/** Login slips: cut out and hand to the students (A4, 2 per row), each with the address and a QR code to it. */
+async function printSlips(rows, t) {
+  const w = window.open('', '_blank')   // opened right on the click, before any await, or the browser blocks it
   if (!w) { toast.error(t('popup_blocked', { ns: 'teacher' })); return }
+  const address = studentAddress()
+  let qr = ''
+  try {
+    const QRCode = (await import('qrcode')).default
+    qr = await QRCode.toString(`${window.location.protocol}//${address}`, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' })
+  } catch { /* the address alone is enough */ }
   const cards = rows.map((r) => `
     <div class="card">
-      <div class="brand">Kursum · ${esc(site)}</div>
-      <div class="name">${esc(r.full_name)}</div>
-      ${r.class_name ? `<div class="cls">${esc(r.class_name)}</div>` : ''}
-      <table>
-        <tr><td>${esc(t('username_field', { ns: 'teacher' }))}</td><td class="v">${esc(r.username)}</td></tr>
-        <tr><td>${esc(t('password_field', { ns: 'teacher' }))}</td><td class="v">${esc(r.password)}</td></tr>
-      </table>
+      <div class="body">
+        <div class="brand">Kursum</div>
+        <div class="name">${esc(r.full_name)}</div>
+        ${r.class_name ? `<div class="cls">${esc(r.class_name)}</div>` : ''}
+        <table>
+          <tr><td>${esc(t('username_field', { ns: 'teacher' }))}</td><td class="v">${esc(r.username)}</td></tr>
+          <tr><td>${esc(t('password_field', { ns: 'teacher' }))}</td><td class="v">${esc(r.password)}</td></tr>
+        </table>
+        <div class="where">${esc(t('slip_login_at', { ns: 'teacher' }))} <b>${esc(address)}</b></div>
+      </div>
+      ${qr ? `<div class="qr">${qr}</div>` : ''}
     </div>`).join('')
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(t('slips_title', { ns: 'teacher' }))}</title>
     <style>
       @page { size: A4; margin: 10mm; }
       body { font-family: Inter, Arial, sans-serif; margin: 0; color: #0f172a; }
       .grid { display: grid; grid-template-columns: 1fr 1fr; }
-      .card { border: 1px dashed #94a3b8; padding: 12px 14px; break-inside: avoid; }
+      .card { border: 1px dashed #94a3b8; padding: 12px 14px; break-inside: avoid; display: flex; gap: 10px; align-items: center; }
+      .body { flex: 1; min-width: 0; }
+      .qr { width: 26mm; height: 26mm; flex-shrink: 0; }
+      .qr svg { width: 100%; height: 100%; display: block; }
+      .where { margin-top: 8px; font-size: 11px; color: #475569; }
+      .where b { color: #1e3a8a; font-size: 12px; }
       .brand { font-size: 11px; color: #1e3a8a; font-weight: 700; letter-spacing: .02em; }
       .name { font-size: 16px; font-weight: 700; margin-top: 6px; }
       .cls { font-size: 12px; color: #64748b; }
@@ -46,7 +63,7 @@ export default function CredentialsSheet({ rows, onClose }) {
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(`${window.location.host}\n\n${lines.join('\n')}`)
+      await navigator.clipboard.writeText(`${t('slip_login_at', { ns: 'teacher' })} ${studentAddress()}\n\n${lines.join('\n')}`)
       toast.success(t('copied', { ns: 'teacher' }))
     } catch { toast.error(t('error')) }
   }
