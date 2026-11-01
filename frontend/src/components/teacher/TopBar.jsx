@@ -13,11 +13,12 @@ export default function TopBar({ onMenuToggle }) {
   const { user, logout, refreshToken } = useAuthStore()
   const navigate = useNavigate()
   const [gradingCount, setGradingCount] = useState(0)
+  const [gradingExamId, setGradingExamId] = useState(null)   // the exam waiting longest: the badge opens its grading
 
   useEffect(() => {
     const refetch = () => {
       examsApi.needsGradingCount()
-        .then(res => setGradingCount(res.data.count || 0))
+        .then(res => { setGradingCount(res.data.count || 0); setGradingExamId(res.data.exam_id || null) })
         .catch(() => {})
     }
     refetch()
@@ -54,7 +55,7 @@ export default function TopBar({ onMenuToggle }) {
       <div className="flex items-center gap-3">
         {gradingCount > 0 && (
           <Link
-            to="/teacher/exams"
+            to={gradingExamId ? `/teacher/exams/${gradingExamId}/grade` : '/teacher/exams'}
             className="relative flex items-center justify-center w-9 h-9 rounded-xl text-amber-500 hover:bg-amber-50 transition-all"
             title={t('grading_pending_count', { count: gradingCount })}
           >

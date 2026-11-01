@@ -335,12 +335,14 @@ class ExamViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsTeacher])
     def needs_grading_count(self, request):
-        count = ExamResult.objects.filter(
+        waiting = ExamResult.objects.filter(
             exam__class_room__teacher=request.user,
             status=ExamResult.STATUS_SUBMITTED,
             answers__is_correct__isnull=True,
-        ).distinct().count()
-        return Response({'count': count})
+        ).distinct()
+        # the header badge opens grading of the exam that has waited longest
+        first = waiting.order_by('submitted_at').values_list('exam_id', flat=True).first()
+        return Response({'count': waiting.count(), 'exam_id': first})
 
     @action(detail=True, methods=['get'], permission_classes=[IsTeacher])
     def results(self, request, pk=None):
