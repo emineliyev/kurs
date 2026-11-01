@@ -601,7 +601,7 @@ export default function TestCreatePage() {
   const isEditMode = !!editId
   const [step, setStep]               = useState(1)
   const [createdTest, setCreatedTest] = useState(null)
-  const [questions, setQuestions]     = useState([defaultQuestion('multiple_choice')])
+  const [questions, setQuestions]     = useState([])   // the teacher picks the first question's type
   const [publishing, setPublishing]   = useState(false)
   const [showBankModal, setShowBankModal] = useState(false)
   const [showBulk, setShowBulk]   = useState(false)
@@ -669,7 +669,7 @@ export default function TestCreatePage() {
         _bankId: q.source_bank_question || null,
         _dndId: newDndId(),
       }))
-      setQuestions(loadedQs.length ? loadedQs : [defaultQuestion('multiple_choice')])
+      setQuestions(loadedQs)
       setStep(2)
     }).catch(() => {
       toast.error(t('error_occurred'))
