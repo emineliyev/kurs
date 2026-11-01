@@ -188,7 +188,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4 text-center">
           {gift ? (
             <Link to="/register?as=teacher" className="anim-fade inline-flex items-center gap-2 bg-yellow-300 text-slate-900 text-sm font-semibold px-4 py-1.5 rounded-full mb-6 shadow-lg hover:bg-yellow-200 transition-colors">
-              <span aria-hidden>🎁</span>{giftText}
+              <i className="bi bi-gift"></i>{giftText}
             </Link>
           ) : (
             <div className="anim-fade inline-flex items-center gap-2 bg-white/20 backdrop-blur text-white text-sm font-medium px-4 py-1.5 rounded-full mb-6">

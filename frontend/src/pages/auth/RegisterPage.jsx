@@ -98,7 +98,7 @@ export default function RegisterPage() {
 
       {gift && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-900 flex items-start gap-2">
-          <span aria-hidden>🎁</span>
+          <i className="bi bi-gift mt-0.5 shrink-0"></i>
           <span>{gift.ends_on
             ? t('gift_banner_until', { ns: 'common', date: giftDate(gift.ends_on), period: giftPeriod(t, gift.days), plan: gift.plan })
             : t('gift_banner', { ns: 'common', period: giftPeriod(t, gift.days), plan: gift.plan })}</span>

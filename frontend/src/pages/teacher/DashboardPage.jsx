@@ -19,7 +19,9 @@ function GiftBanner() {
   return (
     <Link to="/teacher/subscription"
       className={`card p-4 flex items-center gap-3 hover:shadow-md transition-shadow ${soon ? 'border-amber-200 bg-amber-50' : 'border-violet-100 bg-gradient-to-r from-violet-50 to-white'}`}>
-      <span className="text-2xl shrink-0" aria-hidden>🎁</span>
+      <span className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 ${soon ? 'bg-amber-100 text-amber-600' : 'bg-violet-100 text-violet-600'}`}>
+        <i className="bi bi-gift text-lg sm:text-2xl"></i>
+      </span>
       <span className="min-w-0 flex-1">
         <span className="block font-semibold text-slate-900">{t('gift_dash_title', { ns: 'teacher', plan: sub.plan_details?.display_name })}</span>
         <span className="block text-sm text-slate-600">

@@ -52,7 +52,7 @@ function StatusBadge({ sub }) {
   if (sub.has_pending_downgrade)
     return <span className="badge bg-amber-100 text-amber-700"><i className="bi bi-arrow-down-circle mr-1"></i>{t('downgrade_pending', { ns: 'teacher' })}</span>
   if (sub.is_active && sub.is_gift)
-    return <span className="badge bg-amber-100 text-amber-800"><span className="mr-1" aria-hidden>🎁</span>{t('gift_plan', { ns: 'teacher' })}</span>
+    return <span className="badge bg-violet-100 text-violet-700"><i className="bi bi-gift mr-1"></i>{t('gift_plan', { ns: 'teacher' })}</span>
   if (sub.is_active)
     return <span className="badge bg-green-100 text-green-700"><i className="bi bi-check-circle mr-1"></i>{t('active')}</span>
   return <span className="badge bg-red-100 text-red-700"><i className="bi bi-x-circle mr-1"></i>{t('inactive')}</span>
@@ -496,7 +496,7 @@ export default function SubscriptionPage() {
               { label: t('exam_start', { ns: 'teacher' }), val: fmtDate(sub.start_date) },
               { label: t('exam_end', { ns: 'teacher' }),   val: fmtDate(sub.end_date) },
               { label: t('days_remaining_label', { ns: 'teacher' }), val: `${sub.days_remaining} ${t('days', { ns: 'teacher' })}` },
-              { label: t('monthly_payment_label', { ns: 'teacher' }), val: sub.is_gift ? `🎁 ${t('gift_plan', { ns: 'teacher' })}` : fmtAZN(sub.plan_details?.price ?? 0, t('free', { ns: 'teacher' })) },
+              { label: t('monthly_payment_label', { ns: 'teacher' }), val: sub.is_gift ? <><i className="bi bi-gift mr-1 text-violet-600"></i>{t('gift_plan', { ns: 'teacher' })}</> : fmtAZN(sub.plan_details?.price ?? 0, t('free', { ns: 'teacher' })) },
             ].map(({ label, val }) => (
               <div key={label} className="bg-slate-50 rounded-xl p-3">
                 <p className="text-xs text-slate-400">{label}</p>
