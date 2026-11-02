@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.db.models import Count, IntegerField, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -70,6 +72,47 @@ class SubscriptionStateFilter(admin.SimpleListFilter):
         return queryset
 
 
+def _count(qs):
+    """A per-teacher count as a subquery (no join fan-out when several counts sit side by side)."""
+    return Coalesce(Subquery(qs.order_by().values('_t').annotate(n=Count('pk')).values('n')[:1],
+                             output_field=IntegerField()), Value(0))
+
+
+def with_teacher_stats(queryset):
+    """Students (active), classes (active), exams and handed-in results of every teacher in the list."""
+    from apps.classes.models import Class
+    from apps.exams.models import Exam, ExamResult
+    me = OuterRef('pk')
+    return queryset.annotate(
+        n_students=_count(User.objects.filter(created_by=me, role=User.ROLE_STUDENT, is_active=True)
+                          .annotate(_t=Value(1))),
+        n_classes=_count(Class.objects.filter(teacher=me, is_active=True).annotate(_t=Value(1))),
+        n_exams=_count(Exam.objects.filter(class_room__teacher=me).annotate(_t=Value(1))),
+        n_results=_count(ExamResult.objects.filter(exam__class_room__teacher=me)
+                         .exclude(status=ExamResult.STATUS_IN_PROGRESS).annotate(_t=Value(1))),
+    )
+
+
+class TeacherActivityFilter(admin.SimpleListFilter):
+    """Who actually uses it: teachers with no exam yet are the ones to call or help."""
+    title = 'Fəallıq'
+    parameter_name = 'activity'
+
+    def lookups(self, request, model_admin):
+        return [('none', 'Heç imtahan verməyib'), ('no_students', 'Şagird əlavə etməyib'), ('used', 'İmtahan keçirib')]
+
+    def queryset(self, request, queryset):
+        v = self.value()
+        if not v:
+            return queryset
+        queryset = queryset.filter(role=User.ROLE_TEACHER)
+        if v == 'none':
+            return queryset.filter(n_exams=0)
+        if v == 'no_students':
+            return queryset.filter(n_students=0)
+        return queryset.filter(n_exams__gt=0)
+
+
 class SharedSignupIPFilter(admin.SimpleListFilter):
     """Teachers who signed up from an address that 3+ teacher accounts came from — the usual sign of
     someone opening new accounts for new free trials. Click an IP in the list to see all of them."""
@@ -93,8 +136,10 @@ class SharedSignupIPFilter(admin.SimpleListFilter):
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ['email', 'full_name', 'role', 'plan_info', 'is_active', 'is_email_verified', 'signup_ip_link', 'created_at']
-    list_filter = ['role', SubscriptionStateFilter, SharedSignupIPFilter, 'is_active', 'is_email_verified', 'is_staff']
+    list_display = ['email', 'full_name', 'role', 'plan_info', 'students_count', 'classes_count', 'exams_count',
+                    'results_count', 'is_active', 'is_email_verified', 'signup_ip_link', 'created_at']
+    list_filter = ['role', SubscriptionStateFilter, TeacherActivityFilter, SharedSignupIPFilter, 'is_active',
+                   'is_email_verified', 'is_staff']
     list_editable = ['is_email_verified']
     search_fields = ['email', 'username', 'first_name', 'last_name', 'signup_ip']
     ordering = ['-created_at']
@@ -115,6 +160,33 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'username', 'first_name', 'last_name', 'role', 'password1', 'password2'),
         }),
     )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # the counts are only for the list page (sortable columns and the activity filter)
+        if request.resolver_match and request.resolver_match.url_name.endswith('changelist'):
+            qs = with_teacher_stats(qs)
+        return qs
+
+    def _stat(self, obj, field):
+        return getattr(obj, field, None) if obj.is_teacher else None
+
+    @admin.display(description='Şagird', ordering='n_students', empty_value='')
+    def students_count(self, obj):
+        return self._stat(obj, 'n_students')
+
+    @admin.display(description='Sinif', ordering='n_classes', empty_value='')
+    def classes_count(self, obj):
+        return self._stat(obj, 'n_classes')
+
+    @admin.display(description='İmtahan', ordering='n_exams', empty_value='')
+    def exams_count(self, obj):
+        return self._stat(obj, 'n_exams')
+
+    @admin.display(description='Nəticə', ordering='n_results', empty_value='')
+    def results_count(self, obj):
+        # handed-in results: how many students actually wrote this teacher's exams
+        return self._stat(obj, 'n_results')
 
     @admin.display(description='Qeydiyyat IP', ordering='signup_ip')
     def signup_ip_link(self, obj):
