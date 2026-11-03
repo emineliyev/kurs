@@ -883,5 +883,9 @@
   "gift_continue": "Hədiyyədən sonra davam et",
   "gift_dash_title": "Sizə {{plan}} planı hədiyyə edilib",
   "gift_dash_left": "Bütün imkanlardan istifadə edin — {{count}} gün qalıb",
-  "gift_dash_soon": "Hədiyyə {{count}} gün sonra bitir — davam etmək üçün abunəliyi yeniləyin"
+  "gift_dash_soon": "Hədiyyə {{count}} gün sonra bitir — davam etmək üçün abunəliyi yeniləyin",
+  "print_bubbles": "Şəkillidə dairələr",
+  "print_bubbles_off": "Gizlət",
+  "print_bubbles_on": "Göstər",
+  "q_save_retry": "Saxlanmadı — yenidən cəhd et"
 }

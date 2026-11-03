@@ -880,5 +880,9 @@
   "gift_dash_left_one": "Use every feature — {{count}} day left",
   "gift_dash_left_other": "Use every feature — {{count}} days left",
   "gift_dash_soon_one": "Your gift ends in {{count}} day — renew to keep going",
-  "gift_dash_soon_other": "Your gift ends in {{count}} days — renew to keep going"
+  "gift_dash_soon_other": "Your gift ends in {{count}} days — renew to keep going",
+  "print_bubbles": "Picture A–E circles",
+  "print_bubbles_off": "Hide",
+  "print_bubbles_on": "Show",
+  "q_save_retry": "Not saved — retry"
 }

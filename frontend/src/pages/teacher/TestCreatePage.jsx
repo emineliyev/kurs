@@ -121,18 +121,25 @@ function ImageBlock({ preview, onRemove, onRecrop }) {
 
 // ── QuestionCard ──────────────────────────────────────────────────────────────
 
-function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk, equalPoints }) {
+const AUTOSAVE_MS = 1500   // pause after the last edit before a complete question is saved
+
+function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, onOpenBulk, equalPoints }) {
   const { t } = useTranslation(['common', 'teacher'])
   const [saving, setSaving]           = useState(false)
-  const [saved, setSaved]             = useState(false)
+  const [saveError, setSaveError]     = useState(false)
+  const savingRef  = useRef(false)
+  const failedRev  = useRef(null)      // a revision that failed to save is not retried until edited again
+  const saved = !!question._saved
   const [showFormula, setShowFormula] = useState(false)
   const [formulaTarget, setFormulaTarget] = useState(null)
   const [showMedia, setShowMedia]     = useState(false)
   const [showModelAnswer, setShowModelAnswer] = useState(false)
   const textEditorRef = useRef(null)
 
-  const up  = (field, value) => { setSaved(false); onUpdate(index, { ...question, [field]: value, _saved: false }) }
-  const upQ = (patch)        => { setSaved(false); onUpdate(index, { ...question, ...patch, _saved: false }) }
+  // every edit bumps `_rev`; a finished save only marks the card saved if nothing changed meanwhile
+  const nextRev = () => (question._rev || 0) + 1
+  const up  = (field, value) => onUpdate(index, { ...question, [field]: value, _saved: false, _rev: nextRev() })
+  const upQ = (patch)        => onUpdate(index, { ...question, ...patch, _saved: false, _rev: nextRev() })
 
   const changeType = (newType) => {
     if (newType === question.question_type) return
@@ -142,9 +149,8 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
       correct_answer: '', tolerance: '', answer_format: '',
       _choiceCount: newType === 'image_mcq' ? 4 : undefined,
       _correctIndex: newType === 'image_mcq' ? -1 : undefined,
-      _saved: false,
+      _saved: false, _rev: nextRev(),
     })
-    setSaved(false)
   }
 
   const insertFormula = (latex) => {
@@ -175,40 +181,46 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
   const qType   = question.question_type || 'multiple_choice'
 
   // ── Validation ──────────────────────────────────────────────────────────────
-  const validate = () => {
+  const validate = (silent = false) => {
+    const fail = (key) => { if (!silent) toast.error(t(key, { ns: 'teacher' })); return false }
     if (qType === 'passage') {
-      if (isBlankHtml(question.text)) { toast.error(t('q_text_required', { ns: 'teacher' })); return false }
+      if (isBlankHtml(question.text)) return fail('q_text_required')
       return true
     }
     if (qType === 'image_mcq') {
-      if (!preview) { toast.error(t('q_img_required', { ns: 'teacher' })); return false }
-      if ((question._correctIndex ?? -1) < 0) { toast.error(t('q_correct_select', { ns: 'teacher' })); return false }
+      if (!preview) return fail('q_img_required')
+      if ((question._correctIndex ?? -1) < 0) return fail('q_correct_select')
       return true
     }
-    if (isBlankHtml(question.text)) { toast.error(t('q_text_required', { ns: 'teacher' })); return false }
+    if (isBlankHtml(question.text)) return fail('q_text_required')
     if (qType === 'multiple_choice') {
       const filled = (question.answers || []).filter(a => !isBlankHtml(a.text))
-      if (filled.length < 2) { toast.error(t('q_min_2_choices', { ns: 'teacher' })); return false }
-      if (!filled.some(a => a.is_correct)) { toast.error(t('q_mark_correct', { ns: 'teacher' })); return false }
+      if (filled.length < 2) return fail('q_min_2_choices')
+      if (!filled.some(a => a.is_correct)) return fail('q_mark_correct')
     }
     if (qType === 'short_answer' && !question.correct_answer?.trim()) {
-      toast.error(t('q_enter_correct', { ns: 'teacher' })); return false
+      return fail('q_enter_correct')
     }
     if (qType === 'numeric') {
       if (question.correct_answer === '' || question.correct_answer == null) {
-        toast.error(t('q_enter_numeric', { ns: 'teacher' })); return false
+        return fail('q_enter_numeric')
       }
       if (isNaN(parseFloat(question.correct_answer))) {
-        toast.error(t('q_must_be_number', { ns: 'teacher' })); return false
+        return fail('q_must_be_number')
       }
     }
     return true
   }
 
   // ── Save ────────────────────────────────────────────────────────────────────
-  const handleSave = async () => {
-    if (!validate()) return
-    setSaving(true)
+  const handleSave = async (auto = false) => {
+    if (savingRef.current || !validate(auto)) return
+    const rev = question._rev || 0
+    const file = question._imageFile
+    const dnd = question._dndId
+    savingRef.current = true
+    setSaving(true); setSaveError(false)
+    onPatch(dnd, () => ({ _saving: true }))
     try {
       let answersPayload = []
       if (qType === 'multiple_choice') {
@@ -234,7 +246,6 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
         answer_format: qType === 'short_answer' ? (question.answer_format || '').trim() : '',
         tolerance: question.tolerance !== '' && question.tolerance != null
           ? parseFloat(question.tolerance) : null,
-        hide_choices: question._hideChoices || false,
         answers: answersPayload,
       }
       if (question._imageRemoved && !question._imageFile) payload.image = null
@@ -246,7 +257,7 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
         const res = await testsApi.createQuestion(payload)
         qId = res.data.id
         // Remember the id now, so a failed image upload is retried as an update, not a duplicate
-        onUpdate(index, { ...question, _id: qId, _saved: false })
+        onPatch(dnd, () => ({ _id: qId }))
       }
 
       let image = question._imageRemoved ? null : question.image
@@ -257,13 +268,33 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
         image = res.data.image
       }
 
-      onUpdate(index, { ...question, _saved: true, _id: qId, image, _imageFile: null, _imageRemoved: false })
-      setSaved(true)
-      toast.success(t('q_saved_msg', { ns: 'teacher', num: index + 1 }))
+      onPatch(dnd, (cur) => ({
+        _id: qId, image, _imageRemoved: false,
+        _imageFile: cur._imageFile === file ? null : cur._imageFile,   // a picture chosen meanwhile still waits
+        _saved: (cur._rev || 0) === rev,
+      }))
+      failedRev.current = null
+      if (!auto) toast.success(t('q_saved_msg', { ns: 'teacher', num: index + 1 }))
     } catch (err) {
+      failedRev.current = rev
+      setSaveError(true)
       toastApiError(err)
-    } finally { setSaving(false) }
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+      onPatch(dnd, () => ({ _saving: false }))
+    }
   }
+
+  // Autosave: a complete question is saved a moment after the teacher stops typing.
+  // An untouched new card (no `_rev`) waits; an incomplete one shows what's missing below.
+  useEffect(() => {
+    if (saved || saving || !question._rev || failedRev.current === question._rev) return
+    if (!validate(true)) return
+    onPatch(question._dndId, () => ({ _pending: true }))
+    const timer = setTimeout(() => handleSave(true), AUTOSAVE_MS)
+    return () => { clearTimeout(timer); onPatch(question._dndId, () => ({ _pending: false })) }
+  }, [question._rev, saved, saving])
 
   // ── Render helpers ───────────────────────────────────────────────────────────
   const textField = (
@@ -360,18 +391,6 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
         ))}
       </div>
 
-      {/* PDF-də cavab variantlarını gizlət */}
-      <label className="flex items-center gap-2.5 cursor-pointer select-none w-fit">
-        <div
-          onClick={() => upQ({ _hideChoices: !question._hideChoices })}
-          className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 relative ${question._hideChoices ? 'bg-slate-400' : 'bg-orange-500'}`}
-        >
-          <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${question._hideChoices ? 'left-0.5' : 'left-5'}`} />
-        </div>
-        <span className="text-xs font-medium text-slate-600">
-          {question._hideChoices ? t('q_choices_hidden_pdf', { ns: 'teacher' }) : t('q_choices_shown_pdf', { ns: 'teacher' })}
-        </span>
-      </label>
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{t('q_correct_label_inline', { ns: 'teacher' })}</span>
         <div className="flex gap-1.5">
@@ -558,14 +577,19 @@ function QuestionCard({ question, index, onUpdate, onRemove, testId, onOpenBulk,
           {qType === 'passage'         && passageBody}
         </div>
 
-        <div className="px-5 pb-4 flex items-center justify-between">
+        <div className="px-5 pb-4 flex items-center justify-between gap-3 min-h-[2.5rem]">
           {footerStatus()}
-          <button type="button" onClick={handleSave} disabled={saving || saved}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${saved ? 'bg-green-100 text-green-700 cursor-default' : 'bg-primary-700 hover:bg-primary-600 text-white shadow-sm disabled:opacity-50'}`}>
-            {saving ? <><i className="bi bi-arrow-repeat animate-spin"></i> {t('q_saving_btn', { ns: 'teacher' })}</>
-              : saved ? <><i className="bi bi-check-circle-fill"></i> {t('q_saved_badge', { ns: 'teacher' })}</>
-              :         <><i className="bi bi-floppy"></i> {t('q_save_btn', { ns: 'teacher' })}</>}
-          </button>
+          {/* saved automatically; a failed save can be retried by hand */}
+          {saving || question._pending ? (
+            <span className="text-xs text-slate-400 flex items-center gap-1.5 shrink-0"><i className="bi bi-arrow-repeat animate-spin"></i> {t('q_saving_btn', { ns: 'teacher' })}</span>
+          ) : saveError && !saved ? (
+            <button type="button" onClick={() => handleSave(false)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 shrink-0">
+              <i className="bi bi-arrow-clockwise"></i> {t('q_save_retry', { ns: 'teacher' })}
+            </button>
+          ) : saved ? (
+            <span className="text-xs text-green-600 font-medium flex items-center gap-1 shrink-0"><i className="bi bi-cloud-check"></i> {t('q_saved_badge', { ns: 'teacher' })}</span>
+          ) : null}
         </div>
       </div>
     </>
@@ -711,6 +735,20 @@ export default function TestCreatePage() {
   const updateQuestion = (index, updated) => {
     setQuestions(prev => prev.map((q, i) => i === index ? updated : q))
   }
+  // merge into the latest state of one card (saves finish after more typing or a reorder)
+  const patchQuestion = (dndId, fn) => {
+    setQuestions(prev => prev.map(q => q._dndId === dndId ? { ...q, ...fn(q) } : q))
+  }
+  const questionsRef = useRef(questions)
+  questionsRef.current = questions
+  // closing the tab while a question is still being saved would lose it
+  useEffect(() => {
+    const busy = questions.some(q => q._saving || q._pending)
+    if (!busy) return
+    const warn = (e) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [questions])
 
   const removeQuestion = async (index) => {
     const q = questions[index]
@@ -897,6 +935,11 @@ export default function TestCreatePage() {
   }
 
   const onPublish = async () => {
+    // let autosaves that are waiting or running finish first (up to a few seconds)
+    for (let i = 0; i < 40 && questionsRef.current.some(q => q._saving || q._pending); i++) {
+      await new Promise(r => setTimeout(r, 150))
+    }
+    const questions = questionsRef.current
     const savedCount = questions.filter(q => q._saved).length
     if (savedCount === 0) { toast.error(t('min_one_question', { ns: 'teacher' })); return }
     const unsavedCount = questions.length - savedCount
@@ -1100,6 +1143,7 @@ export default function TestCreatePage() {
                     question={q}
                     index={i}
                     onUpdate={updateQuestion}
+                    onPatch={patchQuestion}
                     onRemove={removeQuestion}
                     testId={createdTest?.id}
                     onOpenBulk={() => setShowBulk(true)}

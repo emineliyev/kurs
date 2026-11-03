@@ -13,10 +13,11 @@ import SubscriptionLocked from '@/components/teacher/SubscriptionLocked'
 const FONT_SIZES = { sm: '10pt', md: '11.5pt', lg: '13pt' }
 const SCHOOL_KEY = 'print-school-name'
 const TEACHER_KEY = 'print-teacher'        // { on, name, phoneOn, phone }
-const LAYOUT_KEY = 'print-layout'          // { design, accent, gap }
+const LAYOUT_KEY = 'print-layout'          // { design, accent, gap, bubbles }
 // "framed": the title in a coloured pill inside a rounded box, the column line in the same colour
 const ACCENTS = ['#F97316', '#1D4ED8', '#15803D', '#7C3AED', '#0F172A']
-const LAYOUT_DEFAULT = { design: 'classic', accent: ACCENTS[0], gap: 5 }   // gap: mm between questions
+// gap: mm between questions · bubbles: A–E circles under picture questions
+const LAYOUT_DEFAULT = { design: 'classic', accent: ACCENTS[0], gap: 5, bubbles: false }
 const SIDEBAR_PX = 320                      // settings column on wide screens (lg)
 const SIDEBAR_HIDDEN_KEY = 'print_sidebar_hidden'
 const PAGE_CONTENT_MM = 297 - 2 * 12        // A4 minus the @page margins: what one printed page holds
@@ -130,7 +131,7 @@ function Check({ checked, onChange, label }) {
   )
 }
 
-function Question({ item, t }) {
+function Question({ item, t, bubbles }) {
   const q = item.question
   const type = q.question_type
   if (type === 'passage') {
@@ -160,7 +161,7 @@ function Question({ item, t }) {
               ))}
             </div>
           )}
-          {type === 'image_mcq' && !q.hide_choices && item.answers.length > 0 && (
+          {type === 'image_mcq' && bubbles && item.answers.length > 0 && (
             <div className="print-bubbles">
               {item.answers.map((a, i) => <span key={a.id ?? i}>{CHOICE_LETTERS[i]}</span>)}
             </div>
@@ -316,6 +317,10 @@ export default function TestPrintPage() {
               </div>
             </Row>
           )}
+          <Row label={t('print_bubbles', { ns: 'teacher' })}>
+            <Seg value={layout.bubbles ? 'on' : 'off'} onChange={(v) => setL({ bubbles: v === 'on' })}
+              options={[['off', t('print_bubbles_off', { ns: 'teacher' })], ['on', t('print_bubbles_on', { ns: 'teacher' })]]} />
+          </Row>
           <Row label={t('print_q_gap', { ns: 'teacher' })}>
             <div className="flex items-center gap-2">
               <input type="range" min={0} max={80} step={1} value={layout.gap} onChange={(e) => setL({ gap: Number(e.target.value) })}
@@ -389,7 +394,7 @@ export default function TestPrintPage() {
               </div>
             </header>
             <div className="print-body" style={{ columnCount: columns }}>
-              {v.items.map((item) => <Question key={item.question.id} item={item} t={t} />)}
+              {v.items.map((item) => <Question key={item.question.id} item={item} t={t} bubbles={layout.bubbles} />)}
             </div>
           </section>
         ))}

@@ -25,6 +25,7 @@ import { renderMath } from '@/utils/math'
 import { LABELS, MCQ_TYPES } from '@/utils/examConstants'
 import { WATERMARK_ON_KEY, WATERMARK_TEXT_KEY, watermarkTile } from '@/components/common/Watermark'
 import SubscriptionLocked from '@/components/teacher/SubscriptionLocked'
+import { imageBubblesOn } from '@/utils/printPreview'
 
 function PassageBlock({ q }) {
   return (
@@ -40,7 +41,8 @@ function Question({ q, num }) {
   const isMCQ  = MCQ_TYPES.includes(type)
   const isWide = type === 'image_mcq'
 
-  const choices = isMCQ && q.answers?.length > 0 && !q.hide_choices && (
+  // picture questions: the A–E circles follow the print setting (TestPrintPage), not each question
+  const choices = isMCQ && q.answers?.length > 0 && (type !== 'image_mcq' || imageBubblesOn()) && (
     <div className="choices">
       {q.answers.map((a, i) => {
         const labelLetter = LABELS[i]
