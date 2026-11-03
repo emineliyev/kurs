@@ -131,6 +131,23 @@ function Check({ checked, onChange, label }) {
   )
 }
 
+// A text value inside CSS `content: "…"`
+const cssText = (v) => `"${String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ')}"`
+const FOOT_FONT = 'font: 8pt Arial, sans-serif; color: #64748b;'
+
+/** @page margin boxes: the same small line at the bottom of every printed page. Alone, the page
+ *  number stays in the middle; next to teacher / school it moves to the right. */
+function pageFootCss(left, center, pages) {
+  const boxes = []
+  if (left) boxes.push(`@bottom-left { content: ${cssText(left)}; ${FOOT_FONT} }`)
+  if (center) boxes.push(`@bottom-center { content: ${cssText(center)}; ${FOOT_FONT} }`)
+  if (pages) {
+    const side = left || center ? 'bottom-right' : 'bottom-center'
+    boxes.push(`@${side} { content: counter(page) " / " counter(pages); ${FOOT_FONT} }`)
+  }
+  return `@page { ${boxes.join(' ')} }`
+}
+
 function Question({ item, t, bubbles }) {
   const q = item.question
   const type = q.question_type
@@ -255,6 +272,11 @@ export default function TestPrintPage() {
     teacher.on && teacher.name.trim() && `${t('print_teacher')}: ${teacher.name.trim()}`,
     teacher.phoneOn && teacher.phone.trim() && `${t('phone', { ns: 'teacher' })}: ${teacher.phone.trim()}`,
   ].filter(Boolean).join('  ·  ')
+  // Foot of every printed page: teacher · phone (left), school (centre), "2 / 3" (right).
+  // The header keeps the teacher line too — Safari / Firefox don't print page margin boxes.
+  const footLeft = [teacher.on && teacher.name.trim(), teacher.phoneOn && teacher.phone.trim()].filter(Boolean).join(' · ')
+  const footCenter = school.trim()
+  const hasFoot = !!(footLeft || footCenter || pageNumbers)
 
   return (
     <div className="min-h-screen bg-slate-200 print:bg-white">
@@ -355,6 +377,11 @@ export default function TestPrintPage() {
             </Row>
           </div>
         </Group>
+            {(footLeft || footCenter) && (
+              <p className="text-xs text-slate-400">
+                <i className="bi bi-layout-text-window-reverse mr-1"></i>{t('print_footer_hint', { ns: 'teacher' })}
+              </p>
+            )}
             <p className="text-xs text-slate-400">
               <i className="bi bi-info-circle mr-1"></i>{t('print_hint', { ns: 'teacher' })}
             </p>
@@ -363,10 +390,8 @@ export default function TestPrintPage() {
 
         <main className="flex-1 min-w-0">
       {/* Sheets */}
-      {/* "1 / 3" at the foot of every printed page (Chrome / Edge print margin boxes) */}
-      {pageNumbers && (
-        <style>{'@page { @bottom-center { content: counter(page) " / " counter(pages); font: 9pt Arial, sans-serif; color: #64748b; } }'}</style>
-      )}
+      {/* teacher · school · "1 / 3" at the foot of every printed page (Chrome / Edge print margin boxes) */}
+      {hasFoot && <style>{pageFootCss(footLeft, footCenter, pageNumbers)}</style>}
       <div ref={sheetsRef} className="print-preview py-4 sm:py-8 print:py-0 space-y-12 print:space-y-0" style={{ zoom }}>
         {built.map((v, i) => (
           <section key={v.letter} className={sheetClass} style={sheetStyle}>

@@ -892,5 +892,6 @@
   "print_bubbles": "Кружки у картинок",
   "print_bubbles_off": "Скрыть",
   "print_bubbles_on": "Показать",
-  "q_save_retry": "Не сохранено — повторить"
+  "q_save_retry": "Не сохранено — повторить",
+  "print_footer_hint": "Учитель, школа и номер страницы будут внизу каждой печатной страницы (Chrome, Edge)."
 }

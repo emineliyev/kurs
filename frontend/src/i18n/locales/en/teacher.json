@@ -884,5 +884,6 @@
   "print_bubbles": "Picture A–E circles",
   "print_bubbles_off": "Hide",
   "print_bubbles_on": "Show",
-  "q_save_retry": "Not saved — retry"
+  "q_save_retry": "Not saved — retry",
+  "print_footer_hint": "Teacher, school and page number also go at the foot of every printed page (Chrome, Edge)."
 }
