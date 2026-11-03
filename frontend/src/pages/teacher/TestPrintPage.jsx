@@ -151,6 +151,15 @@ function pageFootCss(left, center, pages) {
 function Question({ item, t, bubbles }) {
   const q = item.question
   const type = q.question_type
+  if (type === 'listening') {
+    // on paper the teacher plays the audio in class ("Play in class" page); the sheet shows the task
+    return (
+      <div className="print-q print-passage print-listening">
+        <div className="font-semibold">🎧 {t('print_listening', { ns: 'teacher' })}</div>
+        {q.text && <div className="qtext">{q.text.replace(/<[^>]+>/g, '')}</div>}
+      </div>
+    )
+  }
   if (type === 'passage') {
     return (
       <div className="print-q print-passage">
@@ -294,6 +303,11 @@ export default function TestPrintPage() {
             </span>
           )}
           <span className="flex-1" />
+          {(test.questions || []).some((q) => q.question_type === 'listening') && (
+            <Link to={`/teacher/tests/${id}/listen`} className="btn-secondary py-2 px-3 text-sm shrink-0 !text-rose-700">
+              <i className="bi bi-speaker"></i><span className="hidden md:inline">{t('listening_classroom', { ns: 'teacher' })}</span>
+            </Link>
+          )}
           <button onClick={() => setShowSettings((v) => !v)} aria-expanded={showSettings}
             className={`lg:hidden btn-secondary py-2 px-3 text-sm shrink-0 ${showSettings ? 'bg-slate-100' : ''}`}>
             <i className="bi bi-sliders"></i><span className="hidden sm:inline">{t('print_settings', { ns: 'teacher' })}</span>
@@ -426,6 +440,7 @@ export default function TestPrintPage() {
 
         {withKey && built.length > 0 && (
           <section className={sheetClass} style={sheetStyle}>
+            {/* transcripts of the listening texts — on the teacher's key page only */}
             {sheetTag(built.length, t('print_key_title', { ns: 'teacher' }))}
             <header className="print-head">
               {framed && <div className="pf-pill-row"><span className="pf-pill">{t('print_key_title', { ns: 'teacher' })}</span></div>}
@@ -450,6 +465,12 @@ export default function TestPrintPage() {
                 ))}
               </tbody>
             </table>
+            {(test.questions || []).filter((q) => q.question_type === 'listening' && q.transcript).map((q, k) => (
+              <div key={q.id} className="print-transcript">
+                <b>🎧 {t('print_transcript', { ns: 'teacher' })}{k ? ` ${k + 1}` : ''}</b>
+                <p>{q.transcript}</p>
+              </div>
+            ))}
           </section>
         )}
       </div>

@@ -430,6 +430,13 @@ export default function ExamPrintPage() {
             if (q.question_type === 'passage') {
               return <PassageBlock key={q.id} q={q} />
             }
+            if (q.question_type === 'listening') {
+              return (
+                <div key={q.id} className="passage-block">
+                  <div className="passage-text"><b>🎧 {t('print_listening', { ns: 'teacher' })}</b>{q.text ? ` — ${q.text.replace(/<[^>]+>/g, '')}` : ''}</div>
+                </div>
+              )
+            }
             qCounter++
             return <Question key={q.id} q={q} num={qCounter} />
           })}

@@ -95,7 +95,7 @@ def board(exams):
     now = timezone.now()
     rows = []
     for exam in exams:
-        total = exam.test.questions.exclude(question_type=Question.TYPE_PASSAGE).count()
+        total = exam.test.questions.exclude(question_type__in=Question.NO_GRADE_TYPES).count()
         results = {r.student_id: r for r in exam.results.select_related('student').prefetch_related('answers')}
         enrolled = (ClassEnrollment.objects
                     .filter(class_room=exam.class_room, is_active=True, student__is_active=True)

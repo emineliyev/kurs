@@ -20,6 +20,8 @@ import { fmtPoints } from '@/utils/score'
 import Select from '@/components/common/Select'
 import BankFolderTree, { inSelection } from '@/components/teacher/BankFolderTree'
 import { autoAnswerHint } from '@/utils/answerHint'
+import { AUDIO_ACCEPT, AUDIO_MAX_MB, checkAudioFile, fmtDuration } from '@/utils/listening'
+import { subscriptionsApi } from '@/api/subscriptions'
 
 let _dndIdCounter = 0
 const newDndId = () => ++_dndIdCounter
@@ -56,7 +58,11 @@ const TYPE_CONFIG = {
   numeric:         { icon: 'bi-123',               color: 'amber'  },
   long_answer:     { icon: 'bi-chat-text',         color: 'violet' },
   passage:         { icon: 'bi-text-paragraph',    color: 'teal'   },
+  listening:       { icon: 'bi-headphones',        color: 'rose'   },
 }
+// blocks: not graded, the questions after them belong to them
+const BLOCK_TYPES = ['passage', 'listening']
+const isBlock = (type) => BLOCK_TYPES.includes(type)
 
 const TYPE_LABEL_KEYS = {
   multiple_choice: 'type_multiple_choice',
@@ -65,6 +71,7 @@ const TYPE_LABEL_KEYS = {
   numeric:         'type_numeric',
   long_answer:     'type_long_answer',
   passage:         'type_passage',
+  listening:       'type_listening',
 }
 
 const COLOR_ACTIVE = {
@@ -74,6 +81,7 @@ const COLOR_ACTIVE = {
   amber:  'bg-amber-500 text-white border-amber-500',
   violet: 'bg-violet-600 text-white border-violet-600',
   teal:   'bg-teal-600 text-white border-teal-600',
+  rose:   'bg-rose-600 text-white border-rose-600',
 }
 const COLOR_IDLE = 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
 
@@ -94,6 +102,8 @@ function defaultQuestion(type) {
     _choiceCount: type === 'image_mcq' ? 4 : undefined,
     _correctIndex: type === 'image_mcq' ? -1 : undefined,
     _hideChoices: false,
+    audio: null, _audioFile: null, _audioName: '', _audioDuration: null,
+    transcript: '', listen_mode: 'dim', max_plays: 2,
     _dndId: newDndId(),
   }
 }
@@ -123,7 +133,7 @@ function ImageBlock({ preview, onRemove, onRecrop }) {
 
 const AUTOSAVE_MS = 1500   // pause after the last edit before a complete question is saved
 
-function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, onOpenBulk, equalPoints }) {
+function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, onOpenBulk, equalPoints, canListen }) {
   const { t } = useTranslation(['common', 'teacher'])
   const [saving, setSaving]           = useState(false)
   const [saveError, setSaveError]     = useState(false)
@@ -143,6 +153,7 @@ function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, on
 
   const changeType = (newType) => {
     if (newType === question.question_type) return
+    if (newType === 'listening' && !canListen) { toast.error(t('listening_plan_only', { ns: 'teacher' })); return }
     onUpdate(index, {
       ...question, question_type: newType,
       answers: newType === 'multiple_choice' ? defaultAnswers() : [],
@@ -185,6 +196,10 @@ function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, on
     const fail = (key) => { if (!silent) toast.error(t(key, { ns: 'teacher' })); return false }
     if (qType === 'passage') {
       if (isBlankHtml(question.text)) return fail('q_text_required')
+      return true
+    }
+    if (qType === 'listening') {
+      if (!question._audioFile && !question.audio) return fail('q_audio_required')
       return true
     }
     if (qType === 'image_mcq') {
@@ -238,7 +253,7 @@ function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, on
         test: testId,
         text: question.text || '',
         question_type: qType,
-        points: qType === 'passage' ? 0 : (question.points ?? 1),
+        points: isBlock(qType) ? 0 : (question.points ?? 1),
         order: index,
         math_formula: question.math_formula || '',
         model_answer: question.model_answer || '',
@@ -247,6 +262,9 @@ function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, on
         tolerance: question.tolerance !== '' && question.tolerance != null
           ? parseFloat(question.tolerance) : null,
         answers: answersPayload,
+        ...(qType === 'listening' && {
+          transcript: question.transcript || '', listen_mode: question.listen_mode || 'dim', max_plays: question.max_plays || 2,
+        }),
       }
       if (question._imageRemoved && !question._imageFile) payload.image = null
 
@@ -267,9 +285,19 @@ function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, on
         const res = await testsApi.updateQuestion(qId, fd)
         image = res.data.image
       }
+      // listening: the audio goes up on its own (the server checks what the file really is)
+      const audioFile = question._audioFile
+      let audio = question.audio
+      if (audioFile) {
+        const fd = new FormData()
+        fd.append('audio', audioFile)
+        const res = await testsApi.updateQuestion(qId, fd)
+        audio = res.data.audio
+      }
 
       onPatch(dnd, (cur) => ({
-        _id: qId, image, _imageRemoved: false,
+        _id: qId, image, _imageRemoved: false, audio,
+        _audioFile: cur._audioFile === audioFile ? null : cur._audioFile,
         _imageFile: cur._imageFile === file ? null : cur._imageFile,   // a picture chosen meanwhile still waits
         _saved: (cur._rev || 0) === rev,
       }))
@@ -485,6 +513,99 @@ function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, on
     </div>
   )
 
+  // ── Listening block ─────────────────────────────────────────────────────────
+  const audioInputRef = useRef(null)
+  const audioSrc = question._audioPreview || question.audio
+  const pickAudio = async (file) => {
+    if (!file) return
+    try {
+      const { duration } = await checkAudioFile(file)
+      if (question._audioPreview) URL.revokeObjectURL(question._audioPreview)
+      upQ({ _audioFile: file, _audioPreview: URL.createObjectURL(file), _audioName: file.name, _audioDuration: duration })
+    } catch (key) {
+      toast.error(t(typeof key === 'string' ? key : 'audio_err_unplayable', { ns: 'teacher', mb: AUDIO_MAX_MB }), { duration: 6000 })
+    }
+  }
+  const listeningBody = (
+    <div className="space-y-4">
+      <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
+        <i className="bi bi-info-circle mt-0.5 shrink-0"></i>
+        <span>{t('q_listening_info', { ns: 'teacher' })}</span>
+      </div>
+
+      <div>
+        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">{t('listening_audio', { ns: 'teacher' })}</label>
+        <input ref={audioInputRef} type="file" accept={AUDIO_ACCEPT} className="hidden"
+          onChange={(e) => { pickAudio(e.target.files?.[0]); e.target.value = '' }} />
+        {audioSrc ? (
+          <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+            <audio src={audioSrc} controls preload="metadata" className="w-full" />
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+              <span className="truncate">
+                <i className="bi bi-music-note-beamed mr-1"></i>{question._audioName || t('listening_audio_saved', { ns: 'teacher' })}
+                {question._audioDuration ? ` · ${fmtDuration(question._audioDuration)}` : ''}
+              </span>
+              <button type="button" onClick={() => audioInputRef.current?.click()} className="text-primary-700 font-medium hover:underline shrink-0">
+                <i className="bi bi-arrow-repeat mr-1"></i>{t('listening_audio_change', { ns: 'teacher' })}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={() => audioInputRef.current?.click()}
+            className="w-full py-6 rounded-xl border-2 border-dashed border-rose-200 hover:border-rose-400 hover:bg-rose-50/50 transition-colors flex flex-col items-center gap-1.5 text-rose-700">
+            <i className="bi bi-file-earmark-music text-2xl"></i>
+            <span className="text-sm font-semibold">{t('listening_audio_pick', { ns: 'teacher' })}</span>
+            <span className="text-xs text-slate-500">{t('listening_audio_formats', { ns: 'teacher', mb: AUDIO_MAX_MB })}</span>
+          </button>
+        )}
+      </div>
+
+      <div>
+        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">{t('listening_task', { ns: 'teacher' })}</label>
+        <input value={(question.text || '').replace(/<[^>]+>/g, '')} onChange={(e) => up('text', e.target.value)} maxLength={300}
+          placeholder={t('listening_task_ph', { ns: 'teacher' })}
+          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">{t('listening_mode', { ns: 'teacher' })}</label>
+        <div className="grid sm:grid-cols-2 gap-2">
+          {[['dim', 'bi-shield-check', 'listening_mode_dim', 'listening_mode_dim_desc'], ['free', 'bi-play-circle', 'listening_mode_free', 'listening_mode_free_desc']].map(([mode, icon, title, desc]) => (
+            <button key={mode} type="button" onClick={() => upQ({ listen_mode: mode })}
+              className={`text-left p-3 rounded-xl border-2 transition-colors ${(question.listen_mode || 'dim') === mode ? 'border-rose-400 bg-rose-50' : 'border-slate-200 hover:border-slate-300'}`}>
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-800"><i className={`bi ${icon}`}></i>{t(title, { ns: 'teacher' })}</span>
+              <span className="block text-xs text-slate-500 mt-0.5">{t(desc, { ns: 'teacher' })}</span>
+            </button>
+          ))}
+        </div>
+        {(question.listen_mode || 'dim') === 'dim' && (
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <span>{t('listening_plays', { ns: 'teacher' })}</span>
+            {[1, 2, 3].map((n) => (
+              <button key={n} type="button" onClick={() => upQ({ max_plays: n })}
+                className={`w-9 h-9 rounded-lg border-2 font-bold text-sm ${(question.max_plays || 2) === n ? 'bg-rose-600 border-rose-600 text-white' : 'border-slate-200 text-slate-500 hover:border-rose-300'}`}>{n}</button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <details className="group" open={!!question.transcript}>
+        <summary className="cursor-pointer text-xs font-semibold text-slate-500 uppercase tracking-wider select-none">
+          <i className="bi bi-chevron-right inline-block transition-transform group-open:rotate-90 mr-1"></i>{t('listening_transcript', { ns: 'teacher' })}
+        </summary>
+        <textarea value={question.transcript || ''} onChange={(e) => up('transcript', e.target.value)} rows={4} maxLength={10000}
+          placeholder={t('listening_transcript_ph', { ns: 'teacher' })}
+          className="mt-2 w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300" />
+      </details>
+
+      {question._id && testId && (
+        <Link to={`/teacher/tests/${testId}/listen`} target="_blank" className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-700 hover:underline">
+          <i className="bi bi-speaker"></i>{t('listening_classroom', { ns: 'teacher' })}
+        </Link>
+      )}
+    </div>
+  )
+
   const passageBody = (
     <div className="space-y-3">
       <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-xs text-teal-700 flex items-start gap-2">
@@ -505,6 +626,9 @@ function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, on
 
   const footerStatus = () => {
     if (qType === 'passage') return <span className="text-xs text-teal-600 flex items-center gap-1"><i className="bi bi-text-paragraph"></i> {t('q_status_passage', { ns: 'teacher' })}</span>
+    if (qType === 'listening') return audioSrc
+      ? <span className="text-xs text-rose-600 flex items-center gap-1"><i className="bi bi-headphones"></i> {t('q_status_listening', { ns: 'teacher' })}</span>
+      : <span className="text-xs text-amber-500 flex items-center gap-1"><i className="bi bi-exclamation-circle"></i> {t('q_status_add_audio', { ns: 'teacher' })}</span>
     if (qType === 'image_mcq') {
       if (!preview) return <span className="text-xs text-orange-500 flex items-center gap-1"><i className="bi bi-exclamation-circle"></i> {t('q_status_add_img', { ns: 'teacher' })}</span>
       if ((question._correctIndex ?? -1) < 0) return <span className="text-xs text-amber-500 flex items-center gap-1"><i className="bi bi-exclamation-circle"></i> {t('q_status_no_correct', { ns: 'teacher' })}</span>
@@ -549,7 +673,7 @@ function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, on
             {saved && <span className="text-xs text-green-600 font-medium flex items-center gap-1"><i className="bi bi-check-circle-fill"></i> {t('q_saved_badge', { ns: 'teacher' })}</span>}
           </div>
           <div className="flex items-center gap-2">
-            {qType !== 'passage' && (equalPoints != null ? (
+            {!isBlock(qType) && (equalPoints != null ? (
               // equal-points tests: the share is computed from the total, not typed per question
               <span className="text-xs text-slate-500 bg-slate-100 rounded-lg px-2 py-1" title={t('equal_points_hint', { ns: 'teacher' })}>
                 {fmtPoints(equalPoints)} {t('q_points_label', { ns: 'teacher' })}
@@ -575,6 +699,7 @@ function QuestionCard({ question, index, onUpdate, onPatch, onRemove, testId, on
           {qType === 'numeric'         && numericBody}
           {qType === 'long_answer'     && longAnswerBody}
           {qType === 'passage'         && passageBody}
+          {qType === 'listening'       && listeningBody}
         </div>
 
         <div className="px-5 pb-4 flex items-center justify-between gap-3 min-h-[2.5rem]">
@@ -623,6 +748,13 @@ export default function TestCreatePage() {
   const navigate = useNavigate()
   const { id: editId } = useParams()
   const isEditMode = !!editId
+  // listening blocks come with Standard and Pro (the server checks too)
+  const [canListen, setCanListen] = useState(false)
+  useEffect(() => {
+    subscriptionsApi.mySubscription()
+      .then((r) => setCanListen(!!r.data?.is_active && (r.data?.plan_details?.tier ?? 0) >= 1))
+      .catch(() => {})
+  }, [])
   const [step, setStep]               = useState(1)
   const [createdTest, setCreatedTest] = useState(null)
   const [questions, setQuestions]     = useState([])   // the teacher picks the first question's type
@@ -671,6 +803,7 @@ export default function TestCreatePage() {
       })
       setCreatedTest(test)
       const loadedQs = (qRes.data || []).map(q => ({
+        audio: q.audio || null, transcript: q.transcript || '', listen_mode: q.listen_mode || 'dim', max_plays: q.max_plays || 2,
         question_type: q.question_type,
         text: q.text || '',
         points: q.points || 1,
@@ -775,8 +908,10 @@ export default function TestCreatePage() {
   }
 
   const addQuestion = (type) => {
+    if (type === 'listening' && !canListen) { toast.error(t('listening_plan_only', { ns: 'teacher' })); return }
     setQuestions(prev => [...prev, defaultQuestion(type)])
   }
+
 
   // Questions cut in the PDF workspace → image questions with their answer keys
   const onBulkDone = async (items) => {
@@ -973,11 +1108,11 @@ export default function TestCreatePage() {
 
   const savedCount  = questions.filter(q => q._saved).length
   const totalCount  = questions.length
-  const gradableCount = questions.filter(q => q.question_type !== 'passage').length
+  const gradableCount = questions.filter(q => !isBlock(q.question_type)).length
   const equalShare = createdTest?.equal_points && gradableCount ? createdTest.max_score / gradableCount : null
   const totalPoints = fmtPoints(createdTest?.equal_points
     ? (gradableCount ? createdTest.max_score : 0)
-    : questions.reduce((s, q) => s + (q.question_type === 'passage' ? 0 : (q.points ?? 1)), 0))
+    : questions.reduce((s, q) => s + (isBlock(q.question_type) ? 0 : (q.points ?? 1)), 0))
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -1148,6 +1283,7 @@ export default function TestCreatePage() {
                     testId={createdTest?.id}
                     onOpenBulk={() => setShowBulk(true)}
                     equalPoints={equalShare}
+                    canListen={canListen}
                   />
                 ))}
               </div>

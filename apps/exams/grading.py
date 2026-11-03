@@ -140,8 +140,9 @@ def regrade_question(question):
 
 
 def gradable_total(exam):
-    """Points of every question that is graded (passages aren't) — answered or not."""
-    return sum(q.points for q in exam.test.questions.exclude(question_type='passage'))
+    """Points of every question that is graded (passages and listening blocks aren't) — answered or not."""
+    from apps.tests_app.models import Question
+    return sum(q.points for q in exam.test.questions.exclude(question_type__in=Question.NO_GRADE_TYPES))
 
 
 def wrong_choice_penalty(result, test):
@@ -184,8 +185,9 @@ def grade(exam, result, answers_data, submitted_at=None, auto=False):
     total_points = 0
     earned_points = 0
 
-    # Passage is display-only — not graded
-    for question in exam.test.questions.exclude(question_type='passage'):
+    # Passages and listening blocks are display-only — not graded
+    from apps.tests_app.models import Question
+    for question in exam.test.questions.exclude(question_type__in=Question.NO_GRADE_TYPES):
         total_points += question.points
         answer_data = submitted.get(question.id)
         if answer_data is None:

@@ -26,10 +26,21 @@ def copy_image(source, question):
         source.close()
 
 
+def copy_audio(source, question):
+    """Copy a listening block's audio into its copy (each question owns its file, like images)."""
+    import os
+    from django.core.files.base import ContentFile
+    source.open('rb')
+    try:
+        question.audio.save(os.path.basename(source.name), ContentFile(source.read()), save=True)
+    finally:
+        source.close()
+
+
 def shuffled_for_student(questions, exam, student):
     """
     Question/answer order for one student, stable across reloads.
-    A passage stays first in its block with the questions that follow it;
+    A passage (or listening) stays first in its block with the questions that follow it;
     image_mcq choices are not shuffled (their A/B/C/D labels are printed on the image).
     """
     import random
@@ -38,7 +49,7 @@ def shuffled_for_student(questions, exam, student):
     if exam.randomize_questions:
         blocks, current = [], None
         for q in questions:
-            if q.question_type == Question.TYPE_PASSAGE:
+            if q.question_type in Question.BLOCK_TYPES:
                 current = [q]
                 blocks.append(current)
             elif current is not None:
@@ -46,7 +57,7 @@ def shuffled_for_student(questions, exam, student):
             else:
                 blocks.append([q])
         for block in blocks:
-            if block[0].question_type == Question.TYPE_PASSAGE:
+            if block[0].question_type in Question.BLOCK_TYPES:
                 rest = block[1:]
                 rng.shuffle(rest)
                 block[1:] = rest
@@ -194,10 +205,15 @@ class TestViewSet(viewsets.ModelViewSet):
                 tolerance=question.tolerance,
                 answer_format=question.answer_format,
                 hide_choices=question.hide_choices,
+                transcript=question.transcript,
+                listen_mode=question.listen_mode,
+                max_plays=question.max_plays,
                 source_bank_question_id=question.source_bank_question_id,
             )
             if question.image:
                 copy_image(question.image, new_question)
+            if question.audio:
+                copy_audio(question.audio, new_question)
             for answer in question.answers.all():
                 Answer.objects.create(
                     question=new_question,

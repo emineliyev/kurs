@@ -90,7 +90,7 @@ def _num(value):
 def _collect(exams):
     test = exams[0].test
     questions = [q for q in test.questions.prefetch_related('answers').order_by('order', 'id')
-                 if q.question_type != Question.TYPE_PASSAGE]
+                 if q.question_type not in Question.NO_GRADE_TYPES]
     choices = {q.id: list(q.answers.all()) for q in questions}
     # submitted results, plus anyone still writing (listed at the bottom, without answers)
     results = (ExamResult.objects.filter(exam__in=exams)

@@ -40,12 +40,14 @@ function shuffle(list, rand) {
   return out
 }
 
-// Passage + its questions form one block; other questions are single blocks
+// A passage or a listening text + its questions form one block; other questions are single blocks
+const isBlockStart = (q) => q.question_type === 'passage' || q.question_type === 'listening'
+
 function toBlocks(questions) {
   const blocks = []
   let current = null
   for (const q of questions) {
-    if (q.question_type === 'passage') {
+    if (isBlockStart(q)) {
       current = [q]
       blocks.push(current)
     } else if (current) {
@@ -76,14 +78,14 @@ export function buildVariants(questions, count, seed) {
     let sequence = ordered
     if (v > 0) {
       const blocks = toBlocks(ordered).map((block) =>
-        block[0].question_type === 'passage' ? [block[0], ...shuffle(block.slice(1), rand)] : block)
+        isBlockStart(block[0]) ? [block[0], ...shuffle(block.slice(1), rand)] : block)
       sequence = shuffle(blocks, rand).flat()
     }
     let n = 0
     const items = sequence.map((q) => {
       const base = q.answers || []
       const answers = v > 0 && SHUFFLE_ANSWER_TYPES.includes(q.question_type) ? shuffle(base, rand) : base
-      const number = q.question_type === 'passage' ? null : ++n
+      const number = isBlockStart(q) ? null : ++n
       return { question: q, number, answers, key: number ? correctKey(q, answers) : null }
     })
     return { letter, items, key: items.filter((i) => i.number).map((i) => ({ number: i.number, key: i.key })) }

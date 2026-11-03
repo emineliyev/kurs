@@ -35,6 +35,7 @@ const TeacherDashboard = lazyPage(() => import('@/pages/teacher/DashboardPage'))
 const TestCreatePage = lazyPage(() => import('@/pages/teacher/TestCreatePage'))
 const TestDetailPage = lazyPage(() => import('@/pages/teacher/TestDetailPage'))
 const TestPrintPage = lazyPage(() => import('@/pages/teacher/TestPrintPage'))
+const ListeningClassroomPage = lazyPage(() => import('@/pages/teacher/ListeningClassroomPage'))
 const ReportCardsPage = lazyPage(() => import('@/pages/teacher/ReportCardsPage'))
 const StudentsPage = lazyPage(() => import('@/pages/teacher/StudentsPage'))
 const ExamsPage = lazyPage(() => import('@/pages/teacher/ExamsPage'))
@@ -116,6 +117,7 @@ export default function App() {
         <Route path="tests/create" element={<TestCreatePage />} />
         <Route path="tests/:id/edit" element={<TestCreatePage />} />
         <Route path="tests/:id" element={<TestDetailPage />} />
+        <Route path="tests/:id/listen" element={<ListeningClassroomPage />} />
         <Route path="classes" element={<Navigate to="/teacher/students" replace />} />
         <Route path="classes/:id" element={<ClassRedirect />} />
         <Route path="students" element={<StudentsPage />} />

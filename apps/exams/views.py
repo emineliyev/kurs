@@ -186,7 +186,37 @@ class ExamViewSet(viewsets.ModelViewSet):
         # The page restores saved answers from the draft and runs its timer to `deadline`
         data = ExamResultSerializer(result).data
         data['draft_answers'] = result.draft_answers
+        data['listen_counts'] = result.listen_counts
         return Response(data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsStudent])
+    def listen(self, request, pk=None):
+        """The student starts playing a listening block. In DİM mode only `max_plays` plays are allowed;
+        the count is kept here, so reloading the page doesn't give more."""
+        from django.db import transaction
+        from apps.tests_app.models import Question
+        exam = self.get_object()
+        try:
+            qid = int(request.data.get('question'))
+        except (TypeError, ValueError):
+            return Response({'detail': 'question is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        block = Question.objects.filter(pk=qid, test_id=exam.test_id, question_type=Question.TYPE_LISTENING).first()
+        if block is None or not block.audio:
+            return Response({'detail': 'Dinləmə tapılmadı.'}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            result = (ExamResult.objects.select_for_update()
+                      .filter(exam=exam, student=request.user, status=ExamResult.STATUS_IN_PROGRESS).first())
+            if result is None or result.is_overdue:
+                return Response({'detail': 'İmtahan davam etmir.'}, status=status.HTTP_400_BAD_REQUEST)
+            counts = dict(result.listen_counts or {})
+            played = int(counts.get(str(qid), 0))
+            if block.listen_mode == Question.LISTEN_DIM and played >= block.max_plays:
+                return Response({'detail': 'Bu mətni dinləmə imkanı bitib.', 'plays': played}, status=status.HTTP_409_CONFLICT)
+            counts[str(qid)] = played + 1
+            result.listen_counts = counts
+            result.last_seen_at = timezone.now()
+            result.save(update_fields=['listen_counts', 'last_seen_at'])
+        return Response({'plays': played + 1, 'max_plays': block.max_plays, 'mode': block.listen_mode})
 
     @action(detail=True, methods=['patch'], permission_classes=[IsStudent])
     def save_draft(self, request, pk=None):

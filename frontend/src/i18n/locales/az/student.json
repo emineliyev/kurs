@@ -79,5 +79,16 @@
   "net_score_note": "Xalis bal: səhv cavablara görə {{points}} bal çıxılıb.",
   "grading_criteria": "Qiymətləndirmə meyarı",
   "correct_answer_colon": "Düzgün cavab:",
-  "answer_format_hint": "Cavabı bu formada yazın:"
+  "answer_format_hint": "Cavabı bu formada yazın:",
+  "listening_label": "Dinləmə",
+  "listening_play": "Dinlə",
+  "listening_playing": "Səslənir…",
+  "listening_pause": "Dayandır",
+  "listening_resume": "Davam et",
+  "listening_left": "{{count}} dinləmə qalıb",
+  "listening_none_left": "Dinləmə imkanı bitib",
+  "listening_test_sound": "Səsi yoxla",
+  "listening_dim_hint": "Mətni {{count}} dəfə dinləyə bilərsiniz, dayandırmaq olmur. Səslənərkən suallara keçib cavab verə bilərsiniz. Qulaqlıq taxın.",
+  "listening_free_hint": "Mətni istədiyiniz qədər dinləyə, dayandıra və geri çəkə bilərsiniz.",
+  "listening_bar": "Dinləmə səslənir"
 }

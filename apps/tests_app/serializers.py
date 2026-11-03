@@ -1,6 +1,20 @@
 from rest_framework import serializers
 
 from .sanitize import clean_html
+from .audio import clean_audio_upload
+
+LISTENING_PLAN_MESSAGE = 'Dinləmə tapşırıqları Standard və Pro planlarındadır.'
+
+
+def can_use_listening(user):
+    """Listening blocks come with the paid plans (Standard, Pro — a gifted Pro too), not the free trial."""
+    from apps.subscriptions.models import Subscription
+    sub = Subscription.objects.filter(teacher=user).select_related('plan').first()   # fresh, not a cached relation
+    return bool(sub and sub.is_active and sub.plan.tier >= 1)
+
+
+def media_url(field):
+    return f'/media/{field.name}' if field else None
 from .models import Test, Question, Answer, TestVersion, BankQuestion, BankAnswer
 
 
@@ -33,13 +47,45 @@ class QuestionSerializer(serializers.ModelSerializer):
             'id', 'question_type', 'text', 'image', 'math_formula',
             'model_answer', 'correct_answer', 'tolerance', 'answer_format',
             'points', 'order', 'hide_choices', 'answers', 'source_bank_question',
+            'audio', 'transcript', 'listen_mode', 'max_plays',
         ]
         read_only_fields = ['id', 'source_bank_question']
+
+    def validate_audio(self, value):
+        # the real content decides (not the name): only audio, under a random name
+        if value:
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            try:
+                return clean_audio_upload(value)
+            except DjangoValidationError as e:
+                raise serializers.ValidationError(e.messages[0])
+        return value
+
+    def validate_max_plays(self, value):
+        if not 1 <= value <= 5:
+            raise serializers.ValidationError('Dinləmə sayı 1 ilə 5 arasında olmalıdır.')
+        return value
+
+    def validate(self, attrs):
+        qtype = attrs.get('question_type', getattr(self.instance, 'question_type', None))
+        listening = qtype == Question.TYPE_LISTENING
+        if listening or attrs.get('audio'):
+            request = self.context.get('request')
+            if request is not None and not can_use_listening(request.user):
+                raise serializers.ValidationError({'detail': LISTENING_PLAN_MESSAGE})
+        if attrs.get('audio') and not listening:
+            raise serializers.ValidationError({'audio': 'Audio yalnız dinləmə blokuna əlavə olunur.'})
+        if listening:
+            attrs['points'] = 0                      # a block, not a graded question
+        if 'transcript' in attrs:
+            attrs['transcript'] = (attrs['transcript'] or '').strip()   # plain text, shown escaped
+        return attrs
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.image:
             data['image'] = f'/media/{instance.image.name}'
+        data['audio'] = media_url(instance.audio)
         return data
 
     def create(self, validated_data):
@@ -81,12 +127,15 @@ class QuestionPublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         # correct_answer, tolerance, model_answer intentionally excluded (teacher reference only)
-        fields = ['id', 'question_type', 'text', 'image', 'math_formula', 'points', 'order', 'answers', 'answer_hint']
+        # transcript left out: the student only hears the listening text during the exam
+        fields = ['id', 'question_type', 'text', 'image', 'math_formula', 'points', 'order', 'answers', 'answer_hint',
+                  'audio', 'listen_mode', 'max_plays']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.image:
             data['image'] = f'/media/{instance.image.name}'
+        data['audio'] = media_url(instance.audio)
         return data
 
 
@@ -220,6 +269,12 @@ class BankQuestionSerializer(serializers.ModelSerializer):
             'points', 'answers', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_question_type(self, value):
+        # a listening block lives in its test (its audio and play rules), not in the bank
+        if value == Question.TYPE_LISTENING:
+            raise serializers.ValidationError('Dinləmə bloku sual bankına əlavə olunmur.')
+        return value
 
     def validate_folder(self, folder):
         if folder is not None and folder.teacher_id != self.context['request'].user.id:

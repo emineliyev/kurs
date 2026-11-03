@@ -11,6 +11,8 @@ export const examsApi = {
   start: (id) => client.post(`/exams/${id}/start/`),
   submit: (id, answers) => client.post(`/exams/${id}/submit/`, { answers }),
   tabSwitch: (id) => client.patch(`/exams/${id}/tab_switch/`),
+  // a listening text starts playing (DİM mode: the server counts and limits the plays)
+  listen: (id, question) => client.post(`/exams/${id}/listen/`, { question }),
   myResult: (id) => client.get(`/exams/${id}/my_result/`),
   saveDraft: (id, answers) => client.patch(`/exams/${id}/save_draft/`, { answers }),
   // live view: the exam page checks in; the teacher sees who is writing

@@ -7,6 +7,10 @@ import { examsApi } from '@/api/exams'
 import { testsApi } from '@/api/tests'
 import { MathText } from '@/utils/math'
 import { LABELS } from '@/utils/examConstants'
+import { ListeningBar, ListeningBlock, useListeningPlayer } from '@/components/student/Listening'
+
+// blocks (a reading passage, a listening text): no answer, no number — their questions follow them
+const isBlock = (q) => q.question_type === 'passage' || q.question_type === 'listening'
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
 // Counts down to the server's deadline (own duration, never past the exam's end). Recomputed from
@@ -40,6 +44,8 @@ export default function TakeExamPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [deadline, setDeadline] = useState(null)
+  const [listenCounts, setListenCounts] = useState(null)
+  const player = useListeningPlayer(id, listenCounts)
   const tabSwitchWarned = useRef(false)
   const restored = useRef(false)
   const storageKey = `kursum-exam-${id}`
@@ -65,6 +71,7 @@ export default function TakeExamPage() {
 
         const startRes = await examsApi.start(id)
         setDeadline(new Date(startRes.data.deadline).getTime())
+        setListenCounts(startRes.data.listen_counts || {})
 
         const qRes = await testsApi.questions(examData.test)
         setQuestions(qRes.data)
@@ -133,7 +140,7 @@ export default function TakeExamPage() {
     setAnswers(prev => ({ ...prev, [questionId]: { type: 'numeric', value } }))
 
   const isAnswered = (q) => {
-    if (q.question_type === 'passage') return true
+    if (isBlock(q)) return true
     const a = answers[q.id]
     if (!a) return false
     if (a.type === 'mcq') return !!a.selected
@@ -147,7 +154,7 @@ export default function TakeExamPage() {
     const answersPayload = questions.map(q => {
       const a = answers[q.id]
       const qType = q.question_type
-      if (qType === 'passage') {
+      if (isBlock(q)) {
         return { question: q.id, selected_answer: null, open_text: '', answer_text: '' }
       }
       if (['multiple_choice', 'mcq', 'true_false', 'image_mcq'].includes(qType)) {
@@ -172,7 +179,7 @@ export default function TakeExamPage() {
   }
 
   const onSubmit = async () => {
-    const gradableQuestions = questions.filter(q => q.question_type !== 'passage')
+    const gradableQuestions = questions.filter(q => !isBlock(q))
     const answeredCount = gradableQuestions.filter(isAnswered).length
     const res = await Swal.fire({
       title: t('submit_exam', { ns: 'student' }),
@@ -204,13 +211,14 @@ export default function TakeExamPage() {
   const qType = q.question_type
 
   const isPassage = qType === 'passage'
+  const isListening = qType === 'listening'
   const isMCQ = !isPassage && ['multiple_choice', 'mcq', 'true_false', 'image_mcq'].includes(qType)
   const isText = !isPassage && ['short_answer', 'long_answer', 'open'].includes(qType)
   const isNumeric = qType === 'numeric'
 
   // Question number among non-passage questions only
-  const gradableQuestions = questions.filter(q => q.question_type !== 'passage')
-  const currentQNum = isPassage ? null : gradableQuestions.indexOf(q) + 1
+  const gradableQuestions = questions.filter(q => !isBlock(q))
+  const currentQNum = isBlock(q) ? null : gradableQuestions.indexOf(q) + 1
 
   return (
     <div className="space-y-4 pb-4">
@@ -231,7 +239,9 @@ export default function TakeExamPage() {
             )}
           </div>
           <p className="text-sm text-slate-500">
-            {isPassage
+            {isListening
+              ? <span className="text-rose-600 flex items-center gap-1"><i className="bi bi-headphones"></i> {t('listening_label', { ns: 'student' })}</span>
+              : isPassage
               ? <span className="text-teal-600 flex items-center gap-1"><i className="bi bi-book"></i> {t('passage_reading_label', { ns: 'student' })}</span>
               : <>{t('question', { ns: 'student' })} {currentQNum} {t('of', { ns: 'student' })} {gradableQuestions.length}</>
             }
@@ -245,8 +255,13 @@ export default function TakeExamPage() {
         </div>
       </div>
 
+      {/* a listening text still playing while the student is on its questions */}
+      {!isListening && <ListeningBar player={player} onOpen={() => setCurrentQ(questions.findIndex(x => x.id === player.state.qid))} />}
+
       {/* Question */}
-      {isPassage ? (
+      {isListening ? (
+        <ListeningBlock q={q} player={player} />
+      ) : isPassage ? (
         <div className="card p-5 border-teal-200 bg-teal-50">
           <p className="text-xs font-semibold text-teal-600 uppercase tracking-wider mb-3 flex items-center gap-1">
             <i className="bi bi-book"></i> {t('passage_reading_label', { ns: 'student' })}
@@ -378,13 +393,15 @@ export default function TakeExamPage() {
           {(() => {
             let counter = 0
             return questions.map((q, i) => {
-              const isP = q.question_type === 'passage'
+              const isP = isBlock(q)
+              const isL = q.question_type === 'listening'
               if (!isP) counter++
-              const label = isP ? <i className="bi bi-book text-xs"></i> : counter
+              const label = isP ? <i className={`bi ${isL ? 'bi-headphones' : 'bi-book'} text-xs`}></i> : counter
               return (
                 <button key={q.id} onClick={() => setCurrentQ(i)}
                   className={`w-8 h-8 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center ${
                     i === currentQ ? 'bg-primary-700 text-white'
+                    : isL ? 'bg-rose-100 text-rose-600 border border-rose-200'
                     : isP ? 'bg-teal-100 text-teal-600 border border-teal-200'
                     : isAnswered(q) ? 'bg-green-100 text-green-700 border border-green-200'
                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'

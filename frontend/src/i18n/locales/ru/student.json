@@ -79,5 +79,19 @@
   "net_score_note": "Чистый балл: за неверные ответы снято {{points}} балл.",
   "grading_criteria": "Критерии оценивания",
   "correct_answer_colon": "Правильный ответ:",
-  "answer_format_hint": "Пишите ответ в таком виде:"
+  "answer_format_hint": "Пишите ответ в таком виде:",
+  "listening_label": "Аудирование",
+  "listening_play": "Слушать",
+  "listening_playing": "Звучит…",
+  "listening_pause": "Пауза",
+  "listening_resume": "Продолжить",
+  "listening_left_one": "Осталось {{count}} прослушивание",
+  "listening_left_few": "Осталось {{count}} прослушивания",
+  "listening_left_many": "Осталось {{count}} прослушиваний",
+  "listening_left_other": "Осталось {{count}} прослушивания",
+  "listening_none_left": "Прослушивания закончились",
+  "listening_test_sound": "Проверить звук",
+  "listening_dim_hint": "Текст можно прослушать {{count}} раз(а), остановить нельзя. Пока он звучит, можно переходить к вопросам. Наденьте наушники.",
+  "listening_free_hint": "Текст можно слушать сколько угодно, ставить на паузу и перематывать.",
+  "listening_bar": "Звучит аудирование"
 }

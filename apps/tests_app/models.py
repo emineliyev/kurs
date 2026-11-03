@@ -46,7 +46,7 @@ class Test(models.Model):
         """With equal_points on, every graded question is worth max_score / count (e.g. 100/30 = 3.3333)."""
         if not self.equal_points:
             return
-        graded = list(self.questions.exclude(question_type=Question.TYPE_PASSAGE))
+        graded = list(self.questions.exclude(question_type__in=Question.NO_GRADE_TYPES))
         if not graded:
             return
         each = round(self.max_score / len(graded), 4)
@@ -92,6 +92,7 @@ class Question(models.Model):
     TYPE_NUMERIC = 'numeric'
     TYPE_LONG_ANSWER = 'long_answer'
     TYPE_PASSAGE = 'passage'
+    TYPE_LISTENING = 'listening'
 
     # Types that use selected_answer (MCQ-style)
     MCQ_TYPES = ('mcq', 'true_false', 'image_mcq', 'multiple_choice')
@@ -99,8 +100,14 @@ class Question(models.Model):
     MANUAL_GRADE_TYPES = ('open', 'long_answer')
     # Types that are auto-graded by text comparison
     AUTO_TEXT_TYPES = ('short_answer', 'numeric')
-    # Types that are not graded at all
-    NO_GRADE_TYPES = ('passage',)
+    # Types that are not graded at all: blocks the following questions belong to
+    NO_GRADE_TYPES = ('passage', 'listening')
+    BLOCK_TYPES = NO_GRADE_TYPES
+
+    # Listening: how the student may play the audio in an online exam
+    LISTEN_DIM = 'dim'        # like the state exam: no pausing or seeking, a fixed number of plays
+    LISTEN_FREE = 'free'      # an ordinary player (practice)
+    LISTEN_CHOICES = [(LISTEN_DIM, 'DİM rejimi'), (LISTEN_FREE, 'Sərbəst')]
 
     TYPE_CHOICES = [
         (TYPE_MCQ, 'Çoxseçimli (köhnə)'),
@@ -112,6 +119,7 @@ class Question(models.Model):
         (TYPE_NUMERIC, 'Rəqəm'),
         (TYPE_LONG_ANSWER, 'Uzun cavab'),
         (TYPE_PASSAGE, 'Mətn bloku'),
+        (TYPE_LISTENING, 'Dinləmə'),
     ]
 
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='questions', verbose_name='Test')
@@ -127,6 +135,12 @@ class Question(models.Model):
     points = models.FloatField(default=1, verbose_name='Bal')
     order = models.PositiveSmallIntegerField(default=0, verbose_name='Sıra')
     hide_choices = models.BooleanField(default=False, help_text='Şəkilli suallarda A–E artıq şəklin içindədirsə', verbose_name='Çapda variantları gizlət')
+    # Listening block: the audio (checked, renamed), an optional transcript students never get
+    # during the exam, and how the audio may be played online
+    audio = models.FileField(upload_to='questions/audio/', blank=True, null=True, verbose_name='Audio')
+    transcript = models.TextField(blank=True, verbose_name='Transkript')
+    listen_mode = models.CharField(max_length=10, choices=LISTEN_CHOICES, default=LISTEN_DIM, verbose_name='Dinləmə rejimi')
+    max_plays = models.PositiveSmallIntegerField(default=2, verbose_name='Dinləmə sayı (DİM rejimi)')
     # Bank question this was copied from — the same bank question can be added to a test only once
     source_bank_question = models.ForeignKey('BankQuestion', null=True, blank=True, on_delete=models.SET_NULL,
                                              related_name='copies', verbose_name='Sual bankından')

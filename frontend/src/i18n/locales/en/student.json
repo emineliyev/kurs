@@ -79,5 +79,17 @@
   "net_score_note": "Net score: {{points}} points were taken off for wrong answers.",
   "grading_criteria": "Grading criteria",
   "correct_answer_colon": "Correct answer:",
-  "answer_format_hint": "Write your answer like this:"
+  "answer_format_hint": "Write your answer like this:",
+  "listening_label": "Listening",
+  "listening_play": "Listen",
+  "listening_playing": "Playing…",
+  "listening_pause": "Pause",
+  "listening_resume": "Resume",
+  "listening_left_one": "{{count}} play left",
+  "listening_left_other": "{{count}} plays left",
+  "listening_none_left": "No plays left",
+  "listening_test_sound": "Test sound",
+  "listening_dim_hint": "You can listen to the text {{count}} time(s) and can't pause it. While it plays you can move on to the questions. Put your headphones on.",
+  "listening_free_hint": "Listen as often as you like, pause and seek freely.",
+  "listening_bar": "Listening text playing"
 }

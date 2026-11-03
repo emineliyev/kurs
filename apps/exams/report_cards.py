@@ -53,7 +53,7 @@ def build_card(result):
 
     items, number = [], 0
     for q in questions:
-        if q.question_type == Question.TYPE_PASSAGE:
+        if q.question_type in Question.NO_GRADE_TYPES:
             continue
         number += 1
         choices = answer_order.get(q.pk) or list(q.answers.all())

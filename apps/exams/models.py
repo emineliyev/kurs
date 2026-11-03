@@ -92,6 +92,9 @@ class ExamResult(models.Model):
     # Answers saved while the student works ({question_id: {...}}, same shape as the exam page keeps them):
     # survive a reload/another device, and are graded if the time runs out before "Submit"
     draft_answers = models.JSONField(default=dict, blank=True, verbose_name='Yadda saxlanmış cavablar')
+    # Listening blocks: how many times each audio was played ({question_id: n}) — kept on the server,
+    # so a reload doesn't give the student more plays than the teacher allowed
+    listen_counts = models.JSONField(default=dict, blank=True, verbose_name='Dinləmə sayları')
     auto_submitted = models.BooleanField(default=False, verbose_name='Vaxt bitəndə avtomatik təhvil')
     # Taken on paper; the teacher typed the answers in. Order/letters follow the printed variant.
     is_offline = models.BooleanField(default=False, verbose_name='Kağız üzərində')
