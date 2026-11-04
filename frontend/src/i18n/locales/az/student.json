@@ -90,5 +90,7 @@
   "listening_test_sound": "Səsi yoxla",
   "listening_dim_hint": "Mətni {{count}} dəfə dinləyə bilərsiniz, dayandırmaq olmur. Səslənərkən suallara keçib cavab verə bilərsiniz. Qulaqlıq taxın.",
   "listening_free_hint": "Mətni istədiyiniz qədər dinləyə, dayandıra və geri çəkə bilərsiniz.",
-  "listening_bar": "Dinləmə səslənir"
+  "listening_bar": "Dinləmə səslənir",
+  "nt_inbox_empty": "Müəllimlərinizdən hələ elan yoxdur.",
+  "nt_new": "Yeni"
 }

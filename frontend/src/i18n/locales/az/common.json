@@ -244,5 +244,8 @@
   "landing_teacher_login": "Müəllim girişi",
   "gift_banner": "Yeni müəllimlərə {{period}} {{plan}} hədiyyə",
   "gift_banner_until": "{{date}} tarixinədək qeydiyyatdan keçən müəllimlərə {{period}} {{plan}} hədiyyə",
-  "gift_note": "{{period}} {{plan}} pulsuz"
+  "gift_note": "{{period}} {{plan}} pulsuz",
+  "notices": "Elanlar",
+  "plan_feat_listening": "Dinləmə tapşırıqları (audio)",
+  "plan_feat_notices": "Şagirdlərə elan və mesaj"
 }

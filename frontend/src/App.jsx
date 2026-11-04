@@ -57,6 +57,8 @@ const StudentExams = lazyPage(() => import('@/pages/student/ExamsPage'))
 const TakeExamPage = lazyPage(() => import('@/pages/student/TakeExamPage'))
 const ExamResultPage = lazyPage(() => import('@/pages/student/ExamResultPage'))
 const StudentProfile = lazyPage(() => import('@/pages/student/ProfilePage'))
+const StudentNotices = lazyPage(() => import('@/pages/student/NoticesPage'))
+const TeacherNotices = lazyPage(() => import('@/pages/teacher/NoticesPage'))
 
 // Classes live on the students page now; old class links open it with that class selected
 function ClassRedirect() {
@@ -130,6 +132,7 @@ export default function App() {
         <Route path="exams/:id/grade" element={<GradingPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="question-bank" element={<QuestionBankPage />} />
+        <Route path="notices" element={<TeacherNotices />} />
         <Route path="subscription" element={<SubscriptionPage />} />
         <Route path="payment" element={<PaymentPage />} />
         <Route path="feedback" element={<FeedbackPage />} />
@@ -147,6 +150,7 @@ export default function App() {
       >
         <Route index element={<StudentHome />} />
         <Route path="exams" element={<StudentExams />} />
+        <Route path="notices" element={<StudentNotices />} />
         <Route path="exams/:id/take" element={<TakeExamPage />} />
         <Route path="exams/:id/result" element={<ExamResultPage />} />
         <Route path="profile" element={<StudentProfile />} />

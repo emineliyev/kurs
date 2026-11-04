@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/teacher/exams', icon: 'bi-journal-check', labelKey: 'exams' },
   { to: '/teacher/analytics',     icon: 'bi-graph-up-arrow', labelKey: 'analytics'  },
   { to: '/teacher/question-bank', icon: 'bi-bank',           labelKey: 'bank_title' },
+  { to: '/teacher/notices',       icon: 'bi-megaphone',      labelKey: 'notices', pro: true },
 ]
 
 const BOTTOM_ITEMS = [
@@ -74,6 +75,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }) {
           >
             <i className={`bi ${item.icon} text-[18px] shrink-0`}></i>
             {expanded && <span>{t(item.labelKey)}</span>}
+            {expanded && item.pro && <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-primary-100 text-primary-700 tracking-wider">PRO</span>}
           </NavLink>
         ))}
       </nav>

@@ -91,5 +91,7 @@
   "listening_test_sound": "Test sound",
   "listening_dim_hint": "You can listen to the text {{count}} time(s) and can't pause it. While it plays you can move on to the questions. Put your headphones on.",
   "listening_free_hint": "Listen as often as you like, pause and seek freely.",
-  "listening_bar": "Listening text playing"
+  "listening_bar": "Listening text playing",
+  "nt_inbox_empty": "No notices from your teachers yet.",
+  "nt_new": "New"
 }

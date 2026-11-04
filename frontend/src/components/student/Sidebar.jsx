@@ -4,15 +4,18 @@ import { useAuthStore } from '@/store/authStore'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher'
 import Logo from '@/components/common/Logo'
 import { InstallAppLink } from '@/components/common/InstallApp'
+import { useUnreadNotices } from '@/hooks/useUnreadNotices'
 
 const NAV_ITEMS = [
   { to: '/student', icon: 'bi-house-fill', iconInactive: 'bi-house', labelKey: 'dashboard', end: true },
   { to: '/student/exams', icon: 'bi-journal-check', iconInactive: 'bi-journal', labelKey: 'exams' },
+  { to: '/student/notices', icon: 'bi-megaphone-fill', iconInactive: 'bi-megaphone', labelKey: 'notices', badge: true },
   { to: '/student/profile', icon: 'bi-person-fill', iconInactive: 'bi-person', labelKey: 'profile' },
 ]
 
 export default function StudentSidebar() {
   const { t } = useTranslation()
+  const unread = useUnreadNotices()
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
 
@@ -46,6 +49,9 @@ export default function StudentSidebar() {
               <>
                 <i className={`bi ${isActive ? item.icon : item.iconInactive} text-lg leading-none`}></i>
                 <span>{t(item.labelKey)}</span>
+                {item.badge && unread > 0 && (
+                  <span className="ml-auto min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center">{unread > 9 ? '9+' : unread}</span>
+                )}
               </>
             )}
           </NavLink>

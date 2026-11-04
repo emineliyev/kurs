@@ -250,5 +250,8 @@
   "landing_teacher_login": "Вход для учителя",
   "gift_banner": "Новым учителям — {{plan}} на {{period}} в подарок",
   "gift_banner_until": "Учителям, зарегистрировавшимся до {{date}}, — {{plan}} на {{period}} в подарок",
-  "gift_note": "{{plan}} на {{period}} бесплатно"
+  "gift_note": "{{plan}} на {{period}} бесплатно",
+  "notices": "Объявления",
+  "plan_feat_listening": "Задания на аудирование (аудио)",
+  "plan_feat_notices": "Объявления и сообщения ученикам"
 }

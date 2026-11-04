@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import Swal from '@/utils/swal'
 import { subscriptionsApi } from '@/api/subscriptions'
 import PageSpinner from '@/components/common/PageSpinner'
+import { featuresOf } from '@/utils/planFeatures'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtDate = (d) => d ? format(new Date(d), 'dd.MM.yyyy') : '—'
@@ -167,6 +168,13 @@ function PlanCard({ plan, sub, onAction, loadingPlan }) {
             <i className={`bi ${icon} text-primary-700 shrink-0`}></i>
             <span>{label}: </span>
             <span className="ml-auto font-medium">{limitLabel(val, unlimitedLabel)}</span>
+          </li>
+        ))}
+        {featuresOf(plan).map((f) => (
+          <li key={f.key} className={`flex items-center gap-2 ${f.included ? '' : 'text-slate-400'}`}>
+            <i className={`bi ${f.icon} ${f.included ? 'text-primary-700' : 'text-slate-300'} shrink-0`}></i>
+            <span className={f.included ? '' : 'line-through decoration-slate-300'}>{t(`plan_feat_${f.key}`)}</span>
+            <i className={`bi ml-auto ${f.included ? 'bi-check-lg text-green-500' : 'bi-x-lg text-slate-300'}`}></i>
           </li>
         ))}
         {plan.description && (

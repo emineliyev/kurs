@@ -246,5 +246,8 @@
   "landing_teacher_login": "Teacher login",
   "gift_banner": "New teachers get {{plan}} free for {{period}}",
   "gift_banner_until": "Teachers who sign up by {{date}} get {{plan}} free for {{period}}",
-  "gift_note": "{{plan}} free for {{period}}"
+  "gift_note": "{{plan}} free for {{period}}",
+  "notices": "Notices",
+  "plan_feat_listening": "Listening tasks (audio)",
+  "plan_feat_notices": "Notices and messages to students"
 }

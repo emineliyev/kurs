@@ -8,6 +8,7 @@ import { useSiteSettings } from '@/api/site'
 import Logo from '@/components/common/Logo'
 import { useCanonical } from '@/utils/seo'
 import { useSignupGift, giftPeriod, giftDate } from '@/utils/gift'
+import { featuresOf } from '@/utils/planFeatures'
 
 const ANIM_STYLE = `
 @keyframes fadeInUp {
@@ -375,6 +376,13 @@ export default function LandingPage() {
                           {t('landing_full_access', { period: period(plan.duration_days) })}
                         </li>
                       )}
+                      {/* plan-level features: listening (Standard, Pro), notices to students (Pro) */}
+                      {featuresOf(plan).map((f) => (
+                        <li key={f.key} className={`flex items-start gap-2 ${f.included ? 'text-slate-700 font-medium' : 'text-slate-400 line-through decoration-slate-300'}`}>
+                          <i className={`bi ${f.included ? 'bi-check-lg text-green-500' : 'bi-x-lg text-slate-300'} mt-0.5 shrink-0`}></i>
+                          <span><i className={`bi ${f.icon} mr-1`}></i>{t(`plan_feat_${f.key}`)}</span>
+                        </li>
+                      ))}
                     </ul>
                     <button
                       onClick={() => handlePlanClick(plan)}
