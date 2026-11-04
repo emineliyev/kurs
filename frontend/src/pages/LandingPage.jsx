@@ -356,24 +356,24 @@ export default function LandingPage() {
                     <ul className="space-y-3 flex-1 text-sm">
                       <li className="flex items-start gap-2 text-slate-600">
                         <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
-                        {t('landing_unlimited_tests')}
+                        <span><i className="bi bi-file-earmark-text mr-1"></i>{t('landing_unlimited_tests')}</span>
                       </li>
                       <li className="flex items-start gap-2 text-slate-600">
                         <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
-                        {plan.max_exams_per_month === -1 ? t('landing_unlimited_exams') : t('landing_n_exams', { count: plan.max_exams_per_month })}
+                        <span><i className="bi bi-journal-check mr-1"></i>{plan.max_exams_per_month === -1 ? t('landing_unlimited_exams') : t('landing_n_exams', { count: plan.max_exams_per_month })}</span>
                       </li>
                       <li className="flex items-start gap-2 text-slate-600">
                         <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
-                        {plan.max_classes === -1 ? t('landing_unlimited_classes') : t('landing_n_classes', { count: plan.max_classes })}
+                        <span><i className="bi bi-people mr-1"></i>{plan.max_classes === -1 ? t('landing_unlimited_classes') : t('landing_n_classes', { count: plan.max_classes })}</span>
                       </li>
                       <li className="flex items-start gap-2 text-slate-600">
                         <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
-                        {plan.max_students === -1 ? t('landing_unlimited_students') : t('landing_n_students', { count: plan.max_students })}
+                        <span><i className="bi bi-person mr-1"></i>{plan.max_students === -1 ? t('landing_unlimited_students') : t('landing_n_students', { count: plan.max_students })}</span>
                       </li>
                       {Number(plan.price) === 0 && plan.duration_days > 0 && (
                         <li className="flex items-start gap-2 text-slate-600">
                           <i className="bi bi-check-lg text-green-500 mt-0.5 shrink-0"></i>
-                          {t('landing_full_access', { period: period(plan.duration_days) })}
+                          <span><i className="bi bi-unlock mr-1"></i>{t('landing_full_access', { period: period(plan.duration_days) })}</span>
                         </li>
                       )}
                       {/* plan-level features: listening (Standard, Pro), notices to students (Pro) */}
