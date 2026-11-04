@@ -112,6 +112,13 @@ export default function ExamResultsPage() {
               <i className="bi bi-person-vcard"></i> {t('rc_print_all', { ns: 'teacher' })}
             </Link>
           )}
+          {/* the questions' print page (variants, answer key) — the same as the PDF button on the exams list */}
+          {exam?.test && (
+            <Link to={`/teacher/tests/${exam.test}/print`} target="_blank" rel="noopener"
+              title={t('pdf_open', { ns: 'teacher' })} className="btn-secondary text-sm justify-center px-3 whitespace-nowrap">
+              <i className="bi bi-file-earmark-pdf text-red-600"></i> PDF
+            </Link>
+          )}
           {results.length > 0 && (
             <button disabled={exporting}
               onClick={async () => {
