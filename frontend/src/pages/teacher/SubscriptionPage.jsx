@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 import Swal from '@/utils/swal'
 import { subscriptionsApi } from '@/api/subscriptions'
 import PageSpinner from '@/components/common/PageSpinner'
-import { featuresOf } from '@/utils/planFeatures'
+import { PLAN_FEATURES, featuresOf } from '@/utils/planFeatures'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtDate = (d) => d ? format(new Date(d), 'dd.MM.yyyy') : '—'
@@ -290,6 +290,20 @@ function CompareTable({ plans, sub }) {
                 {plans.map((plan) => (
                   <td key={plan.id} className={`px-1.5 sm:px-5 py-3 sm:py-3.5 text-center font-medium text-slate-700 ${colClass(plan)}`}>
                     {limitLabel(plan[field], unlimitedLabel)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+
+            <SectionRow>{t('compare_plan_features', { ns: 'teacher' })}</SectionRow>
+            {PLAN_FEATURES.map((f) => (
+              <tr key={f.key}>
+                <RowLabel icon={f.icon}>{t(`plan_feat_${f.key}`)}</RowLabel>
+                {plans.map((plan) => (
+                  <td key={plan.id} className={`px-1.5 sm:px-5 py-3 sm:py-3.5 text-center ${colClass(plan)}`}>
+                    {(plan.tier ?? 0) >= f.minTier
+                      ? <i className="bi bi-check-circle-fill text-green-500 text-base"></i>
+                      : <i className="bi bi-x-circle text-slate-300 text-base"></i>}
                   </td>
                 ))}
               </tr>
