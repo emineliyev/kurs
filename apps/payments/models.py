@@ -73,7 +73,10 @@ class PaymentRequest(models.Model):
         (TYPE_RENEWAL, 'Yeniləmə'),
     ]
 
-    teacher          = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payment_requests', verbose_name='Müəllim')
+    # SET_NULL: when an idle teacher is deleted their payments stay (accounting), labelled in deleted_teacher
+    teacher          = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                         related_name='payment_requests', verbose_name='Müəllim')
+    deleted_teacher  = models.CharField(max_length=100, blank=True, editable=False, verbose_name='Silinmiş müəllim')
     plan             = models.ForeignKey(Plan, on_delete=models.PROTECT, related_name='payment_requests', verbose_name='Plan')
     requisite        = models.ForeignKey(
         PaymentRequisite, on_delete=models.SET_NULL, null=True, blank=True,
@@ -105,7 +108,7 @@ class PaymentRequest(models.Model):
         verbose_name_plural = 'Ödəniş sorğuları'
 
     def __str__(self):
-        return f'{self.teacher.email} — {self.plan.display_name} — {self.get_status_display()}'
+        return f'{self.teacher.email if self.teacher else self.deleted_teacher} — {self.plan.display_name} — {self.get_status_display()}'
 
 
 class PaymentHold(models.Model):

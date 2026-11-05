@@ -151,6 +151,9 @@ class LoginView(APIView):
         if serializer.is_valid():
             login_guard.record_success(request, ident)
             user = serializer.validated_data['user']
+            if user.is_teacher:
+                from .inactivity import touch
+                touch(user)
             refresh = RefreshToken.for_user(user)
             return Response({
                 'user': UserSerializer(user).data,

@@ -84,6 +84,9 @@ class PaymentRequestAdmin(admin.ModelAdmin):
         if change:
             old = PaymentRequest.objects.get(pk=obj.pk)
             status_changed = old.status != obj.status
+            if status_changed and obj.teacher is None:
+                messages.error(request, 'Bu ödənişin müəllimi silinib, statusu dəyişdirilə bilməz.')
+                return
             if status_changed:
                 obj.reviewed_by = request.user
                 obj.reviewed_at = timezone.now()
@@ -101,7 +104,7 @@ class PaymentRequestAdmin(admin.ModelAdmin):
 
     @admin.action(description='✅ Seçilmiş sorğuları təsdiqlə')
     def approve_payments(self, request, queryset):
-        pending = queryset.filter(status=PaymentRequest.STATUS_PENDING)
+        pending = queryset.filter(status=PaymentRequest.STATUS_PENDING, teacher__isnull=False)
         count = 0
         for pr in pending:
             pr.status      = PaymentRequest.STATUS_APPROVED
@@ -172,6 +175,8 @@ class PaymentRequestAdmin(admin.ModelAdmin):
 
     @admin.display(description='Müəllim')
     def teacher_link(self, obj):
+        if obj.teacher is None:
+            return format_html('<span style="color:#6b7280">{}</span>', obj.deleted_teacher or '—')
         return format_html('<b>{}</b><br/><small style="color:#6b7280">{}</small>',
                            obj.teacher.get_full_name() or '—', obj.teacher.email)
 

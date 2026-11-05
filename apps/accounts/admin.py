@@ -132,13 +132,29 @@ class SharedSignupIPFilter(admin.SimpleListFilter):
         return queryset.filter(role=User.ROLE_TEACHER, signup_ip__in=busy)
 
 
+class InactivityFilter(admin.SimpleListFilter):
+    title = 'Aktivsizlik'
+    parameter_name = 'idle'
+
+    def lookups(self, request, model_admin):
+        return [('soon', 'Silinməyə namizəd (6+ ay gəlməyib)'), ('warned', 'Xəbərdarlıq göndərilib')]
+
+    def queryset(self, request, queryset):
+        from . import inactivity
+        if self.value() == 'soon':
+            return queryset.filter(pk__in=inactivity.candidates().values('pk'))
+        if self.value() == 'warned':
+            return queryset.filter(pk__in=inactivity.candidates().values('pk'), inactivity_warning_stage__gt=0)
+        return queryset
+
+
 # ── Users ─────────────────────────────────────────────────────────────────────
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = ['email', 'full_name', 'role', 'plan_info', 'students_count', 'classes_count', 'exams_count',
-                    'results_count', 'is_active', 'is_email_verified', 'signup_ip_link', 'created_at']
-    list_filter = ['role', SubscriptionStateFilter, TeacherActivityFilter, SharedSignupIPFilter, 'is_active',
+                    'results_count', 'last_activity_at', 'is_active', 'is_email_verified', 'signup_ip_link', 'created_at']
+    list_filter = ['role', SubscriptionStateFilter, TeacherActivityFilter, InactivityFilter, SharedSignupIPFilter, 'is_active',
                    'is_email_verified', 'is_staff']
     list_editable = ['is_email_verified']
     search_fields = ['email', 'username', 'first_name', 'last_name', 'signup_ip']
@@ -148,7 +164,7 @@ class UserAdmin(BaseUserAdmin):
     actions = ['activate_users', 'block_users', 'mark_email_verified', 'mark_email_unverified', 'gift_plan']
     fieldsets = (
         (None, {'fields': ('email', 'username', 'password')}),
-        ('Şəxsi məlumat', {'fields': ('first_name', 'last_name', 'role', 'created_by', 'signup_ip')}),
+        ('Şəxsi məlumat', {'fields': ('first_name', 'last_name', 'role', 'created_by', 'signup_ip', 'last_activity_at')}),
         ('İcazələr', {
             'fields': ('is_active', 'is_email_verified', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
             'classes': ('collapse',),

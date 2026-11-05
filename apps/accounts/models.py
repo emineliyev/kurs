@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from .managers import UserManager
 
@@ -29,6 +30,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Yenilənmə tarixi')
     # Where a teacher signed up from — the admin spots many free trials from one place
     signup_ip = models.GenericIPAddressField(null=True, blank=True, verbose_name='Qeydiyyat IP-si')
+    # Last time the user used the site (updated at most once a day, see core.authentication).
+    # A teacher idle for 7 months is warned twice by e-mail and then deleted (apps.accounts.inactivity).
+    last_activity_at = models.DateTimeField(default=timezone.now, db_index=True, verbose_name='Son aktivlik')
+    inactivity_warning_stage = models.PositiveSmallIntegerField(default=0, editable=False)
+    inactivity_warned_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']

@@ -57,7 +57,7 @@ def notify_admin_new_request(payment_request):
 def notify_user_approved(payment_request):
     """Send email to teacher when their payment is approved."""
     teacher = payment_request.teacher
-    if not teacher.email:
+    if not teacher or not teacher.email:
         return
 
     subject = f'✅ Ödənişiniz təsdiqləndi — {payment_request.plan.display_name}'
@@ -95,7 +95,7 @@ def notify_user_approved(payment_request):
 def notify_user_rejected(payment_request):
     """Send email to teacher when their payment is rejected."""
     teacher = payment_request.teacher
-    if not teacher.email:
+    if not teacher or not teacher.email:
         return
 
     subject = '❌ Ödəniş sorğunuz rədd edildi'
