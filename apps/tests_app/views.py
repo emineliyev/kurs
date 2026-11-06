@@ -3,6 +3,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from apps.accounts.permissions import IsTeacher
 from apps.subscriptions.permissions import ActiveSubscriptionFor
@@ -502,3 +504,21 @@ class BankFolderViewSet(viewsets.ModelViewSet):
             BankFolder.objects.filter(parent=folder).update(parent=folder.parent)
             BankQuestion.objects.filter(folder=folder).update(folder=folder.parent)
             folder.delete()
+
+
+class AutoCropView(APIView):
+    """POST the words of the opened PDF pages → one box per question (see autocrop.py)."""
+    permission_classes = [IsAuthenticated, IsTeacher]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'auto_crop'
+
+    def post(self, request):
+        from . import autocrop
+        if not autocrop.can_auto_crop(request.user):
+            return Response({'detail': autocrop.AUTO_CROP_PLAN_MESSAGE, 'code': 'plan'}, status=status.HTTP_403_FORBIDDEN)
+        pages = request.data.get('pages')
+        if not isinstance(pages, list) or not pages:
+            return Response({'detail': 'pages tələb olunur.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(pages) > autocrop.MAX_PAGES or sum(len(p.get('words') or []) for p in pages if isinstance(p, dict)) > autocrop.MAX_WORDS:
+            return Response({'detail': 'Çox səhifə seçilib. Səhifə aralığını kiçildin.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(autocrop.detect([p for p in pages if isinstance(p, dict)]))

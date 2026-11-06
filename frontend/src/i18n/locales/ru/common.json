@@ -253,5 +253,6 @@
   "gift_note": "{{plan}} на {{period}} бесплатно",
   "notices": "Объявления",
   "plan_feat_listening": "Задания на аудирование (аудио)",
-  "plan_feat_notices": "Объявления и сообщения ученикам"
+  "plan_feat_notices": "Объявления и сообщения ученикам",
+  "plan_feat_auto_crop": "Автоматическая нарезка вопросов из PDF"
 }

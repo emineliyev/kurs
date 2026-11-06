@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 import Swal from '@/utils/swal'
+import { testsApi } from '@/api/tests'
+import { subscriptionsApi } from '@/api/subscriptions'
 import { AnnotateCanvas, applyLook, loadScript, trimWhitespace, PDFJS_CDN, PDFJS_WORKER } from '@/components/common/MediaPickerModal'
 
 /**
@@ -152,6 +155,25 @@ function readingOrder(items, pages) {
   })
 }
 
+// The words of a rendered PDF page, in the page image's pixels: [text, x, top, width, height].
+// Only these go to the server for the automatic search — never the file.
+async function pageWords(pdf, num) {
+  const page = await pdf.getPage(num)
+  const base = page.getViewport({ scale: 1 })
+  const viewport = page.getViewport({ scale: PAGE_TARGET_W / base.width })
+  const { items } = await page.getTextContent()
+  const r = (v) => Math.round(v * 10) / 10
+  const words = []
+  for (const it of items) {
+    if (!it.str || !it.str.trim()) continue
+    const tx = window.pdfjsLib.Util.transform(viewport.transform, it.transform)
+    if (Math.abs(tx[1]) > 0.01 || Math.abs(tx[2]) > 0.01) continue   // turned text (stamps, side notes)
+    const h = Math.abs(tx[3])
+    words.push([it.str, r(tx[4]), r(tx[5] - h), r(it.width * viewport.scale), r(h)])
+  }
+  return words
+}
+
 const isUsable = (f) => f && (f.type === 'application/pdf' || f.type.startsWith('image/'))
 
 function AnswerBar({ count, answer, text = '', onPick, onText, onOk, onCancel, t }) {
@@ -248,6 +270,7 @@ function PageRangeDialog({ t, name, total, initialFrom = 1, initialTo, keptNote 
 
 export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode = 'bulk', initialFiles = null, busy = false }) {
   const { t } = useTranslation(['common', 'teacher'])
+  const navigate = useNavigate()
   const single = mode === 'single'
   const [pages, setPages] = useState([])            // see pageOf()
   const [items, setItems] = useState([])            // bulk: { id, page, x, y, w, h, answer, file, url, edited }
@@ -273,6 +296,15 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
   const docsRef = useRef(new Map())                 // key → pdf.js document (kept to open other pages later)
   const startedRef = useRef(false)
   const fineTimer = useRef(null)
+  const [autoAllowed, setAutoAllowed] = useState(null)   // Pro or the free trial (the server checks too)
+  const [autoBusy, setAutoBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open || single || autoAllowed !== null) return
+    subscriptionsApi.mySubscription()
+      .then((r) => setAutoAllowed(!!r.data?.is_active && ((r.data?.plan_details?.tier ?? 0) >= 2 || r.data?.status === 'trial')))
+      .catch(() => setAutoAllowed(false))
+  }, [open, single])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Free the PDFs when the workspace goes away
   useEffect(() => () => {
@@ -653,6 +685,70 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
     document.getElementById(`bulk-box-${item.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
+  // ── Automatic search (Pro / trial) ──────────────────────────────────────────
+  const showProOnly = async () => {
+    const { isConfirmed } = await Swal.fire({
+      title: t('bulk_auto_pro_title', { ns: 'teacher' }),
+      text: t('bulk_auto_pro_text', { ns: 'teacher' }),
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: t('bulk_auto_pro_go', { ns: 'teacher' }),
+      cancelButtonText: t('cancel'),
+    })
+    if (isConfirmed) { onClose(); navigate('/teacher/subscription') }
+  }
+
+  const autoFind = async () => {
+    if (!autoAllowed) { showProOnly(); return }
+    // PDF pages as drawn (not turned) that have no questions cut on them yet
+    const cutOn = new Set(items.map((i) => i.page))
+    const targets = pages.map((pg, index) => ({ pg, index }))
+      .filter(({ pg, index }) => pg.doc && !pg.q && !pg.fine && !cutOn.has(index) && pending?.page !== index)
+    if (!targets.length) { toast.error(t('bulk_auto_no_pages', { ns: 'teacher' })); return }
+    setAutoBusy(true)
+    setActiveId(null)
+    try {
+      const payload = []
+      for (const { pg, index } of targets) {
+        const pdf = docsRef.current.get(pg.doc)
+        if (!pdf) continue
+        payload.push({ index, doc: pg.doc, w: pg.w, h: pg.h, words: await pageWords(pdf, pg.num) })
+      }
+      const { data } = await testsApi.autoCrop(payload)
+      const count = data.choice_count || choiceCount
+      if (data.choice_count) setChoiceCount(data.choice_count)
+      const images = new Map()
+      const found = []
+      for (const b of data.boxes || []) {
+        const pg = pages[b.page]
+        if (!pg) continue
+        if (!images.has(b.page)) images.set(b.page, await loadImage(pg.url))
+        let rect = { x: b.x, y: b.y, w: b.w, h: b.h }
+        if (autoTrim) rect = trimWhitespace(images.get(b.page), rect)
+        const crop = await cropFromPage(pg.url, rect, look)
+        const letter = b.answer ? LETTERS.indexOf(b.answer) : -1
+        found.push({ id: nextId(), page: b.page, ...rect, ...crop, answer: letter >= 0 && letter < count ? letter : null,
+          edited: false, warn: !!b.continues })
+      }
+      setItems((prev) => [...prev, ...found])
+      if (!found.length) toast.error(t('bulk_auto_none', { ns: 'teacher' }), { duration: 6000 })
+      else {
+        const keys = found.filter((f) => f.answer != null).length
+        toast.success([t('bulk_auto_found', { ns: 'teacher', count: found.length }),
+          keys ? t('bulk_auto_keys', { ns: 'teacher', count: keys }) : null,
+          t('bulk_auto_check', { ns: 'teacher' })].filter(Boolean).join('. '), { duration: 7000 })
+      }
+      const warned = found.filter((f) => f.warn).length
+      if (warned) toast(t('bulk_auto_continues', { ns: 'teacher', count: warned }), { icon: '⚠️', duration: 8000 })
+      if (data.no_text?.length) toast(t('bulk_auto_scans', { ns: 'teacher', count: data.no_text.length }), { icon: 'ℹ️', duration: 8000 })
+    } catch (e) {
+      if (e?.response?.data?.code === 'plan') { setAutoAllowed(false); showProOnly() }
+      else if (!isCancelled(e)) toast.error(e?.response?.data?.detail || t('error_occurred'))
+    } finally {
+      setAutoBusy(false)
+    }
+  }
+
   const finish = () => {
     if (!ordered.length) return
     onDone(ordered.map((i) => ({ file: i.file, url: i.url, answer: i.answer, text: (i.text || '').trim(), choiceCount })))
@@ -711,6 +807,23 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
             </div>
           )
         })}
+        {!single && docs.length > 0 && (
+          <button onClick={autoFind} disabled={autoBusy || !!loading || !!rangeAsk || busy || autoAllowed === null}
+            title={t('bulk_auto_tip', { ns: 'teacher' })}
+            className={`h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 ${autoAllowed === false
+              ? 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-100'
+              : 'bg-gradient-to-r from-violet-600 to-primary-600 text-white hover:opacity-90'}`}>
+            <i className={`bi ${autoBusy ? 'bi-arrow-repeat animate-spin' : 'bi-magic'}`}></i>
+            <span className={autoBusy ? '' : 'hidden xl:inline'}>
+              {autoBusy ? t('bulk_auto_busy', { ns: 'teacher' }) : t('bulk_auto', { ns: 'teacher' })}
+            </span>
+            {autoAllowed === false && (
+              <span className="ml-0.5 px-1.5 py-px rounded bg-amber-100 text-amber-700 text-[10px] font-bold flex items-center gap-0.5">
+                <i className="bi bi-lock-fill"></i>PRO
+              </span>
+            )}
+          </button>
+        )}
         {!single && (
           <div className="flex items-center gap-1 text-xs text-slate-500">
             {t('bulk_choices', { ns: 'teacher' })}:
@@ -844,6 +957,10 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
                             <span className="px-2 py-0.5 rounded-md bg-red-500 text-white text-xs font-bold">
                               {t('bulk_question_n', { ns: 'teacher', n: numberOf(it.id) })}
                             </span>
+                            {it.warn && (
+                              <span title={t('bulk_auto_warn', { ns: 'teacher' })}
+                                className="px-1.5 py-0.5 rounded-md bg-amber-400 text-amber-950 text-xs font-bold">⚠</span>
+                            )}
                             <button onClick={() => setEditing(it)} className="px-2 py-0.5 rounded-md bg-primary-600 text-white text-xs font-medium hover:bg-primary-700">
                               <i className="bi bi-pencil"></i> {t('edit')}
                             </button>
@@ -907,7 +1024,10 @@ export default function BulkCropWorkspace({ open, onClose, onDone, onPick, mode 
                 <button key={it.id} onClick={() => scrollToItem(it)}
                   className={`w-full text-left p-2 rounded-xl border transition-colors ${activeId === it.id ? 'border-primary-400 bg-primary-50' : 'border-slate-200 hover:border-slate-300'}`}>
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-semibold text-slate-700">{t('bulk_question_n', { ns: 'teacher', n: idx + 1 })}</span>
+                    <span className="font-semibold text-slate-700">
+                      {t('bulk_question_n', { ns: 'teacher', n: idx + 1 })}
+                      {it.warn && <span title={t('bulk_auto_warn', { ns: 'teacher' })} className="ml-1 text-amber-500">⚠</span>}
+                    </span>
                     <span className={`px-1.5 py-0.5 rounded font-bold max-w-[7rem] truncate ${missing(it) ? 'bg-amber-100 text-amber-700'
                       : it.answer === SHORT ? 'bg-teal-100 text-teal-700'
                       : it.answer === OPEN ? 'bg-violet-100 text-violet-700'

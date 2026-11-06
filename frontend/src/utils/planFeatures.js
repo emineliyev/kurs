@@ -3,6 +3,7 @@
 export const PLAN_FEATURES = [
   { key: 'listening', icon: 'bi-headphones', minTier: 1 },
   { key: 'notices',   icon: 'bi-megaphone',  minTier: 2 },
+  { key: 'auto_crop', icon: 'bi-magic',      minTier: 2 },
 ]
 
 /** [{ key, icon, included }] for a plan. */

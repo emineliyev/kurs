@@ -955,5 +955,19 @@
   "nt_pro_title": "Notices come with Pro",
   "nt_pro_text": "Move to Pro to send notices to your students and see who has read them.",
   "nt_pro_cta": "See plans",
-  "compare_plan_features": "Features by plan"
+  "compare_plan_features": "Features by plan",
+  "bulk_auto": "Find questions automatically",
+  "bulk_auto_tip": "Finds the questions and the answer key in a text PDF (Pro)",
+  "bulk_auto_busy": "Looking for questions…",
+  "bulk_auto_found": "{{count}} questions found",
+  "bulk_auto_keys": "Answers for {{count}} questions taken from the key",
+  "bulk_auto_none": "No numbered questions found on these pages. Cut them by hand.",
+  "bulk_auto_no_pages": "No pages to search: pages with cut questions or turned pages are skipped.",
+  "bulk_auto_scans": "{{count}} pages have no text (scanned image). Cut them by hand.",
+  "bulk_auto_continues": "{{count}} questions run on to the next column or page — check the ones marked ⚠.",
+  "bulk_auto_check": "Check the boxes: delete a wrong one and draw it again.",
+  "bulk_auto_pro_title": "This feature is in the Pro plan",
+  "bulk_auto_pro_text": "On Pro the system finds the questions and the answer key in a PDF itself — 40 questions are ready in minutes.",
+  "bulk_auto_pro_go": "Go Pro",
+  "bulk_auto_warn": "This question may run on to the next column or page — check it"
 }

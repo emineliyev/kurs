@@ -171,6 +171,7 @@ REST_FRAMEWORK = {
         'resend_verification': '5/hour',
         'password_reset': '5/hour',
         'password_reset_confirm': '20/hour',
+        'auto_crop': '60/hour',
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',

@@ -247,5 +247,6 @@
   "gift_note": "{{period}} {{plan}} pulsuz",
   "notices": "Elanlar",
   "plan_feat_listening": "Dinləmə tapşırıqları (audio)",
-  "plan_feat_notices": "Şagirdlərə elan və mesaj"
+  "plan_feat_notices": "Şagirdlərə elan və mesaj",
+  "plan_feat_auto_crop": "PDF-dən sualları avtomatik kəsmə"
 }

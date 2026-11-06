@@ -19,4 +19,6 @@ export const testsApi = {
   reorderQuestions: (orderedIds) => client.post('/tests/questions/reorder/', { ordered_ids: orderedIds }),
   // the answer key can be corrected even after students answered; the server re-marks them
   fixKey: (id, data) => client.post(`/tests/questions/${id}/fix_key/`, data),
+  // Pro / trial: the words of opened PDF pages → one box per question (the PDF itself is never sent)
+  autoCrop: (pages) => client.post('/tests/auto-crop/', { pages }),
 }

@@ -955,5 +955,19 @@
   "nt_pro_title": "Elanlar Pro planındadır",
   "nt_pro_text": "Pro planına keçin və şagirdlərinizə elan göndərin, kimin oxuduğunu görün.",
   "nt_pro_cta": "Planlara bax",
-  "compare_plan_features": "Plana görə imkanlar"
+  "compare_plan_features": "Plana görə imkanlar",
+  "bulk_auto": "Sualları avtomatik tap",
+  "bulk_auto_tip": "Mətnli PDF-də sualları və cavab açarını özü tapır (Pro)",
+  "bulk_auto_busy": "Suallar axtarılır…",
+  "bulk_auto_found": "{{count}} sual tapıldı",
+  "bulk_auto_keys": "{{count}} sualın cavabı açardan götürüldü",
+  "bulk_auto_none": "Bu səhifələrdə nömrələnmiş sual tapılmadı. Sualları əl ilə kəsin.",
+  "bulk_auto_no_pages": "Avtomatik axtarış üçün səhifə yoxdur: sual kəsilmiş və ya döndərilmiş səhifələr keçilir.",
+  "bulk_auto_scans": "{{count}} səhifədə mətn yoxdur (skan şəkil). Onları əl ilə kəsin.",
+  "bulk_auto_continues": "{{count}} sual növbəti sütuna və ya səhifəyə keçir — ⚠ işarəli sualları yoxlayın.",
+  "bulk_auto_check": "Çərçivələri yoxlayın: səhv tutulanı silib yenidən çəkin.",
+  "bulk_auto_pro_title": "Bu funksiya Pro planındadır",
+  "bulk_auto_pro_text": "Pro planda sistem PDF-dəki sualları və cavab açarını özü tapır — 40 sual bir neçə dəqiqəyə hazır olur.",
+  "bulk_auto_pro_go": "Pro-ya keç",
+  "bulk_auto_warn": "Sual növbəti sütuna və ya səhifəyə keçə bilər — yoxlayın"
 }

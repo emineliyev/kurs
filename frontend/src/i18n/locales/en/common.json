@@ -249,5 +249,6 @@
   "gift_note": "{{plan}} free for {{period}}",
   "notices": "Notices",
   "plan_feat_listening": "Listening tasks (audio)",
-  "plan_feat_notices": "Notices and messages to students"
+  "plan_feat_notices": "Notices and messages to students",
+  "plan_feat_auto_crop": "Automatic question cutting from PDFs"
 }
